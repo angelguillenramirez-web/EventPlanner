@@ -212,3 +212,8 @@ Login: Google, Apple (simulated), email/password, or "Create account". New accou
 - **Full-width layout:** the app content no longer stops at 1280px; the task board columns stretch with the screen.
 - **Password reset:** only on request, through a one-hour, single-use link sent to the account email (`#/forgot`, `#/reset/<token>`; Login, Account > Access and security, and the planner's reset button for collaborators all send that email). If the old email is no longer reachable, the screen points to customer service.
 - **Client access:** a client (collaborator signed in with their own access) sees only My events, their assigned tabs, My tasks and Help. Account has only Basic info (name, last name, password reset) and My subscription (invitation notice with "Create my own account").
+
+## v39: cancellation survey
+- Cancelling a trial or a subscription (Account > My subscription) now opens a short survey first: main reason (required), a follow-up (fair price, missing features, competitor), parts of the platform used, a 1-5 rating, what would make them stay, and consent to be contacted.
+- The answers are saved in `cancelSurveys` (see `CancelSurvey` in `src/store.ts`); the cancellation only happens when the survey is submitted.
+- The responses live in the browser for now. A later step can send them to the staff console through the bridge.

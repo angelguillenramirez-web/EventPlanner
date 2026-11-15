@@ -42,6 +42,11 @@ export const queueReset = (st: State, to: string, name: string) => { st.outbox.p
 export const RESERVED = ["forgot", "reset", "app", "login", "join", "invite", "access", "confirm", "welcome", "choose-type", "trial", "rsvp", "catalog", "api", "admin", "www"];
 /** The confirmation e-mail the prototype "sends" (shown in the demo inbox; no real mail is sent). */
 export interface Mail { id: string; to: string; subject: string; token: string; at: number; /** "confirm" = sign-up confirmation (default); "invite" = collaborator invitation; "client" = client access link with a temporary password */ kind?: "confirm" | "invite" | "client" | "notice" | "reset"; /** reset links can be used once */ used?: boolean; /** notices: how it is delivered and what it says (dictionary key + values) */ chan?: "email" | "whatsapp"; key?: string; vars?: Record<string, string>; name?: string; pw?: string; role?: string; from?: string; scope?: string }
+export const CANCEL_REASONS = ["price", "features", "usage", "competitor", "hard", "trying", "paused", "other"] as const;
+export type CancelReason = typeof CANCEL_REASONS[number];
+export const CANCEL_FEATURES = ["events", "guests", "invitations", "seating", "agreement", "tasks", "suppliers", "inbox", "team", "budget"] as const;
+/** Answers from the short survey shown when a planner cancels a trial or a subscription. */
+export interface CancelSurvey { id: string; at: number; plan: Plan; cycle: "monthly" | "yearly"; stage: "trialing" | "active"; reason: CancelReason; detail: string; used: string[]; rating: number; stay: string; contact: boolean }
 export interface Subscription { plan: Plan; cycle: "monthly" | "yearly"; status: "none" | "trialing" | "active" | "canceled" | "expired"; startedAt: number; renewsAt: number; trialEndsAt: number; cancelAtEnd: boolean; promo: string }
 export interface Invoice { id: string; number: string; at: number; description: string; plan: Plan; cycle: "monthly" | "yearly"; subtotal: number; discount: number; total: number; promo: string; last4: string; billTo: string; address: string }
 /** Only the brand and last four digits are kept (test mode: no real card is ever stored). */
@@ -140,7 +145,7 @@ export interface EventType { id: string; color: string; name?: string; custom?: 
 export interface State {
   lang: Lang; theme: Theme; plan: Plan; sidebarCollapsed: boolean; businessLogo: string; defaultFields: TaskField[]; defaultFieldsCustom: boolean; loggedIn: boolean; sub: Subscription; eventLog: number[]; invoices: Invoice[]; card: Card | null; sessionId: string; accounts: Account[]; outbox: Mail[]; accountType: "planner" | "supplier" | null; userName: string; avatar: string;
   tags: string[]; team: Member[]; events: EventT[]; tasks: Task[]; todos: Todo[]; guests: Guest[]; invitations: Invitation[]; seatings: Seating[]; menu: MenuItem[]; menuLibrary: MenuItem[]; services: Service[]; documents: Doc[]; meetings: Meeting[]; dots: Dot[]; itineraries: Itinerary[]; talents: Talent[]; signoffs: Signoff[]; agreements: Agreement[]; designRequests: DesignRequest[]; folders: Folder[]; defaultSurvey: DefaultSurvey | null; userEmail: string; userPhone: string; billing: Billing;
-  supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[];
+  supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
   eventTypes: EventType[]; upsell: string | null; supportOpen: boolean; viewAs: string; seatEditor: boolean; seatDirty: boolean;
 }
 
@@ -296,7 +301,7 @@ function seed(): State {
       { id: uid(), type: "task", key: "inb.n.due", vars: { n: 2 }, at: Date.now() - 30 * 3600000, read: true, href: "/app/tasks" },
       { id: uid(), type: "collab", key: "inb.n.joined", vars: { name: "Sofía" }, at: Date.now() - 2 * 86400000, read: true, href: "/app/team" },
     ],
-    tourSeen: [], supplierProfile: emptyProfile(), accDraft: null, confirmOut: false,
+    tourSeen: [], cancelSurveys: [], supplierProfile: emptyProfile(), accDraft: null, confirmOut: false,
     inboxPrefs: { types: { approval: true, supplier: true, task: true, guest: true, collab: true, billing: true }, digest: "daily" },
     chat: [{ id: uid(), from: "support", text: "¡Hola! ¿En qué podemos ayudarte?" }],
     surveys: seedSurveys(w.id),
@@ -364,7 +369,7 @@ function load(): State {
       });
       st.viewAs = st.team.some((m) => m.id === st.viewAs) ? st.viewAs : "";
       if (!st.threads) { const d = seed(), first = st.events[0]?.id ?? "", old = d.events[0]?.id ?? ""; st.threads = d.threads.map((x) => ({ ...x, eventId: first })); st.notifs = d.notifs.map((n) => ({ ...n, href: n.href.replace(old, first) })); st.inboxPrefs = d.inboxPrefs; } // the demo conversations point at this browser's first event
-      st.tourSeen = st.tourSeen ?? []; st.supplierProfile = { ...emptyProfile(), ...(st.supplierProfile ?? {}) };
+      st.tourSeen = st.tourSeen ?? []; st.cancelSurveys = st.cancelSurveys ?? []; st.supplierProfile = { ...emptyProfile(), ...(st.supplierProfile ?? {}) };
       st.designRequests = st.designRequests ?? []; st.agreements = st.agreements ?? [];
       st.team.forEach((m) => { if (!m.access.includes("agreement") && (m.kind === "client" || m.access.length >= 10)) m.access.push("agreement"); });
       if (st.loggedIn && !st.sessionId) st.loggedIn = false; // sessions from before real log-in existed

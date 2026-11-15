@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useT } from "../i18n";
 import { Checkout, CardModal, InvoiceModal, money, planBullets, usePrices } from "./Billing";
 import { yearlySaving, RESET_MINUTES, TRIAL_DAYS, askLogout, go, logout, eventLimit, queueReset, eventsLast30, resetDemo, uid, update, useStore, type Invoice, type Plan } from "../store";
+import CancelSurvey from "./CancelSurvey";
 import { Modal } from "./ui";
 import SupplierProfileTab from "./SupplierProfile";
 import { ResetMail } from "../Reset";
@@ -176,6 +177,7 @@ function Subscription() {
   const { t, locale } = useT();
   const price = usePrices();
   const [co, setCo] = useState<Plan | null>(null);
+  const [cancel, setCancel] = useState(false);
   const [cyc, setCyc] = useState<"monthly" | "yearly">(s.sub.cycle);
   const n = (v: number) => (v === Infinity ? t("unlimited") : String(v));
   const sub = s.sub, date = (ms: number) => new Date(ms).toLocaleDateString(locale, { dateStyle: "long" });
@@ -192,6 +194,7 @@ function Subscription() {
   });
   return (
     <>
+      {cancel && <CancelSurvey sub={sub} when={date(sub.renewsAt)} onClose={() => setCancel(false)} onDone={() => setCancel(false)} />}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="row between">
           <div><span className="muted small">{t("account.current")}</span><h2 style={{ margin: "2px 0" }}>{access ? t("plan." + s.plan) : t("plan.inactive")} <span className="badge" style={{ verticalAlign: 3, background: sub.status === "active" && !sub.cancelAtEnd ? "var(--teal)" : undefined, color: sub.status === "active" && !sub.cancelAtEnd ? "#0c2a25" : undefined }}>{status}</span></h2>
@@ -199,9 +202,9 @@ function Subscription() {
           <div style={{ textAlign: "right" }}>
             {sub.status === "active" && <><div><b>{money(price(sub.plan, sub.cycle), locale)}</b> <span className="muted small">/ {t("bill." + (sub.cycle === "monthly" ? "mo" : "yr"))}</span></div><div className="muted small">{sub.cancelAtEnd ? t("bill.endson", { when: date(sub.renewsAt) }) : t("bill.nextcharge", { when: date(sub.renewsAt) })}</div></>}
             {sub.status === "trialing" && <div className="muted small">{t("bill.trialends", { when: date(sub.trialEndsAt), amount: money(price(sub.plan, sub.cycle), locale) })}</div>}
-            {sub.status === "trialing" && <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => { if (confirm(t("bill.canceltrial.q"))) update((st) => { st.sub.status = "canceled"; }); }}>{t("bill.canceltrial")}</button>}
+            {sub.status === "trialing" && <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => setCancel(true)}>{t("bill.canceltrial")}</button>}
             <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-              {sub.status === "active" && !sub.cancelAtEnd && <button className="ghost sm" onClick={() => { if (confirm(t("bill.cancel.q", { when: date(sub.renewsAt) }))) update((st) => { st.sub.cancelAtEnd = true; }); }}>{t("bill.cancel")}</button>}
+              {sub.status === "active" && !sub.cancelAtEnd && <button className="ghost sm" onClick={() => setCancel(true)}>{t("bill.cancel")}</button>}
               {sub.status === "active" && sub.cancelAtEnd && <button className="sm" onClick={() => update((st) => { st.sub.cancelAtEnd = false; })}>{t("bill.resume")}</button>}
               {sub.status === "active" && sub.cycle === "monthly" && <button className="ghost sm" onClick={() => setCo(sub.plan)}>{t("bill.toyearly")}</button>}
             </div>
