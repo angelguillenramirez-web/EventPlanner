@@ -17,7 +17,7 @@ const POLY: Record<string, [number, number][]> = {
 const clipOf = (k: string) => (POLY[k] ? `polygon(${POLY[k].map(([x, y]) => `${x}% ${y}%`).join(",")})` : undefined);
 const figCls = (f: Figure) => `seatfig ${f.kind}${POLY[f.kind] ? " clip" : ""}${f.color ? "" : " nocolor"}`;
 const figSize = (k: string) => (k === "circle" ? { w: 100, h: 100 } : k === "line" ? { w: 180, h: 30 } : k === "arrow" || k === "arrowdouble" ? { w: 150, h: 70 } : { w: 120, h: 90 });
-const PALETTE = ["#8FB9A8", "#F2A541", "#4EB1E8", "#C7465C", "#e98a3c", "#8b6fd6", "#5cb85c", "#8a96a3"];
+const PALETTE = ["#46C8B2", "#C7B146", "#4EB1E8", "#C7465C", "#e98a3c", "#8b6fd6", "#5cb85c", "#8a96a3"];
 const SEAT = 24;
 /** Arrangement types; the ones suggested for the event type come first. */
 const KINDS = ["ceremony", "dinner", "cocktail", "bar", "panel", "conference", "classroom", "other"];
@@ -397,7 +397,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
       <div className="row" style={{ gap: 6 }}>
         {none && <button type="button" className={`sw none${cur === "" ? " on" : ""}`} aria-label={t("seat.nocolor")} title={t("seat.nocolor")} disabled={!edit} onClick={() => set("")}>×</button>}
         {PALETTE.map((c) => <button type="button" key={c} className={`sw${cur === c ? " on" : ""}`} style={{ background: c }} aria-label={c} title={v.legend.find((l) => l.color === c)?.meaning || c} disabled={!edit} onClick={() => { set(c); remember(c); }} />)}
-        <label className="sw more" title={t("seat.morecolors")} aria-label={t("seat.morecolors")}><input type="color" value={/^#[0-9a-f]{6}$/i.test(cur) ? cur : "#8FB9A8"} disabled={!edit} onChange={(e) => set(e.target.value)} onBlur={(e) => remember(e.target.value)} /></label>
+        <label className="sw more" title={t("seat.morecolors")} aria-label={t("seat.morecolors")}><input type="color" value={/^#[0-9a-f]{6}$/i.test(cur) ? cur : "#46C8B2"} disabled={!edit} onChange={(e) => set(e.target.value)} onBlur={(e) => remember(e.target.value)} /></label>
       </div>
       {recent.length > 0 && <div className="row" style={{ gap: 6, marginTop: 6 }}><span className="muted small">{t("seat.recent")}</span>{recent.map((c) => <button type="button" key={c} className={`sw${cur === c ? " on" : ""}`} style={{ background: c }} aria-label={c} title={c} disabled={!edit} onClick={() => { set(c); remember(c); }} />)}</div>}
     </div>

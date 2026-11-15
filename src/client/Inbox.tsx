@@ -197,7 +197,7 @@ function Conversation({ th, onBack }: { th: Thread; onBack?: () => void }) {
                       <span className="muted small">{t("inb.quote")}</span>
                       <b style={{ fontSize: "1.25rem" }}>{money(m.quote.amount, locale)}</b>
                       {m.quote.status === "pending" ? <div className="row" style={{ gap: 6 }}><button className="sm" onClick={() => quote(m, true)}><ThumbsUp size={14} /> {t("inb.accept")}</button><button className="ghost sm" onClick={() => quote(m, false)}><ThumbsDown size={14} /> {t("inb.decline")}</button></div>
-                        : <span className="pill" style={{ background: m.quote.status === "accepted" ? "var(--teal)" : "var(--rose)", color: "var(--on-primary)", width: "fit-content" }}>{t("inb.quote." + m.quote.status)}</span>}
+                        : <span className="pill" style={{ background: m.quote.status === "accepted" ? "var(--teal)" : "var(--rose)", color: "#0c1a18", width: "fit-content" }}>{t("inb.quote." + m.quote.status)}</span>}
                     </div>
                   )}
                   <div className="inbmeta">

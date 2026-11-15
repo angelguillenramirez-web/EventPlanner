@@ -31,8 +31,8 @@ export function Lock({ on, children }: { on: boolean; children?: React.ReactNode
   return on ? <span className="lock" ><LockI /> {children}</span> : <>{children}</>;
 }
 
-const PALETTE = ["#C7465C", "#e98a3c", "#F2A541", "#8FB9A8", "#4EB1E8", "#8b6fd6", "#14302c", "#6b7b78", "#ffffff"];
-const HL_PALETTE = ["#fff3a3", "#F2A541", "#ffd0a8", "#a8e6d8", "#a8d8f5", "#f3b4c0", "#d9c8ff"];
+const PALETTE = ["#C7465C", "#e98a3c", "#C7B146", "#46C8B2", "#4EB1E8", "#8b6fd6", "#14302c", "#6b7b78", "#ffffff"];
+const HL_PALETTE = ["#fff3a3", "#C7B146", "#ffd0a8", "#a8e6d8", "#a8d8f5", "#f3b4c0", "#d9c8ff"];
 
 /** Keeps note HTML to a small safe set of tags/styles (notes come from a contentEditable). */
 export function sanitizeHtml(html: string): string {
@@ -59,7 +59,7 @@ export const RichText = forwardRef<{ clear: () => void }, { onChange: (html: str
   const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [color, setColor] = useState<string | null>(null); // null = theme text colour
-  const [hl, setHl] = useState("#F2A541");
+  const [hl, setHl] = useState("#C7B146");
   const [pop, setPop] = useState<"color" | "hl" | null>(null);
   useImperativeHandle(outer, () => ({ clear: () => { if (ref.current) ref.current.innerHTML = ""; onChange(""); } }));
   const emit = () => onChange(ref.current!.innerHTML);

@@ -149,7 +149,7 @@ export interface State {
   eventTypes: EventType[]; upsell: string | null; supportOpen: boolean; viewAs: string; seatEditor: boolean; seatDirty: boolean;
 }
 
-export const COLORS = { teal: "#8FB9A8", gold: "#F2A541", blue: "#4EB1E8", rose: "#C7465C" };
+export const COLORS = { teal: "#46C8B2", gold: "#C7B146", blue: "#4EB1E8", rose: "#C7465C" };
 
 /** Every plan includes every feature and unlimited collaborators and client accounts; plans differ only in events per 30 days and invitations per event (archived, cancelled and deleted events still count). */
 const ALL_FEATURES = { invites: Infinity, tables: true, customTemplates: true, designEdits: Infinity, editContacts: true, assign: true, todos: true, subUsers: Infinity, ai: true };

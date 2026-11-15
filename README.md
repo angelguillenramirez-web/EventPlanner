@@ -217,8 +217,3 @@ Login: Google, Apple (simulated), email/password, or "Create account". New accou
 - Cancelling a trial or a subscription (Account > My subscription) now opens a short survey first: main reason (required), a follow-up (fair price, missing features, competitor), parts of the platform used, a 1-5 rating, what would make them stay, and consent to be contacted.
 - The answers are saved in `cancelSurveys` (see `CancelSurvey` in `src/store.ts`); the cancellation only happens when the survey is submitted.
 - The responses live in the browser for now. A later step can send them to the staff console through the bridge.
-
-## v40: new color palette (Brindis)
-- Colors now follow the "Brindis" design system: plum (brand, sidebar, primary buttons), marigold (accent, highlights), sage (done), blush (decorative) on ivory, with a matching dark mode.
-- Everything is driven by the tokens at the top of `src/styles.css`. The old variable names are kept (`--teal` is now the brand plum). New tokens: `--accent`, `--on-primary`, `--focus`, `--side-*`.
-- Fonts, corner radii and the name were not changed. The previous stylesheet is not kept in the repo; use git history to compare.

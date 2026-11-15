@@ -13,7 +13,7 @@ function PlanCard({ id, pop }: { id: Plan; pop?: boolean }) {
   const price = usePrices();
   return (
     <div className={`card plan${pop ? " pop" : ""}`}>
-      {pop && <span className="badge" style={{ background: "var(--teal)", color: "var(--on-primary)", position: "absolute", top: -10, right: 14 }}>{t("plan.popular")}</span>}
+      {pop && <span className="badge" style={{ background: "var(--teal)", color: "#0c2a25", position: "absolute", top: -10, right: 14 }}>{t("plan.popular")}</span>}
       <h3>{t("plan." + id)}</h3>
       <p className="muted small" style={{ margin: "0 0 6px" }}>{t("plan.tag." + id)}</p>
       <div className="price">{money(price(id, "monthly"), locale)}<span style={{ fontSize: ".9rem" }} className="muted"> {t("plan.permonth")}</span></div>
