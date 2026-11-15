@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String // SUPERADMIN | ORGANIZER | CLIENT
+  locale       String   @default("es")
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  organizedEvents Event[] @relation("Organizer")
+  clientEvents    Event[] @relation("Client")
+}
+
+model Event {
+  id           String    @id @default(cuid())
+  title        String
+  type         String // WEDDING | BIRTHDAY | ANNIVERSARY | BABY_SHOWER | GRADUATION | CORPORATE | OTHER
+  status       String    @default("PLANNING") // PLANNING | CONFIRMED | DONE | CANCELLED
+  date         DateTime
+  venue        String    @default("")
+  description  String    @default("")
+  rsvpDeadline DateTime?
+  organizerId  String
+  clientId     String?
+  createdAt    DateTime  @default(now())
+
+  organizer User  @relation("Organizer", fields: [organizerId], references: [id])
+  client    User? @relation("Client", fields: [clientId], references: [id])
+
+  checklist ChecklistItem[]
+  schedule  ScheduleItem[]
+  guests    Guest[]
+  forms     Form[]
+  documents Document[]
+  outbox    EmailLog[]
+}
+
+model ChecklistItem {
+  id       String    @id @default(cuid())
+  eventId  String
+  title    String
+  category String    @default("")
+  dueDate  DateTime?
+  done     Boolean   @default(false)
+  position Int       @default(0)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model ScheduleItem {
+  id       String    @id @default(cuid())
+  eventId  String
+  title    String
+  startsAt DateTime
+  endsAt   DateTime?
+  location String    @default("")
+  notes    String    @default("")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Guest {
+  id          String    @id @default(cuid())
+  eventId     String
+  name        String
+  email       String    @default("")
+  phone       String    @default("")
+  token       String    @unique @default(cuid())
+  maxParty    Int       @default(1) // seats allotted including the guest
+  status      String    @default("PENDING") // PENDING | ATTENDING | DECLINED
+  attendees   Int       @default(0)
+  dietary     String    @default("")
+  message     String    @default("")
+  invitedAt   DateTime?
+  respondedAt DateTime?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Form {
+  id          String  @id @default(cuid())
+  eventId     String
+  title       String
+  description String  @default("")
+  token       String  @unique @default(cuid())
+  isOpen      Boolean @default(true)
+  fields      String  @default("[]") // JSON: [{id,label,type,options?,required}]
+
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  responses FormResponse[]
+}
+
+model FormResponse {
+  id         String   @id @default(cuid())
+  formId     String
+  respondent String   @default("")
+  answers    String // JSON: {fieldId: value}
+  createdAt  DateTime @default(now())
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id              String   @id @default(cuid())
+  eventId         String
+  name            String
+  category        String   @default("")
+  mime            String
+  size            Int
+  storedName      String
+  visibleToClient Boolean  @default(true)
+  uploadedById    String
+  createdAt       DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  eventId   String
+  guestId   String?
+  toEmail   String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}

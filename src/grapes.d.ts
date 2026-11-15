@@ -1,0 +1,13 @@
+declare module "grapesjs-blocks-basic";
+declare module "grapesjs/dist/css/grapes.min.css";
+declare module "grapesjs-preset-webpage";
+declare module "grapesjs-plugin-forms";
+declare module "grapesjs-navbar";
+declare module "grapesjs-component-countdown";
+declare module "grapesjs-tabs";
+declare module "grapesjs-custom-code";
+declare module "grapesjs-style-bg";
+declare module "grapesjs-tooltip";
+declare module "grapesjs-typed";
+declare module "grapesjs-style-filter";
+declare module "grapesjs-touch";
