@@ -17,7 +17,7 @@ const IDEAS: Record<string, { title: string; message: string; template: string; 
   default: [{ title: "Estás invitado", message: "Queremos compartir este momento contigo.", template: "modern", color: COLORS.teal, font: "sans" }],
 };
 
-const PALETTE = ["#C7465C", "#C7B146", "#46C8B2", "#4EB1E8", "#1f2a37", "#f4f1ea", "#8a5cf5", "#e98a3c"];
+const PALETTE = ["#C7465C", "#F2A541", "#8FB9A8", "#4EB1E8", "#1f2a37", "#f4f1ea", "#8a5cf5", "#e98a3c"];
 
 /** Read-only view of an invitation. Nobody except A plan staff can edit the HTML. */
 function PreviewModal({ inv, onClose }: { inv: Invitation; onClose: () => void }) {

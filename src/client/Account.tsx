@@ -123,7 +123,7 @@ function Identity() {
     <div className="grid" style={{ maxWidth: 720 }}>
       <div className="card">
         <h3>{t("account.signin")}</h3>
-        <div className="row between" style={{ padding: "8px 0" }}><span>{t("email")}: <b>{s.userEmail}</b></span><span className="badge" style={{ background: "var(--teal)", color: "#0c2a25" }}>{t("account.on")}</span></div>
+        <div className="row between" style={{ padding: "8px 0" }}><span>{t("email")}: <b>{s.userEmail}</b></span><span className="badge" style={{ background: "var(--teal)", color: "var(--on-primary)" }}>{t("account.on")}</span></div>
       </div>
       <div className="card">
         <h3>{t("account.resetpw")}</h3>
@@ -217,7 +217,7 @@ function Subscription() {
           const cur = s.plan === p && (sub.status === "active" || sub.status === "trialing");
           return (
             <div key={p} className="card" style={cur ? { borderColor: "var(--teal)", borderWidth: 2 } : {}}>
-              <div className="row between"><h3 style={{ margin: 0 }}>{t("plan." + p)}</h3>{cur && <span className="badge" style={{ background: "var(--teal)", color: "#0c2a25" }}>{t("account.current")}</span>}</div>
+              <div className="row between"><h3 style={{ margin: 0 }}>{t("plan." + p)}</h3>{cur && <span className="badge" style={{ background: "var(--teal)", color: "var(--on-primary)" }}>{t("account.current")}</span>}</div>
               <p className="muted small" style={{ margin: "2px 0 0" }}>{t("plan.tag." + p)}</p>
               <div className="price" style={{ margin: "6px 0" }}>{money(price(p, cyc), locale)}<span className="muted small"> / {t("bill." + (cyc === "monthly" ? "mo" : "yr"))}</span></div>
               {cyc === "yearly" && <p className="small" style={{ color: "var(--teal)", margin: "0 0 4px" }}>{t("bill.yearsave", { save: money(yearlySaving(p), locale) })}</p>}
