@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useT } from "./i18n";
-import { go, TEST_USERS, update, useStore } from "./store";
+import { go, isLocalHost, TEST_USERS, update, useStore } from "./store";
+import { authErrorKey, cloudSignIn } from "./cloud";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
 
 /** Log in with e-mail (planners, suppliers) or the user ID created by the planner . No social sign-in. */
@@ -9,11 +10,20 @@ export default function Login() {
   const s = useStore();
   const [f, setF] = useState({ id: "", pw: "" });
   const [err, setErr] = useState("");
-  const submit = (e: React.FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = f.id.trim().toLowerCase();
     if (!id || !f.pw) return setErr(t("login.err"));
-    const acct = s.accounts.find((a) => a.email.toLowerCase() === id);
+    const acct = isLocalHost ? s.accounts.find((a) => a.email.toLowerCase() === id && !a.id.startsWith("sb:")) : undefined; // built-in test accounts: developer machines only
+    const member = isLocalHost ? s.team.find((x) => x.email.toLowerCase() === id) : undefined; // collaborators and clients: prototype logins, real accounts come next
+    if (!acct && !member) { // real account (Supabase)
+      setBusy(true); setErr("");
+      const { error } = await cloudSignIn(id, f.pw);
+      setBusy(false);
+      if (error) setErr(t(authErrorKey(error)));
+      return; // on success the app signs in by itself and moves on
+    }
     if (acct) {
       if (acct.password !== f.pw) return setErr(t("login.err.bad"));
       if (!acct.confirmed) return setErr(t("login.err.unconfirmed"));
@@ -38,11 +48,11 @@ export default function Login() {
           <div><label htmlFor="li">{t("login.id")}</label><input id="li" autoFocus value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="username" autoCapitalize="none" /></div>
           <div><label htmlFor="lp">{t("password")}</label><input id="lp" type="password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} autoComplete="current-password" /></div>
           {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
-          <button type="submit">{t("login")}</button>
+          <button type="submit" disabled={busy}>{busy ? "…" : t("login")}</button>
         </form>
         <p style={{ textAlign: "center", margin: "0 0 8px" }}><a href="#/forgot">{t("forgot.link")}</a></p>
         <p style={{ textAlign: "center", marginBottom: 0 }}><span className="muted">{t("auth.new")}</span> <a href="#/join">{t("signup")}</a></p>
-        <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "16px 0" }} />
+        {isLocalHost && <><hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "16px 0" }} />
         <div className="muted small" style={{ marginBottom: 6 }}>{t("login.test")}</div>
         {users.map(([k, label]) => (
           <div key={k} className="row between testuser" style={{ flexWrap: "nowrap" }}>
@@ -50,7 +60,7 @@ export default function Login() {
             <button type="button" className="ghost sm" onClick={() => { setF({ id: TEST_USERS[k].login, pw: TEST_USERS[k].password }); setErr(""); }}>{t("login.use")}</button>
           </div>
         ))}
-        <p className="muted small" style={{ marginBottom: 0 }}>{t("login.note")}</p>
+        <p className="muted small" style={{ marginBottom: 0 }}>{t("login.note")}</p></>}
       </div>
     </div>
   );

@@ -217,3 +217,10 @@ Login: Google, Apple (simulated), email/password, or "Create account". New accou
 - Cancelling a trial or a subscription (Account > My subscription) now opens a short survey first: main reason (required), a follow-up (fair price, missing features, competitor), parts of the platform used, a 1-5 rating, what would make them stay, and consent to be contacted.
 - The answers are saved in `cancelSurveys` (see `CancelSurvey` in `src/store.ts`); the cancellation only happens when the survey is submitted.
 - The responses live in the browser for now. A later step can send them to the staff console through the bridge.
+
+## v41: real accounts and cloud saving (Supabase, phase 1)
+- Sign-up, log-in and password reset now use Supabase Auth (`src/cloud.ts`, `src/supabase.ts`). The confirmation and reset e-mails are real; links return to the site with `?code=` (PKCE) and the app signs the user in.
+- Each real account's workspace is saved to the `workspaces` table as one JSON row (row-level security: users only see their own). Saving is debounced (about 1 second), shows a small "Saving / Saved" badge, and unsaved changes survive a refresh. New accounts start empty.
+- Setup SQL: `supabase/schema.sql` (run once in the Supabase SQL editor). Redirect URLs are set in Authentication > URL Configuration.
+- On `localhost` the built-in test accounts and prototype collaborator logins still work; on the public site only real accounts do.
+- Not real yet: collaborator and client logins and invitations, e-mail change for real accounts, billing, WhatsApp. Supabase's built-in e-mail sender is for testing (team addresses only, a few per hour): configure custom SMTP before launch.

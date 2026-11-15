@@ -4,9 +4,9 @@ import Landing from "./Landing";
 import Login from "./Login";
 import ChooseType from "./ChooseType";
 import Welcome from "./Welcome";
-import { Join, Sent, Confirm } from "./Join";
+import { Join, Sent, Confirm, CloudSent } from "./Join";
 import { Invite, Access } from "./Invite";
-import { Forgot, ResetPage } from "./Reset";
+import { Forgot, ResetPage, SetPassword } from "./Reset";
 import SupplierHome from "./SupplierHome";
 import ClientApp from "./client/ClientApp";
 import { TrialPage } from "./client/Billing";
@@ -16,6 +16,7 @@ import SignOutDialog from "./client/SignOut";
 import PublicCatalog from "./client/PublicCatalog";
 import Rsvp from "./client/Rsvp";
 import { RESERVED } from "./store";
+import CloudBadge from "./client/CloudBadge";
 
 export default function App() {
   const s = useStore();
@@ -43,6 +44,8 @@ export default function App() {
   const acct = s.accounts.find((x) => x.id === s.sessionId);
   if (route === "/login") page = <Login />;
   else if (route === "/join") page = <Join />;
+  else if (route === "/join/check") page = <CloudSent />;
+  else if (route === "/set-password") page = <SetPassword />;
   else if (route.startsWith("/join/sent/")) page = <Sent id={route.split("/")[3]} />;
   else if (route.startsWith("/confirm/")) page = <Confirm token={route.split("/")[2]} />;
   else if (route.startsWith("/rsvp/")) page = <Rsvp parts={route.split("/").slice(2)} />;
@@ -56,5 +59,5 @@ export default function App() {
   else if (route === "/choose-type") page = s.loggedIn && !s.accountType && acct?.profile ? <ChooseType /> : null;
   else if (route === "/trial") page = s.loggedIn && s.accountType === "planner" ? <TrialPage /> : null;
   else if (route.startsWith("/app")) page = !s.loggedIn || !s.accountType ? null : s.accountType === "supplier" ? <SupplierHome /> : <ClientApp route={route} />;
-  return <>{page}{route.startsWith("/app") && s.accountType && <HowToGate />}<Upsell />{s.loggedIn && <SignOutDialog />}</>;
+  return <>{page}{route.startsWith("/app") && s.accountType && <HowToGate />}<Upsell />{s.loggedIn && <SignOutDialog />}<CloudBadge /></>;
 }

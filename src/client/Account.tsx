@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { Checkout, CardModal, InvoiceModal, money, planBullets, usePrices } from "./Billing";
 import { yearlySaving, RESET_MINUTES, TRIAL_DAYS, askLogout, go, logout, eventLimit, queueReset, eventsLast30, resetDemo, uid, update, useStore, type Invoice, type Plan } from "../store";
 import CancelSurvey from "./CancelSurvey";
+import { cloudResetRequest, isCloudId } from "../cloud";
 import { Modal } from "./ui";
 import SupplierProfileTab from "./SupplierProfile";
 import { ResetMail } from "../Reset";
@@ -128,7 +129,7 @@ function Identity() {
       <div className="card">
         <h3>{t("account.resetpw")}</h3>
         <p className="muted" style={{ marginTop: 0 }}>{t("reset.req.sub", { email: s.userEmail })}</p>
-        <button onClick={() => { update((st) => { queueReset(st, st.userEmail, st.userName); }); setSent(true); }}>{t("reset.req.btn")}</button>
+        <button onClick={() => { if (isCloudId(s.sessionId)) void cloudResetRequest(s.userEmail); else update((st) => { queueReset(st, st.userEmail, st.userName); }); setSent(true); }}>{t("reset.req.btn")}</button>
         {sent && <p role="status" style={{ color: "var(--teal)" }}>{t("forgot.sent.sub", { email: s.userEmail, min: RESET_MINUTES })}</p>}
         {mail && <><div className="muted small" style={{ margin: "8px 0" }}>{t("sent.demo")}</div><ResetMail mail={mail} /></>}
         <p className="muted small" style={{ marginBottom: 0 }}>{t("reset.nomail")} <button className="ghost sm" onClick={() => update((st) => { st.supportOpen = true; })}>{t("nav.support")}</button></p>

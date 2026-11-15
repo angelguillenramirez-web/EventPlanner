@@ -3,6 +3,7 @@ import { useT } from "./i18n";
 import { TRIAL_DAYS, go, newTrial, uid, update, useStore } from "./store";
 import { Check } from "./icons";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
+import { authErrorKey, cloudResend, cloudSignUp } from "./cloud";
 
 export const Shell = ({ children, wide }: { children: React.ReactNode; wide?: boolean }) => (
   <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", placeItems: "center", padding: 20 }}>
@@ -19,19 +20,21 @@ export function Join() {
   const s = useStore();
   const [f, setF] = useState(() => { let p = { name: "", email: "" }; try { p = JSON.parse(sessionStorage.getItem("aplan-join") ?? "") ?? p; sessionStorage.removeItem("aplan-join"); } catch { /* ignore */ } return { name: p.name ?? "", email: p.email ?? "", company: "", pw: "", promo: "" }; });
   const [err, setErr] = useState("");
-  const submit = (e: React.FormEvent) => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = f.email.trim().toLowerCase(), name = f.name.trim();
     if (!name || !email || !f.pw) return setErr(t("join.err.required"));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr(t("join.err.email"));
     if (f.pw.length < 8) return setErr(t("auth.pwshort"));
-    if (s.accounts.some((a) => a.email.toLowerCase() === email)) return setErr(t("join.err.exists"));
-    const id = uid(), token = uid() + uid() + uid();
-    update((st) => {
-      st.accounts.push({ id, name, email, company: f.company.trim(), password: f.pw, promo: f.promo.trim(), token, confirmed: false, confirmedAt: 0, createdAt: Date.now(), profile: null, accountType: null });
-      st.outbox.push({ id: uid(), to: email, subject: "confirm", token, at: Date.now() });
-    });
-    go(`/join/sent/${id}`);
+    if (s.accounts.some((a) => a.email.toLowerCase() === email && !a.id.startsWith("sb:"))) return setErr(t("join.err.exists")); // built-in test accounts
+    setBusy(true); setErr("");
+    const { data, error } = await cloudSignUp({ name, email, password: f.pw, company: f.company.trim(), promo: f.promo.trim() });
+    setBusy(false);
+    if (error) return setErr(t(authErrorKey(error)));
+    if (data.user && data.user.identities?.length === 0) return setErr(t("join.err.exists")); // address already registered
+    try { sessionStorage.setItem("aplan-pending", email); } catch { /* ignore */ }
+    go("/join/check");
   };
   return (
     <Shell wide>
@@ -49,7 +52,7 @@ export function Join() {
           <div><label htmlFor="jp">{t("password")} *</label><input id="jp" type="password" value={f.pw} autoComplete="new-password" onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
           <div><label htmlFor="jr">{t("join.promo")}</label><input id="jr" value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value.toUpperCase() })} />{f.promo.trim() && <span className="small" style={{ color: "var(--teal)" }}>{t("join.promo.ok", { code: f.promo.trim() })}</span>}</div>
           {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err} {err === t("join.err.exists") && <a href="#/login">{t("login")}</a>}</p>}
-          <button type="submit">{t("join.submit")}</button>
+          <button type="submit" disabled={busy}>{busy ? "…" : t("join.submit")}</button>
           <p className="muted small" style={{ margin: 0 }}>{t("join.terms")}</p>
           <p style={{ margin: 0, textAlign: "center" }}><span className="muted">{t("join.have")}</span> <a href="#/login">{t("login")}</a></p>
         </form>
@@ -101,4 +104,25 @@ export function Confirm({ token }: { token: string }) {
     }, 0);
   }
   return <Shell><div className="card" style={{ textAlign: "center" }}>{acct ? <p>…</p> : <><p>{t("conf.invalid")}</p><a href="#/join">{t("conf.signup")}</a></>}</div></Shell>;
+}
+
+/** "Check your email": the real confirmation e-mail was sent by Supabase. */
+export function CloudSent() {
+  const { t } = useT();
+  const email = (() => { try { return sessionStorage.getItem("aplan-pending") ?? ""; } catch { return ""; } })();
+  const [state, setState] = useState<"" | "ok" | "err">("");
+  if (!email) return <Shell><div className="card"><p>{t("conf.invalid")}</p><a href="#/join">{t("conf.signup")}</a></div></Shell>;
+  const again = async () => { const { error } = await cloudResend(email); setState(error ? "err" : "ok"); };
+  return (
+    <Shell>
+      <div className="card" style={{ textAlign: "center" }}>
+        <h2 style={{ marginTop: 0 }}>{t("sent.title")}</h2>
+        <p>{t("sent.desc", { email })}</p>
+        <button className="ghost" onClick={again}>{t("sent.resend")}</button>
+        {state === "ok" && <p className="small" role="status" style={{ color: "var(--teal)", marginBottom: 0 }}>{t("sent.resent")}</p>}
+        {state === "err" && <p className="small" role="alert" style={{ color: "var(--rose)", marginBottom: 0 }}>{t("auth.err.rate")}</p>}
+        <p className="muted small" style={{ marginBottom: 0 }}><a href="#/login">{t("login")}</a></p>
+      </div>
+    </Shell>
+  );
 }

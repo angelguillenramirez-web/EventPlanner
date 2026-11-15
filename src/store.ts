@@ -449,3 +449,21 @@ export function downloadCsv(filename: string, rows: (string | number)[][]) {
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+/* ───── Cloud accounts (Supabase) ───── */
+/** True on a developer machine: the built-in test accounts and the local-only mode are available there, never on the public site. */
+export const isLocalHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || location.hostname.endsWith(".localhost");
+export const subscribe = (cb: () => void) => { subs.add(cb); return () => { subs.delete(cb); }; };
+/** Fields NOT saved to the cloud workspace: sign-in state, per-device settings and transient UI flags. */
+export const CLOUD_SKIP = new Set(["accounts", "outbox", "loggedIn", "sessionId", "viewAs", "upsell", "supportOpen", "seatEditor", "seatDirty", "accDraft", "confirmOut", "lang", "theme", "sidebarCollapsed", "userEmail"]);
+/** A brand-new real account starts with an empty workspace (no demo events, guests or tasks). */
+export const blankWorkspace = (): Partial<State> => {
+  const w: Partial<State> = {
+    ...seed(), events: [], tasks: [], todos: [], guests: [], invitations: [], seatings: [], menu: [], team: [], tags: [], dots: [], meetings: [], itineraries: [], talents: [],
+    signoffs: [], agreements: [], designRequests: [], documents: [], folders: [], threads: [], notifs: [], support: [], supplierChats: {}, surveys: [], feedback: [],
+    cancelSurveys: [], tourSeen: [], eventLog: [], invoices: [], card: null, defaultSurvey: null, userName: "", userPhone: "", avatar: "", businessLogo: "",
+    billing: { name: "", taxId: "", address: "", city: "", country: "" }, supplierProfile: emptyProfile(), plan: "planner", sub: { ...newTrial("planner"), status: "none" }, accountType: null,
+  };
+  for (const k of CLOUD_SKIP) delete (w as Record<string, unknown>)[k];
+  return w;
+};

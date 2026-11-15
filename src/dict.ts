@@ -940,4 +940,11 @@ export const D: Record<string, E> = {
   "cs.keep": ["Keep my subscription", "Conservar mi suscripción", "Manter minha assinatura"],
   "cs.submit": ["Submit and cancel subscription", "Enviar y cancelar suscripción", "Enviar e cancelar assinatura"],
   "cs.submit.trial": ["Submit and cancel trial", "Enviar y cancelar prueba", "Enviar e cancelar teste"],
+  "auth.err.rate": ["Too many emails were sent. Please wait a few minutes and try again.", "Se enviaron demasiados correos. Espera unos minutos e inténtalo de nuevo.", "Muitos e-mails foram enviados. Aguarde alguns minutos e tente novamente."],
+  "auth.err.generic": ["Something went wrong. Please try again.", "Algo salió mal. Inténtalo de nuevo.", "Algo deu errado. Tente novamente."],
+  "cloud.saving": ["Saving…", "Guardando…", "Salvando…"],
+  "cloud.saved": ["Saved", "Guardado", "Salvo"],
+  "cloud.error": ["Could not save your changes. Check your connection; we will keep trying.", "No se pudieron guardar tus cambios. Revisa tu conexión; seguiremos intentando.", "Não foi possível salvar suas alterações. Verifique sua conexão; vamos tentar novamente."],
+  "setpw.continue": ["Continue to the app", "Continuar a la app", "Continuar para o app"],
+  "setpw.expired": ["This reset link is no longer valid. Request a new one.", "Este enlace ya no es válido. Solicita uno nuevo.", "Este link não é mais válido. Solicite um novo."],
 };
