@@ -646,7 +646,6 @@ export const D: Record<string, E> = {
   "plan.yearly": ["or {amount} per year, billed annually. Save {save} (10%).", "o {amount} al año, facturado anualmente. Ahorras {save} (10 %).", "ou {amount} por ano, cobrado anualmente. Você economiza {save} (10%)."],
   "plan.yearnote": ["Annual billing saves 10%.", "La facturación anual ahorra un 10 %.", "O pagamento anual economiza 10%."],
   "trial.title": ["Start your {n}-day free trial", "Comienza tu prueba gratis de {n} días", "Comece seu teste grátis de {n} dias"],
-  "trial.sub": ["Choose a plan and add a card. You will not be charged today, and you can cancel at any time during the trial.", "Elige un plan y agrega una tarjeta. No se te cobrará hoy y puedes cancelar en cualquier momento durante la prueba.", "Escolha um plano e adicione um cartão. Você não será cobrado hoje e pode cancelar a qualquer momento durante o teste."],
   "trial.today": ["Due today", "A pagar hoy", "A pagar hoje"],
   "trial.then": ["After your trial, {amount} will be charged on {when} for the {plan} plan unless you cancel before then.", "Al terminar la prueba, se cobrarán {amount} el {when} por el plan {plan}, salvo que canceles antes.", "Após o teste, {amount} serão cobrados em {when} pelo plano {plan}, a menos que você cancele antes."],
   "trial.start": ["Start {n}-day free trial", "Comenzar prueba gratis de {n} días", "Iniciar teste grátis de {n} dias"],
@@ -1079,4 +1078,5 @@ export const D: Record<string, E> = {
   "linkerr.reset": ["Request a new password link", "Solicitar un enlace nuevo de contraseña", "Solicitar novo link"],
   "join.sub": ["Plan events, send invitations and manage guests in one place. A card is needed to start the trial.", "Planifica eventos, envía invitaciones y gestiona invitados en un solo lugar. Se necesita una tarjeta para iniciar la prueba.", "Planeje eventos, envie convites e gerencie convidados em um só lugar."],
   "plan.trialnote": ["The Essential plan starts with a {n}-day free trial. A card is required, and you are charged when the trial ends unless you cancel.", "El plan Essential comienza con {n} días de prueba gratis. Se requiere una tarjeta y se te cobra al terminar la prueba, salvo que canceles.", "O plano Essential começa com {n} dias de teste grátis."],
+  "trial.sub": ["Add a card to start your Essential trial. You will not be charged today, and you can cancel at any time during the trial.", "Agrega una tarjeta para iniciar tu prueba de Essential. No se te cobrará hoy y puedes cancelar en cualquier momento durante la prueba.", "Adicione um cartão para iniciar seu teste do Essential."],
 };
