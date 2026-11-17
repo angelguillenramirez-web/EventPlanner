@@ -3,8 +3,8 @@ import QRCode from "qrcode";
 import { changePassword, checkCode, checkCredentials } from "./auth";
 import { otpauthUri, totpAt, totpStep } from "./crypto";
 import { DEMO_PASSWORD, getState, resetAll, ROLE_LABEL, type Staff } from "./store";
-import { Copy } from "./ui";
-import { Lock, ShieldCheck } from "./icons";
+import { Copy, Logo } from "./ui";
+import { Lock } from "./icons";
 
 type Step = "creds" | "change" | "enroll" | "code";
 
@@ -46,7 +46,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div style={{ width: "min(440px, 100%)", display: "grid", gap: 14 }}>
         <div className="card">
-          <div className="row" style={{ marginBottom: 6 }}><ShieldCheck size={22} /><b style={{ fontSize: "1.1rem" }}>Event<span style={{ color: "var(--primary)" }}>Planner</span> · Staff</b></div>
+          <div className="row" style={{ marginBottom: 6 }}><Logo height={30} /><b style={{ fontSize: "1.1rem" }}>· Staff</b></div>
           <p className="muted small" style={{ marginTop: 0 }}>Authorized employees only. Access is logged.</p>
 
           {step === "creds" && (

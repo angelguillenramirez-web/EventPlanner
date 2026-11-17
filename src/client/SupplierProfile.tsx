@@ -30,15 +30,15 @@ export function CatalogLink({ compact }: { compact?: boolean }) {
     <div className={compact ? "" : "card"} style={compact ? {} : { boxShadow: "none" }}>
       <label htmlFor="cslug">{t("cat.address")}</label>
       <div className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
-        <code className="small nowrap" style={{ background: "var(--soft)", padding: "8px 8px", borderRadius: 4 }}>{location.host}/#/</code>
+        <code className="small nowrap" style={{ background: "var(--soft)", padding: "8px 8px", borderRadius: 8 }}>{location.host}/#/</code>
         <input id="cslug" value={v} onChange={(e) => { setV(e.target.value); setErr(""); }} onBlur={() => setV(slugify(v))} />
       </div>
       <p className="muted small" style={{ margin: "4px 0 8px" }}>{t("cat.hint")}</p>
-      {err && <p role="alert" className="small" style={{ color: "var(--rose)", margin: "0 0 8px" }}>{err}</p>}
+      {err && <p role="alert" className="small" style={{ color: "var(--danger)", margin: "0 0 8px" }}>{err}</p>}
       {p.catalogOpen && p.slug === clean ? (
         <>
           <div className="row" style={{ flexWrap: "nowrap", gap: 4, marginBottom: 8 }}>
-            <code className="small ell" style={{ background: "var(--soft)", padding: "8px 10px", borderRadius: 4, flex: 1 }}>{url}</code>
+            <code className="small ell" style={{ background: "var(--soft)", padding: "8px 10px", borderRadius: 8, flex: 1 }}>{url}</code>
             <button className="ghost icon" aria-label={t("gst.copylink")} title={copied ? t("gst.copied") : t("gst.copylink")} onClick={copy}>{copied ? <Check size={16} /> : <Copy size={16} />}</button>
             <a className="ghost btnlike" style={{ padding: "7px 10px" }} href={url} target="_blank" rel="noreferrer" aria-label={t("cat.open")} title={t("cat.open")}><ExternalLink size={15} /></a>
           </div>
@@ -100,10 +100,11 @@ export default function SupplierProfileTab() {
           <div className="row" style={{ gap: 8 }}>
             <span className="thumb" style={{ width: 120, height: 70, margin: 0 }}>{f.cover ? <img src={f.cover} alt="" /> : <ImageIcon size={22} className="muted" />}</span>
             <label className="filebtn sm"><Upload size={14} /> {t("menu.upload")}<input type="file" accept="image/*" hidden onChange={(e) => { pic(e.target.files?.[0]); e.target.value = ""; }} /></label>
+            <button type="button" className="ghost sm" disabled={!s.businessLogo} title={s.businessLogo ? "" : t("ag.logo.noaccount")} onClick={() => set({ cover: s.businessLogo })}>{t("sprof.cover.logo")}</button>
             {f.cover && <button type="button" className="ghost sm" onClick={() => set({ cover: "" })}>{t("menu.removeimg")}</button>}
           </div>
         </div>
-        {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+        {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
         <div className="row"><button>{t("save")}</button>{saved && <span role="status" className="row" style={{ color: "var(--teal)", gap: 4 }}><Check size={15} />{t("saved")}</span>}</div>
       </form>
       <div style={{ display: "grid", gap: 14, alignContent: "start" }}>

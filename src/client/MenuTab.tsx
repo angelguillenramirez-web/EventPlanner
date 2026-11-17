@@ -4,6 +4,7 @@ import { MENU_CATEGORIES, uid, update, useStore, type EventT, type MenuItem } fr
 import { BookmarkPlus, BookOpen, ImageIcon, Pencil, Plus, Trash2, Utensils } from "../icons";
 import { Modal } from "./ui";
 import ApprovalButton from "./Approval";
+import { ask } from "./Ask";
 
 const money = (n: number, locale: string) => "$" + n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -11,7 +12,7 @@ const money = (n: number, locale: string) => "$" + n.toLocaleString(locale, { mi
 export function ImageLightbox({ src, title, onClose }: { src: string; title: string; onClose: () => void }) {
   return (
     <Modal title={title} onClose={onClose} wide>
-      <div style={{ textAlign: "center", marginTop: 12 }}><img src={src} alt={title} style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: 5 }} /></div>
+      <div style={{ textAlign: "center", marginTop: 12 }}><img src={src} alt={title} style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: 12 }} /></div>
     </Modal>
   );
 }
@@ -70,12 +71,12 @@ function ItemModal({ event, item, category, library, onClose }: { event: EventT;
         <div className="full"><label>{t("menu.image")}</label>
           <div className="row" style={{ gap: 12 }}>
             <div className="menuimg" style={{ cursor: f.image ? "zoom-in" : undefined }} onClick={() => f.image && setZoom(true)}>{f.image ? <img src={f.image} alt="" /> : <ImageIcon size={26} className="muted" />}</div>
-            <label className="ghost" style={{ display: "inline-block", padding: "8px 14px", border: "1px solid var(--line)", borderRadius: 5, cursor: "pointer", margin: 0, color: "var(--ink)" }}>
+            <label className="ghost" style={{ display: "inline-block", padding: "8px 14px", border: "1px solid var(--line)", borderRadius: 12, cursor: "pointer", margin: 0, color: "var(--ink)" }}>
               {t("menu.upload")}<input type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
             </label>
             {f.image && <button type="button" className="ghost sm" onClick={() => setF({ ...f, image: "" })}>{t("menu.removeimg")}</button>}
           </div>
-          {err && <div className="small" role="alert" style={{ color: "var(--rose)" }}>{err}</div>}
+          {err && <div className="small" role="alert" style={{ color: "var(--danger)" }}>{err}</div>}
         </div>
         {!library && !item && <label className="row small full" style={{ margin: 0, color: "var(--ink)", gap: 6 }}><input type="checkbox" checked={saveDefault} onChange={(e) => setSaveDefault(e.target.checked)} />{t("menu.lib.save")}</label>}
         <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button>{item ? t("save") : t("add")}</button></div>
@@ -112,7 +113,7 @@ function LibraryModal({ event, onClose, onEdit, onNew }: { event: EventT; onClos
                 <span className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
                   <span style={{ fontWeight: 600, marginRight: 6 }}>{money(m.price, locale)}</span>
                   <button className="ghost icon" aria-label={t("menu.edit")} title={t("menu.edit")} onClick={() => onEdit(m)}><Pencil size={15} /></button>
-                  <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => { if (confirm(t("confirm.delete"))) update((st) => { st.menuLibrary = st.menuLibrary.filter((x) => x.id !== m.id); }); }}><Trash2 size={15} /></button>
+                  <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => ask(t("confirm.delete"), () => update((st) => { st.menuLibrary = st.menuLibrary.filter((x) => x.id !== m.id); }), { danger: true })}><Trash2 size={15} /></button>
                 </span>
               </div>
             );
@@ -174,7 +175,7 @@ export default function MenuTab({ event }: { event: EventT }) {
                   <span className="row" style={{ gap: 0 }}>
                     {!s.menuLibrary.some((x) => x.name === m.name && x.category === m.category) && <button className="ghost icon" aria-label={t("menu.lib.saveone")} title={t("menu.lib.saveone")} onClick={() => update((st) => { st.menuLibrary.push({ ...m, id: uid(), eventId: "", selected: false }); })}><BookmarkPlus size={15} /></button>}
                     <button className="ghost icon" aria-label={t("menu.edit")} title={t("menu.edit")} onClick={() => setModal({ item: m })}><Pencil size={15} /></button>
-                    <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => { if (confirm(t("confirm.delete"))) update((st) => { st.menu = st.menu.filter((x) => x.id !== m.id); }); }}><Trash2 size={15} /></button>
+                    <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => ask(t("confirm.delete"), () => update((st) => { st.menu = st.menu.filter((x) => x.id !== m.id); }), { danger: true })}><Trash2 size={15} /></button>
                   </span>
                 </div>
               </div>

@@ -5,9 +5,10 @@ import { flag } from "../countries";
 import { invitationDoc, templateHtml } from "../invitationTemplates";
 import { Modal } from "./ui";
 import { Bar } from "./ui";
-import { Check, CircleCheck, CircleX, Copy, Eye, Mail, MessageCircle, Pencil, Send, Wand2, X } from "../icons";
+import { Check, CircleCheck, CircleX, Copy, Eye, Lock, Mail, MessageCircle, Pencil, Send, Wand2, X } from "../icons";
+import { ask } from "./Ask";
 
-const TONE: Record<Guest["status"], string> = { draft: "var(--muted)", sent: "var(--blue)", confirmed: "var(--teal)", declined: "var(--rose)" };
+const TONE: Record<Guest["status"], string> = { draft: "var(--muted)", sent: "var(--blue)", confirmed: "var(--teal)", declined: "var(--danger)" };
 const slug = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 const inviteLink = (g: Guest, ev: EventT) => `${location.origin}${location.pathname}#/rsvp/${ev.rsvpSlug || slug(ev.name)}/${g.token}`;
 
@@ -44,6 +45,12 @@ export default function Invitations({ event }: { event: EventT }) {
   };
   const [rsName, setRsName] = useState(event.rsvpSlug || slug(event.name));
   const [rsSaved, setRsSaved] = useState(false);
+  const [rsErr, setRsErr] = useState("");
+  const saveRsName = () => { // the event's link name is unique across all events and can be saved only once by the planner
+    const v = slug(rsName);
+    if (s.events.some((e) => e.id !== event.id && (e.rsvpSlug || slug(e.name)) === v)) { setRsErr(t("rsvp.linkname.taken")); return; }
+    ask(t("rsvp.linkname.once"), () => { update((st) => { const ev = st.events.find((e) => e.id === event.id)!; ev.rsvpSlug = v; ev.rsvpSlugLocked = true; }); setRsSaved(true); });
+  };
   const mine = s.invitations.filter((i) => i.eventId === event.id).sort((a, b) => b.modifiedAt - a.modifiedAt);
   const chosen = mine.find((i) => i.id === invId) ?? mine[0];
   // the invitation shown here is read-only; with none created yet, the default design is previewed
@@ -58,11 +65,13 @@ export default function Invitations({ event }: { event: EventT }) {
       <div className="card" style={{ marginBottom: 12 }}>
         <label htmlFor="rsn">{t("rsvp.linkname")}</label>
         <div className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
-          <code className="small nowrap" style={{ background: "var(--soft)", padding: "8px 8px", borderRadius: 4 }}>…/#/rsvp/</code>
-          <input id="rsn" value={rsName} onChange={(e) => { setRsName(e.target.value); setRsSaved(false); }} onBlur={() => setRsName(slug(rsName))} placeholder={slug(event.name)} />
+          <code className="small nowrap" style={{ background: "var(--soft)", padding: "8px 8px", borderRadius: 8 }}>…/#/rsvp/</code>
+          <input id="rsn" className={event.rsvpSlugLocked ? "rsvp-locked" : undefined} value={rsName} disabled={!!event.rsvpSlugLocked} onChange={(e) => { setRsName(e.target.value); setRsSaved(false); setRsErr(""); }} onBlur={() => setRsName(slug(rsName))} placeholder={slug(event.name)} />
           <code className="small nowrap" style={{ padding: "8px 4px" }}>/guest-name</code>
-          <button disabled={!slug(rsName) || slug(rsName) === (event.rsvpSlug || slug(event.name))} onClick={() => { update((st) => { st.events.find((e) => e.id === event.id)!.rsvpSlug = slug(rsName); }); setRsSaved(true); }}>{t("save")}</button>
+          <button className={event.rsvpSlugLocked ? "rsvp-locked" : undefined} disabled={!!event.rsvpSlugLocked || !slug(rsName) || slug(rsName) === (event.rsvpSlug || slug(event.name))} onClick={saveRsName}>{t("save")}</button>
         </div>
+        {rsErr && <p className="small" role="alert" style={{ margin: "4px 0 0", color: "var(--danger)" }}>{rsErr}</p>}
+        {event.rsvpSlugLocked && <p className="small" style={{ margin: "4px 0 0", color: "var(--muted)" }}><Lock size={12} style={{ verticalAlign: -1 }} /> {t("rsvp.linkname.locked")}</p>}
         <p className="muted small" style={{ margin: "4px 0 0" }}>{t("rsvp.linkname.hint")}{rsSaved && <span style={{ color: "var(--teal)" }}> · {t("saved")}</span>}</p>
       </div>
       <div className="grid g4 stickbar">
@@ -101,7 +110,7 @@ export default function Invitations({ event }: { event: EventT }) {
             {sentList.map((g) => (
               <tr key={g.id}>
                 <td>{g.name}<div className="muted small">{g.invitees}</div></td>
-                <td><span className="pill" style={{ background: TONE[g.status], color: "#0c1a18" }}>{t("g." + g.status)}</span></td>
+                <td><span className={`pill st-${g.status}`}>{t("g." + g.status)}</span></td>
                 <td className="small"><span className="row" style={{ gap: 6 }}>{g.sentVia && chan(g.sentVia)}{g.sentAt ? new Date(g.sentAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) : "—"}</span></td>
                 <td>
                   {linkEdit?.id === g.id ? (
@@ -113,27 +122,27 @@ export default function Invitations({ event }: { event: EventT }) {
                         <button className="ghost icon" aria-label={t("rsvp.link.fromname")} title={t("rsvp.link.fromname")} onClick={() => setLinkEdit({ id: g.id, v: slug(g.name), err: "" })}><Wand2 size={15} /></button>
                         <button className="ghost icon" aria-label={t("cancel")} title={t("cancel")} onClick={() => setLinkEdit(null)}><X size={15} /></button>
                       </div>
-                      {linkEdit.err && <div className="small" style={{ color: "var(--rose)" }}>{linkEdit.err}</div>}
+                      {linkEdit.err && <div className="small" style={{ color: "var(--danger)" }}>{linkEdit.err}</div>}
                     </div>
                   ) : (
                     <span className="row" style={{ gap: 2, flexWrap: "nowrap" }}>
-                      <code className="small" title={inviteLink(g, event)} style={{ background: "var(--soft)", padding: "3px 8px", borderRadius: 3 }}>…/rsvp/{event.rsvpSlug || slug(event.name)}/{g.token.slice(0, 24)}</code>
-                      <button className="ghost icon" aria-label={t("rsvp.link.custom")} title={t("rsvp.link.custom")} onClick={() => setLinkEdit({ id: g.id, v: g.token, err: "" })}><Pencil size={14} /></button>
+                      <code className="small" title={inviteLink(g, event)} style={{ background: "var(--soft)", padding: "3px 8px", borderRadius: 8 }}>…/rsvp/{event.rsvpSlug || slug(event.name)}/{g.token.slice(0, 24)}</code>
+                      <button className="ghost icon" aria-label={t("rsvp.link.custom")} title={t("rsvp.link.custom")} onClick={() => { if (!plan.customLink) { openUpsell("link"); return; } setLinkEdit({ id: g.id, v: g.token, err: "" }); }}><Pencil size={14} /></button>
                     </span>
                   )}
                 </td>
-                <td className="row" style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}>
+                <td><div className="row" style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}>
                   {g.status === "sent" && (
                     <>
                       <button className="ghost icon" aria-label={t("inv.sim.ok")} title={t("inv.sim.ok")} onClick={() => patch(g.id, { status: "confirmed" })}><CircleCheck size={16} style={{ color: "var(--teal)" }} /></button>
-                      <button className="ghost icon" aria-label={t("inv.sim.no")} title={t("inv.sim.no")} onClick={() => patch(g.id, { status: "declined" })}><CircleX size={16} style={{ color: "var(--rose)" }} /></button>
+                      <button className="ghost icon" aria-label={t("inv.sim.no")} title={t("inv.sim.no")} onClick={() => patch(g.id, { status: "declined" })}><CircleX size={16} style={{ color: "var(--danger)" }} /></button>
                     </>
                   )}
                   <button className="ghost icon" aria-label={t("rsvp.preview")} title={t("rsvp.preview")} onClick={() => setPreview(true)}><Eye size={16} /></button>
                   <button className="ghost icon" aria-label={t("gst.resend.wa")} title={t("gst.resend.wa")} disabled={!g.phone} onClick={() => resend(g, "whatsapp")}><MessageCircle size={16} /></button>
                   <button className="ghost icon" aria-label={t("gst.resend.mail")} title={t("gst.resend.mail")} disabled={!g.email} onClick={() => resend(g, "email")}><Mail size={16} /></button>
                   <button className="ghost icon" aria-label={t("gst.copylink")} title={copied === g.id ? t("gst.copied") : t("gst.copylink")} onClick={() => copy(g)}>{copied === g.id ? <Check size={16} /> : <Copy size={16} />}</button>
-                </td>
+                </div></td>
               </tr>
             ))}
           </tbody>
@@ -145,7 +154,7 @@ export default function Invitations({ event }: { event: EventT }) {
             <span className="muted small">{chosen ? t("rsvp.preview.hint") : t("rsvp.preview.none")}</span>
             {mine.length > 1 && <select aria-label={t("ins.mine")} value={chosen?.id ?? ""} style={{ width: "auto" }} onChange={(e) => setInvId(e.target.value)}>{mine.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}</select>}
           </div>
-          <iframe title={t("rsvp.preview")} sandbox="" srcDoc={previewDoc} style={{ width: "100%", height: "65vh", border: "1px solid var(--line)", borderRadius: 5, background: "#f4f1ea" }} />
+          <iframe title={t("rsvp.preview")} sandbox="" srcDoc={previewDoc} style={{ width: "100%", height: "65vh", border: "1px solid var(--line)", borderRadius: 12, background: "#F5EFE4" }} />
         </Modal>
       )}
     </>

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { log, uid, update, useStore, type Article, type Staff } from "../store";
 import { fmtDate, Modal } from "../ui";
 
-/** Knowledge base: Event Planner features and "how to" articles. Everyone with access can search; only a super admin edits. */
+/** Knowledge base: 1Plan features and "how to" articles. Everyone with access can search; only a super admin edits. */
 export default function Kb({ me }: { me: Staff }) {
   const s = useStore();
   const [q, setQ] = useState("");
@@ -17,7 +17,7 @@ export default function Kb({ me }: { me: Staff }) {
   return (
     <>
       <div className="row between"><h1>Knowledge base</h1>{admin && <button onClick={() => setEdit("new")}>+ New article</button>}</div>
-      <p className="muted" style={{ marginTop: -4 }}>Event Planner features and how-to guides for helping customers. First version written {fmtDate(s.kbSeededAt)}; it does not update by itself — report anything outdated to a super admin.</p>
+      <p className="muted" style={{ marginTop: -4 }}>1Plan features and how-to guides for helping customers. First version written {fmtDate(s.kbSeededAt)}; it does not update by itself — report anything outdated to a super admin.</p>
       <div className="kb">
         <div className="card">
           <input aria-label="Search articles" placeholder="Search guides…" value={q} onChange={(e) => setQ(e.target.value)} />

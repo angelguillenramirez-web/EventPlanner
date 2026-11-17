@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
+import { toast } from "../motion";
 import { COLORS, DAY, PLANS, iso, newTask, openUpsell, patchTask, uid, update, useStore, type EventT, type Priority, type Status, type Task, type TaskField, type ViewMode } from "../store";
 import { ThumbsUp, ArchiveRestore, Archive, ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, Copy, GripVertical, LockI, MoreVertical, Pencil, Plus, Settings, Tag as TagIcon, Trash2, User, X } from "../icons";
 import { Modal, NoteView, PRIORITIES, PriBadge, RichText, isEmptyHtml, sanitizeHtml } from "./ui";
@@ -111,7 +112,7 @@ export function DoneBox({ task }: { task: Task }) {
   const { t } = useT();
   return (
     <input type="checkbox" className="tcheck" aria-label={t("task.done")} title={t("task.done")} checked={task.done} onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} draggable={false}
-      onChange={(e) => update((st) => { patchTask(st, task.id, { done: e.target.checked }); })} />
+      onChange={(e) => { if (e.target.checked) toast(t("toast.taskdone")); update((st) => { patchTask(st, task.id, { done: e.target.checked }); }); }} />
   );
 }
 
@@ -234,7 +235,7 @@ export function TaskPanel({ taskId, create, statuses: statusesProp, events, onCl
                     <div className="menu-bg" onClick={() => setMenu(false)} />
                     <div className="menu" role="menu" style={{ zIndex: 2, minWidth: 150 }}>
                       <button role="menuitem" onClick={() => { setMenu(false); setRenaming(true); }}><Pencil size={14} /> {t("task.rename")}</button>
-                      <button role="menuitem" style={{ color: "var(--rose)" }} onClick={() => { setMenu(false); setConfirm(true); }}><Trash2 size={14} /> {t("delete")}</button>
+                      <button role="menuitem" style={{ color: "var(--danger)" }} onClick={() => { setMenu(false); setConfirm(true); }}><Trash2 size={14} /> {t("delete")}</button>
                     </div>
                   </>
                 )}
@@ -347,6 +348,7 @@ export default function TaskTracker({ event }: { event: EventT }) {
   const firstStatus = active[0].id;
   const copyList = (st: Status) => update((x) => {
     const e = x.events.find((y) => y.id === event.id)!;
+    if (!PLANS[x.plan].customStatuses) { x.upsell = "statuses"; return; }
     const nid = uid();
     e.statuses.splice(e.statuses.findIndex((y) => y.id === st.id) + 1, 0, { id: nid, name: `${st.name} (${t("board.copy")})`, color: st.color });
     const now = Date.now();
@@ -397,14 +399,14 @@ export default function TaskTracker({ event }: { event: EventT }) {
               <button role="menuitem" onClick={() => { setColMenu(null); setQuick({ statusId: st.id, n: Date.now() }); }}><Plus size={14} /> {t("task.add")}</button>
               <button role="menuitem" onClick={() => { setColMenu(null); copyList(st); }}><Copy size={14} /> {t("board.copylist")}</button>
               <button role="menuitem" disabled={active.length < 2} onClick={() => { setColMenu(null); setArchived(st.id, true); }}><Archive size={14} /> {t("board.archive")}</button>
-              <button role="menuitem" style={{ color: "var(--rose)" }} disabled={active.length < 2} onClick={() => { setColMenu(null); setDeleting(st.id); }}><Trash2 size={14} /> {t("board.deletelist")}</button>
+              <button role="menuitem" style={{ color: "var(--danger)" }} disabled={active.length < 2} onClick={() => { setColMenu(null); setDeleting(st.id); }}><Trash2 size={14} /> {t("board.deletelist")}</button>
             </div>
           </>
         )}
       </span>
     </div>
   );
-  const addStatusBtn = (cls: string) => <button className={cls} aria-label={t("status.add")} title={t("status.add")} onClick={() => setNaming(true)}><Plus size={cls === "addcol" ? 20 : 15} />{cls === "addtask" && <> {t("status.add")}</>}</button>;
+  const addStatusBtn = (cls: string) => <button className={cls} aria-label={t("status.add")} title={t("status.add")} onClick={() => { if (!PLANS[s.plan].customStatuses) { openUpsell("statuses"); return; } setNaming(true); }}><Plus size={cls === "addcol" ? 20 : 15} />{cls === "addtask" && <> {t("status.add")}</>}</button>;
 
   const board = () => (
     <div className="board" style={{ gridTemplateColumns: `repeat(${active.length}, minmax(260px, 1fr)) 44px` }}>
@@ -413,9 +415,10 @@ export default function TaskTracker({ event }: { event: EventT }) {
           {colHead(st)}
           <div className="list">
             {tasks.filter((x) => x.statusId === st.id).map((x) => (
-              <div key={x.id} className={`tcard${x.done ? " tdone" : ""}${over === x.id ? " dragover-top" : ""}`} draggable onDragStart={(e) => startTask(e, x.id)} onDragEnd={endDrag}
+              <div key={x.id} data-tid={x.id} className={`tcard${x.done ? " tdone" : ""}${over === x.id ? " dragover-top" : ""}`} draggable onDragStart={(e) => startTask(e, x.id)} onDragEnd={endDrag}
                 onDragOver={(e) => { if (drag.current?.kind === "task") { e.preventDefault(); e.stopPropagation(); setOver(x.id); } }} onDrop={(e) => dropOnTask(e, x)}
                 onClick={() => setOpen(x.id)} tabIndex={0} role="button" onKeyDown={(e) => e.key === "Enter" && setOpen(x.id)}>
+                <GripVertical size={14} className="gripi" aria-hidden />
                 <div className="row" style={{ flexWrap: "nowrap", gap: 8, alignItems: "flex-start" }}><DoneBox task={x} /><b>{x.name}</b></div>
                 <div className="mrow">{meta(x)}<LikeButton task={x} /></div>
               </div>
@@ -435,7 +438,7 @@ export default function TaskTracker({ event }: { event: EventT }) {
           <div style={{ marginBottom: 6 }}>{colHead(st)}</div>
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             {tasks.filter((x) => x.statusId === st.id).map((x) => (
-              <div key={x.id} className={`listrow${x.done ? " tdone" : ""}${over === x.id ? " dragover-top" : ""}`} draggable onDragStart={(e) => startTask(e, x.id)} onDragEnd={endDrag}
+              <div key={x.id} data-tid={x.id} className={`listrow${x.done ? " tdone" : ""}${over === x.id ? " dragover-top" : ""}`} draggable onDragStart={(e) => startTask(e, x.id)} onDragEnd={endDrag}
                 onDragOver={(e) => { if (drag.current?.kind === "task") { e.preventDefault(); e.stopPropagation(); setOver(x.id); } }} onDrop={(e) => dropOnTask(e, x)} onClick={() => setOpen(x.id)}>
                 <span className="row" style={{ gap: 6 }}><GripVertical size={14} className="muted" /><DoneBox task={x} /><b>{x.name}</b></span>
                 <span>{has("priority") && <PriBadge p={x.priority} />}</span>
@@ -515,7 +518,7 @@ export default function TaskTracker({ event }: { event: EventT }) {
                 onDragOver={(e) => { if (drag.current?.kind === "task") { e.preventDefault(); setOver(x.id); } }} onDrop={(e) => dropOnTask(e, x)}>
                 <div className="row" style={{ padding: "0 8px", gap: 4, flexWrap: "nowrap", overflow: "hidden", cursor: "grab" }}><GripVertical size={14} className="muted" /><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</span></div>
                 <div style={{ position: "relative", height: 34 }}>
-                  {todayIdx >= 0 && todayIdx < n && <div style={{ position: "absolute", left: todayIdx * W, top: 0, bottom: 0, width: 2, background: "var(--rose)", opacity: .6 }} />}
+                  {todayIdx >= 0 && todayIdx < n && <div style={{ position: "absolute", left: todayIdx * W, top: 0, bottom: 0, width: 2, background: "var(--danger)", opacity: .6 }} />}
                   <button className={`gbar${x.done ? " tdone" : ""}`} style={{ position: "absolute", top: 7, left: dayIdx(x.start) * W, width: Math.max(1, dayIdx(x.due) - dayIdx(x.start) + 1) * W, background: statusOf(x.statusId).color }} onClick={() => setOpen(x.id)}>{x.name}</button>
                 </div>
               </div>

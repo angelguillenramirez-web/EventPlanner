@@ -5,10 +5,11 @@ import { MENU_CATEGORIES, defaultPaper, me, newTask, uid, update, useStore, type
 import { SeatStatic } from "./Tables";
 import { invitationDoc } from "../invitationTemplates";
 import { useMedia } from "../shared";
-import { ArrowLeft, Bold, ChevronDown, ChevronUp, Download, FileText, Image as ImageIcon, Italic, List, ListTodo, MessageCircle, Palette, Plus, Printer, RefreshCw, Save, Send, Trash2, Upload, X } from "../icons";
+import { Pipette, ArrowLeft, Bold, ChevronDown, ChevronUp, Download, FileText, Image as ImageIcon, Italic, List, ListTodo, MessageCircle, Palette, Plus, Printer, RefreshCw, Save, Send, Trash2, Upload, X } from "../icons";
 import { PAPER_COLORS, TEXTURES, cleanDoc, cleanVis, docHtml, esc, fullDoc, logoHtml, paperBg } from "./agDoc";
 import ApprovalButton from "./Approval";
 import { money } from "./Billing";
+import { ask } from "./Ask";
 
 const KINDS: AgKind[] = ["parties", "event", "itinerary", "menu", "talent", "seating", "invitation", "fees", "payment", "terms"];
 
@@ -40,42 +41,55 @@ function PaperPanel({ paper, onChange, onClose }: { paper: AgPaper; onChange: (p
     if (!file.type.startsWith("image/")) return setErr(t("menu.imgerr"));
     try { const data = await readPic(file, kind === "texture" ? 1000 : 500, kind === "texture" ? "image/jpeg" : "image/png"); setErr(""); if (kind === "texture") set({ image: data, texture: "custom" }); else set({ logoImg: data, logo: "upload" }); } catch { setErr(t("menu.imgerr")); }
   };
+  const [branch, setBranch] = useState<"color" | "texture" | "logo" | "">("color"); // one branch open at a time keeps the menu short
+  const Branch = ({ id, label, summary, children }: { id: "color" | "texture" | "logo"; label: string; summary: React.ReactNode; children: React.ReactNode }) => (
+    <div className="agbranch">
+      <button type="button" className="agbhead" aria-expanded={branch === id} onClick={() => setBranch(branch === id ? "" : id)}>
+        <ChevronDown size={14} style={{ transform: branch === id ? undefined : "rotate(-90deg)", transition: "transform .15s" }} /><b>{label}</b><span className="agbsum">{summary}</span>
+      </button>
+      {branch === id && <div className="agbbody">{children}</div>}
+    </div>
+  );
+  const logoSrc = paper.logo === "account" ? s.businessLogo : paper.logo === "upload" ? paper.logoImg : "";
+  const choose = (v: AgPaper["logo"]) => { if (v === "account" && !s.businessLogo) { setErr(t("ag.logo.noaccount")); return; } setErr(""); set({ logo: v }); };
+  const seg = <T extends string>(label: string, value: T, opts: [T, string][], on: (v: T) => void) => (
+    <div className="row" style={{ gap: 8, justifyContent: "space-between" }}><span className="muted small">{label}</span><div className="seg" role="group" aria-label={label}>{opts.map(([v, l]) => <button key={v} type="button" aria-pressed={value === v} onClick={() => on(v)}>{l}</button>)}</div></div>
+  );
   return (
+    <>
+    <div className="menu-bg" style={{ zIndex: 29 }} onClick={onClose} />
     <div className="card agpaper noprint" role="region" aria-label={t("ag.paper")}>
       <div className="row between"><b>{t("ag.paper")}</b><button className="ghost icon" aria-label={t("close")} onClick={onClose}><X size={15} /></button></div>
-      <div className="agpgrid">
-        <div>
-          <label>{t("ag.paper.color")}</label>
-          <div className="row" style={{ gap: 6 }}>
-            {PAPER_COLORS.map((c) => <button key={c} type="button" className="swatch" aria-label={c} aria-pressed={paper.color === c} style={{ background: c }} onClick={() => set({ color: c })} />)}
-            <input type="color" aria-label={t("ag.paper.custom")} title={t("ag.paper.custom")} value={paper.color} onChange={(e) => set({ color: e.target.value })} style={{ width: 34, height: 28, padding: 0 }} />
-          </div>
-          <label style={{ marginTop: 10 }}>{t("ag.paper.texture")}</label>
-          <div className="row" style={{ gap: 6 }}>
-            <button type="button" className="textile" aria-pressed={paper.texture === ""} style={{ background: paper.color }} onClick={() => set({ texture: "" })}>{t("ag.tx.none")}</button>
-            {Object.keys(TEXTURES).map((k) => <button key={k} type="button" className="textile" aria-pressed={paper.texture === k} style={{ background: paperBg({ ...paper, texture: k }) }} onClick={() => set({ texture: k })}>{t("ag.tx." + k)}</button>)}
-            {paper.image && <button type="button" className="textile" aria-pressed={paper.texture === "custom"} style={{ background: paperBg({ ...paper, texture: "custom" }) }} onClick={() => set({ texture: "custom" })}>{t("ag.tx.custom")}</button>}
-          </div>
-          <label className="filebtn sm" style={{ marginTop: 8 }}><Upload size={14} /> {t("ag.tx.upload")}<input type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0], "texture"); e.target.value = ""; }} /></label>
+      <Branch id="color" label={t("ag.paper.color")} summary={<i className="swatch sm" style={{ background: paper.color, display: "inline-block" }} />}>
+        <div className="row" style={{ gap: 6, flexWrap: "nowrap", alignItems: "center" }}>
+          {PAPER_COLORS.map((c) => <button key={c} type="button" className="swatch sm" aria-label={c} aria-pressed={paper.color === c} style={{ background: c }} onClick={() => set({ color: c })} />)}
+          <label className="pickbtn" title={t("ag.paper.custom")} aria-label={t("ag.paper.custom")}><Pipette size={15} /><input type="color" value={paper.color} onChange={(e) => set({ color: e.target.value })} /></label>
         </div>
-        <div>
-          <label>{t("ag.logo")}</label>
-          <div className="seg" role="group" aria-label={t("ag.logo")}>
-            <button type="button" aria-pressed={paper.logo === ""} onClick={() => set({ logo: "" })}>{t("ag.logo.none")}</button>
-            <button type="button" aria-pressed={paper.logo === "account"} disabled={!s.businessLogo} title={s.businessLogo ? "" : t("ag.logo.noaccount")} onClick={() => set({ logo: "account" })}>{t("ag.logo.account")}</button>
-            <button type="button" aria-pressed={paper.logo === "upload"} disabled={!paper.logoImg} onClick={() => set({ logo: "upload" })}>{t("ag.logo.upload")}</button>
-          </div>
-          {!s.businessLogo && <p className="muted small" style={{ margin: "4px 0 0" }}>{t("ag.logo.noaccount")}</p>}
-          <label className="filebtn sm" style={{ marginTop: 8 }}><Upload size={14} /> {t("ag.logo.pick")}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={(e) => { pick(e.target.files?.[0], "logo"); e.target.value = ""; }} /></label>
-          {paper.logo && <div className="row" style={{ marginTop: 8, gap: 6 }}>
-            <div className="seg" role="group" aria-label={t("ag.logo.size")}>{(["s", "m", "l"] as const).map((z) => <button key={z} type="button" aria-pressed={paper.logoSize === z} onClick={() => set({ logoSize: z })}>{z.toUpperCase()}</button>)}</div>
-            <div className="seg" role="group" aria-label={t("ag.logo.pos")}>{(["top", "bottom"] as const).map((z) => <button key={z} type="button" aria-pressed={(paper.logoPos ?? "top") === z} onClick={() => set({ logoPos: z })}>{t("ag.logo." + z)}</button>)}</div>
-            <div className="seg" role="group" aria-label={t("ag.logo.align")}>{(["left", "center", "right"] as const).map((z) => <button key={z} type="button" aria-pressed={paper.logoAlign === z} onClick={() => set({ logoAlign: z })}>{t("ag.logo." + z)}</button>)}</div>
-          </div>}
+      </Branch>
+      <Branch id="texture" label={t("ag.paper.texture")} summary={<span>{paper.texture === "" ? t("ag.tx.none") : paper.texture === "custom" ? t("ag.tx.custom") : t("ag.tx." + paper.texture)}</span>}>
+        <div className="row" style={{ gap: 6 }}>
+          <button type="button" className="textile" aria-pressed={paper.texture === ""} style={{ background: paper.color }} onClick={() => set({ texture: "" })}>{t("ag.tx.none")}</button>
+          {Object.keys(TEXTURES).map((k) => <button key={k} type="button" className="textile" aria-pressed={paper.texture === k} style={{ background: paperBg({ ...paper, texture: k }) }} onClick={() => set({ texture: k })}>{t("ag.tx." + k)}</button>)}
+          {paper.image && <button type="button" className="textile" aria-pressed={paper.texture === "custom"} style={{ background: paperBg({ ...paper, texture: "custom" }) }} onClick={() => set({ texture: "custom" })}>{t("ag.tx.custom")}</button>}
         </div>
-      </div>
-      {err && <p role="alert" style={{ color: "var(--rose)", margin: "6px 0 0" }}>{err}</p>}
+        <label className="filebtn sm" style={{ marginTop: 8 }}><Upload size={14} /> {t("ag.tx.upload")}<input type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0], "texture"); e.target.value = ""; }} /></label>
+      </Branch>
+      <Branch id="logo" label={t("ag.logo")} summary={logoSrc ? <img src={logoSrc} alt="" style={{ height: 18, maxWidth: 40, objectFit: "contain" }} /> : <span>{t("ag.logo.none")}</span>}>
+        <div className="row" style={{ gap: 6, alignItems: "stretch" }}>
+          <button type="button" className="textile logotile" aria-pressed={paper.logo === ""} onClick={() => choose("")}>{t("ag.logo.none")}</button>
+          <button type="button" className="textile logotile" aria-pressed={paper.logo === "account"} disabled={!s.businessLogo} title={s.businessLogo ? "" : t("ag.logo.noaccount")} onClick={() => choose("account")}>{s.businessLogo ? <img src={s.businessLogo} alt="" /> : null}<span>{t("ag.logo.account")}</span></button>
+          {paper.logoImg && <button type="button" className="textile logotile" aria-pressed={paper.logo === "upload"} onClick={() => choose("upload")}><img src={paper.logoImg} alt="" /><span>{t("ag.logo.upload")}</span></button>}
+        </div>
+        <label className="filebtn sm" style={{ marginTop: 8 }}><Upload size={14} /> {t("ag.logo.pick")}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden onChange={(e) => { pick(e.target.files?.[0], "logo"); e.target.value = ""; }} /></label>
+        {paper.logo && <div className="col" style={{ gap: 6, marginTop: 10 }}>
+          {seg(t("ag.logo.size"), paper.logoSize, [["s", "S"], ["m", "M"], ["l", "L"]], (v) => set({ logoSize: v }))}
+          {seg(t("ag.logo.pos"), paper.logoPos ?? "top", [["top", t("ag.logo.top")], ["bottom", t("ag.logo.bottom")]], (v) => set({ logoPos: v }))}
+          {seg(t("ag.logo.align"), paper.logoAlign, [["left", t("ag.logo.left")], ["center", t("ag.logo.center")], ["right", t("ag.logo.right")]], (v) => set({ logoAlign: v }))}
+        </div>}
+      </Branch>
+      {err && <p role="alert" style={{ color: "var(--danger)", margin: "6px 0 0", fontSize: ".85rem" }}>{err}</p>}
     </div>
+    </>
   );
 }
 
@@ -156,7 +170,7 @@ export default function AgreementTab({ event }: { event: EventT }) {
     if (kind === "invitation") {
       const ok = s.signoffs.find((x) => x.eventId === event.id && x.scope === "invitations" && x.approvers.every((a) => a.at));
       const inv = s.invitations.find((i) => i.eventId === event.id && (!ok || ok.subject.includes(i.name))) ?? s.invitations.find((i) => i.eventId === event.id);
-      return inv ? `<div class="agvis"><figure class="agfig inv"><div style="position:relative;width:300px;height:300px;overflow:hidden;border:1px solid #ddd;border-radius:4px"><iframe sandbox="" tabindex="-1" srcdoc="${esc(invitationDoc(inv.html, inv.css))}" style="position:absolute;top:0;left:0;width:640px;height:640px;border:0;transform:scale(.469);transform-origin:top left;pointer-events:none"></iframe></div><figcaption>${esc(inv.name)}</figcaption></figure></div>` : "";
+      return inv ? `<div class="agvis"><figure class="agfig inv"><div style="position:relative;width:300px;height:300px;overflow:hidden;border:1px solid #EDE6D8;border-radius:4px"><iframe sandbox="" tabindex="-1" srcdoc="${esc(invitationDoc(inv.html, inv.css))}" style="position:absolute;top:0;left:0;width:640px;height:640px;border:0;transform:scale(.469);transform-origin:top left;pointer-events:none"></iframe></div><figcaption>${esc(inv.name)}</figcaption></figure></div>` : "";
     }
     return "";
   };
@@ -197,17 +211,17 @@ export default function AgreementTab({ event }: { event: EventT }) {
 
   const setSec = (id: string, fn: (x: AgSection) => void) => patch((a) => { const x = a.sections.find((y) => y.id === id); if (x) fn(x); });
   const move = (i: number, d: -1 | 1) => patch((a) => { const j = i + d; if (j < 0 || j >= a.sections.length) return; [a.sections[i], a.sections[j]] = [a.sections[j], a.sections[i]]; });
-  const refresh = (sec: AgSection) => { if (!confirm(t("ag.refresh.q"))) return; setSec(sec.id, (x) => { x.html = generate(x.kind); if (VIS_KINDS.includes(x.kind)) x.vis = genVis(x.kind); }); setNonce((n) => n + 1); };
-  const refreshAll = () => { if (!confirm(t("ag.refresh.q"))) return; patch((a) => { a.sections.forEach((x) => { if (x.kind !== "custom") { x.html = generate(x.kind); if (VIS_KINDS.includes(x.kind)) x.vis = genVis(x.kind); } }); }); setNonce((n) => n + 1); };
+  const refresh = (sec: AgSection) => ask(t("ag.refresh.q"), () => { setSec(sec.id, (x) => { x.html = generate(x.kind); if (VIS_KINDS.includes(x.kind)) x.vis = genVis(x.kind); }); setNonce((n) => n + 1); });
+  const refreshAll = () => ask(t("ag.refresh.q"), () => { patch((a) => { a.sections.forEach((x) => { if (x.kind !== "custom") { x.html = generate(x.kind); if (VIS_KINDS.includes(x.kind)) x.vis = genVis(x.kind); } }); }); setNonce((n) => n + 1); });
   const saveVersion = () => { patch((a) => { a.versions.push({ id: uid(), at: Date.now(), by: who, name: `v${a.version}.${a.versions.filter((v) => v.name.startsWith(`v${a.version}.`)).length + 1}`, sections: structuredClone(a.sections) }); }); setFlash(t("saved")); setTimeout(() => setFlash(""), 1600); };
   const restore = () => { if (!old) return; patch((a) => { a.sections = structuredClone(old.sections); }); setViewVer(""); setNonce((n) => n + 1); };
-  const amend = () => { if (!confirm(t("ag.amend.q"))) return; patch((a) => { a.versions.push({ id: uid(), at: Date.now(), by: who, name: `v${a.version} (${t("ag.status.signed").toLowerCase()})`, sections: structuredClone(a.sections) }); a.version += 1; a.status = "draft"; }); setNonce((n) => n + 1); };
+  const amend = () => ask(t("ag.amend.q"), () => { patch((a) => { a.versions.push({ id: uid(), at: Date.now(), by: who, name: `v${a.version} (${t("ag.status.signed").toLowerCase()})`, sections: structuredClone(a.sections) }); a.version += 1; a.status = "draft"; }); setNonce((n) => n + 1); });
   const printDoc = () => { const f = document.createElement("iframe"); f.style.cssText = "position:fixed;width:0;height:0;border:0"; document.body.appendChild(f); f.srcdoc = fullDoc(title, body(), paper); f.onload = () => { f.contentWindow?.focus(); f.contentWindow?.print(); setTimeout(() => f.remove(), 2000); }; };
   const download = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([fullDoc(title, body(), paper)], { type: "text/html" })); a.download = `${event.name.replace(/[^\w-]+/g, "_")}-agreement-v${ag.version}.html`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
   const cmd = (c: string, v?: string) => { document.execCommand(c, false, v); setFmt((n) => n + 1); };
   const keep = (e: React.MouseEvent) => e.preventDefault();
   const addComment = (sid: string) => { const v = text.trim(); if (!v) return; setSec(sid, (x) => { x.comments.push({ id: uid(), by: who, at: Date.now(), text: v }); }); setText(""); setComposer(null); };
-  const delComment = (sid: string, cid: string) => { if (!confirm(t("ag.cdel.q"))) return; setSec(sid, (x) => { x.comments = x.comments.filter((c) => c.id !== cid); }); };
+  const delComment = (sid: string, cid: string) => ask(t("ag.cdel.q"), () => setSec(sid, (x) => { x.comments = x.comments.filter((c) => c.id !== cid); }), { danger: true });
   const openTask = (c: Comment) => { setTaskFor(c.id); setTk({ name: c.text.length > 80 ? c.text.slice(0, 77) + "…" : c.text, who: s.userName, due: "" }); };
   /** Creates a real task in the event's task board from a comment and links it back to the comment. */
   const makeTask = (sec: AgSection, c: Comment) => {
@@ -261,7 +275,7 @@ export default function AgreementTab({ event }: { event: EventT }) {
         </div>
         <div className="row" style={{ gap: 6 }}>
           {ag.versions.length > 0 && <select aria-label={t("ag.versions")} value={viewVer} style={{ width: "auto" }} onChange={(e) => setViewVer(e.target.value)}><option value="">{t("ag.versions")} ({ag.versions.length})</option>{ag.versions.map((v) => <option key={v.id} value={v.id}>{v.name} · {new Date(v.at).toLocaleDateString(locale)}</option>)}</select>}
-          {editable && <button className="ghost" aria-expanded={paperOpen} onClick={() => setPaperOpen(!paperOpen)}><Palette size={15} /> {t("ag.paper")}</button>}
+          {editable && <span style={{ position: "relative" }}><button className="ghost" aria-expanded={paperOpen} onClick={() => setPaperOpen(!paperOpen)}><Palette size={15} /> {t("ag.paper")}</button>{paperOpen && <PaperPanel paper={paper} onChange={(p) => patch((a) => { a.paper = p; })} onClose={() => setPaperOpen(false)} />}</span>}
           {editable && <button className="ghost" onClick={refreshAll}><RefreshCw size={15} /> {t("ag.refreshall")}</button>}
           {editable && <button className="ghost" onClick={saveVersion}><Save size={15} /> {t("ag.saveversion")}</button>}
           <button className="ghost icon" aria-label={t("docs.download")} title={t("docs.download")} onClick={download}><Download size={17} /></button>
@@ -271,7 +285,6 @@ export default function AgreementTab({ event }: { event: EventT }) {
           {signed && <button onClick={amend}>{t("ag.amend")}</button>}
         </div>
       </div>
-      {paperOpen && editable && <PaperPanel paper={paper} onChange={(p) => patch((a) => { a.paper = p; })} onClose={() => setPaperOpen(false)} />}
       {signed && <p className="small" style={{ color: "var(--teal)", margin: "0 0 8px" }}>{t("ag.locked.signed")}</p>}
       {inApproval && <p className="small" style={{ color: "var(--gold)", margin: "0 0 8px" }}>{t("ag.locked.approval")}</p>}
       {old && <p className="row small" style={{ margin: "0 0 8px", color: "var(--gold)" }}>{t("ag.viewing")} <button className="ghost sm" onClick={() => setViewVer("")}><ArrowLeft size={13} /> {t("ag.backcur")}</button>{!signed && !inApproval && <button className="sm" onClick={restore}>{t("ag.restore")}</button>}</p>}
@@ -309,7 +322,7 @@ export default function AgreementTab({ event }: { event: EventT }) {
                   {editable && x.vis && <button className="ghost icon" aria-pressed={x.showVis !== false} aria-label={t("ag.vis")} title={`${t("ag.vis")}: ${t(x.showVis !== false ? "ag.vis.on" : "ag.vis.off")}`} style={{ opacity: x.showVis !== false ? 1 : 0.45 }} onClick={() => setSec(x.id, (y) => { y.showVis = y.showVis === false; })}><ImageIcon size={14} /></button>}
                   {editable && x.kind !== "custom" && <button className="ghost icon" aria-label={t("ag.refresh")} title={t("ag.refresh")} onClick={() => refresh(x)}><RefreshCw size={14} /></button>}
                   <button className="ghost icon" aria-label={t("ag.c.add")} title={t("ag.c.add")} aria-expanded={composer === x.id} onClick={() => { setComposer(composer === x.id ? null : x.id); setText(""); }}><MessageCircle size={14} />{x.comments.length > 0 && <span className="small">{x.comments.length}</span>}</button>
-                  {editable && x.kind === "custom" && <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => { if (confirm(t("confirm.delete"))) patch((a) => { a.sections = a.sections.filter((y) => y.id !== x.id); }); }}><Trash2 size={14} /></button>}
+                  {editable && x.kind === "custom" && <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => ask(t("confirm.delete"), () => patch((a) => { a.sections = a.sections.filter((y) => y.id !== x.id); }), { danger: true })}><Trash2 size={14} /></button>}
                 </span>
               </div>
               <Editable html={x.html} editable={editable} nonce={`${x.id}:${nonce}:${viewVer}`} onSave={(h) => { if (h !== x.html) setSec(x.id, (y) => { y.html = h; }); }} />

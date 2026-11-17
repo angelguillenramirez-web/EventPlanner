@@ -1,6 +1,6 @@
 import { createTask, getState, STATUS_LABEL, uid, update, type Priority } from "./store";
 
-// Connection with the Event Planner app through the local bridge (bridge/server.mjs).
+// Connection with the 1Plan app through the local bridge (bridge/server.mjs).
 const BASE = import.meta.env.VITE_BRIDGE_URL ?? "http://localhost:5175";
 const KEY = import.meta.env.VITE_BRIDGE_KEY ?? "dev-only-staff-key";
 export type Link = "connecting" | "online" | "offline";
@@ -27,7 +27,7 @@ async function pull() {
     // link to a known customer by email, or register a new one
     let cust = getState().customers.find((c) => c.email.toLowerCase() === i.customerEmail.toLowerCase());
     if (!cust && i.customerEmail) {
-      const c = { id: uid(), name: i.customerName || i.customerEmail, email: i.customerEmail, plan: "free" as const, status: "active" as const, createdAt: Date.now(), lastLogin: Date.now(), payments: [], tempPassword: "", tempPasswordAt: 0 };
+      const c = { id: uid(), name: i.customerName || i.customerEmail, email: i.customerEmail, plan: "none" as const, status: "active" as const, createdAt: Date.now(), lastLogin: Date.now(), payments: [], tempPassword: "", tempPasswordAt: 0 };
       update((s) => { s.customers.push(c); });
       cust = c;
     }
@@ -46,7 +46,7 @@ async function pullChats() {
     if (!t) {
       let cust = c.customerEmail ? getState().customers.find((x) => x.email.toLowerCase() === c.customerEmail.toLowerCase()) : undefined;
       if (!cust && c.customerEmail) {
-        const n = { id: uid(), name: c.customerName || c.customerEmail, email: c.customerEmail, plan: "free" as const, status: "active" as const, createdAt: Date.now(), lastLogin: Date.now(), payments: [], tempPassword: "", tempPasswordAt: 0 };
+        const n = { id: uid(), name: c.customerName || c.customerEmail, email: c.customerEmail, plan: "none" as const, status: "active" as const, createdAt: Date.now(), lastLogin: Date.now(), payments: [], tempPassword: "", tempPasswordAt: 0 };
         update((s) => { s.customers.push(n); }); cust = n;
       }
       const who = c.customerName || c.customerEmail || "Visitor";
@@ -69,6 +69,7 @@ async function push() {
   const statuses: Record<string, unknown> = {};
   for (const t of s.tasks) if (t.ref) statuses[t.ref] = { taskId: t.id, status: t.status, label: STATUS_LABEL[t.status], updatedAt: t.updatedAt, replies: t.notes.filter((n) => !n.internal && !n.customer).map((n) => ({ at: n.at, text: n.text })) };
   const body = JSON.stringify({
+    coupons: Object.fromEntries((s.config.coupons ?? []).filter((c) => c.active && (!c.expires || c.expires >= new Date().toISOString().slice(0, 10))).map((c) => [c.code, c.percent])),
     plans: s.config.plans, web: s.config.web, design: s.config.design,
     templates: s.templates.filter((t) => t.status === "published").map((t) => ({ id: t.id, name: t.name, category: t.category, html: t.html, css: t.css, version: t.version })),
     statuses,

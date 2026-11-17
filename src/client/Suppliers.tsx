@@ -29,7 +29,7 @@ export function SupplierCard({ x, onChat, onCard, mine }: { x: Supplier; onChat?
   const { t, tn } = useT();
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column", gap: 6, ...(mine ? { borderColor: "var(--teal)" } : {}) }}>
-      {x.cover && <img src={x.cover} alt="" style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 5 }} />}
+      {x.cover && <img src={x.cover} alt="" style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 12 }} />}
       <div className="row between" style={{ flexWrap: "nowrap" }}><b>{x.name || "—"}</b><span className="row small" style={{ gap: 3, flexWrap: "nowrap" }}>{x.rating > 0 ? <><Star size={13} fill="currentColor" style={{ color: "var(--gold)" }} />{x.rating}</> : <span className="badge ok">{t("sup.new")}</span>}</span></div>
       <div><span className="badge">{t("supc." + x.category)}</span></div>
       <div className="muted small row" style={{ gap: 4 }}><MapPin size={13} />{[x.city, x.country].filter(Boolean).join(", ") || "—"}</div>

@@ -32,7 +32,16 @@ export interface Account { id: string; name: string; email: string; company: str
 export interface SupplierProfile { published: boolean; name: string; slug: string; category: string; tagline: string; about: string; city: string; country: string; phone: string; email: string; web: string; instagram: string; supports: string[]; tier: 1 | 2 | 3; from: number; cover: string; catalogOpen: boolean }
 export const emptyProfile = (): SupplierProfile => ({ published: false, name: "", slug: "", category: "catering", tagline: "", about: "", city: "", country: "", phone: "", email: "", web: "", instagram: "", supports: [], tier: 2, from: 0, cover: "", catalogOpen: false });
 /** Account details edited but not saved yet (listed when the user signs out). */
-export interface AccDraft { name?: string; avatar?: string; logo?: string }
+/** Budget of a client for one event. It belongs to the client (ownerId = member id): the planner sees it only while `shared` is on. */
+export interface BudgetRow { id: string; category: string; name: string; vendor: string; estimated: number; actual: number; paid: number; notes: string }
+export interface BudgetTable { id: string; name: string; rows: BudgetRow[] }
+/** Ledger line: positive = income, negative = expense. */
+export interface LedgerRow { id: string; date: string; concept: string; amount: number; notes: string }
+/** Free list (e.g. the alcohol list): the client names the columns and fills the rows. */
+export interface ListTable { id: string; name: string; cols: string[]; rows: { id: string; cells: string[] }[] }
+export interface EventChange { id: string; at: number; by: string; field: string; from: string; to: string }
+export interface Budget { /** one table of costs: every row has a category */ items: BudgetRow[]; /** old format (one table per category), migrated into items */ tables?: BudgetTable[]; ledger: LedgerRow[]; lists: ListTable[]; id: string; ownerId: string; eventId: string; currency: string; total: number; shared: boolean; sharedAt: number; updatedAt: number }
+export interface AccDraft { name?: string; last?: string; avatar?: string; logo?: string }
 /** URL-safe text: "Laura Events & Co." -> "laura-events-co". */
 export const slugify = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 /** Queues the password reset e-mail (link valid for one hour, one use). */
@@ -64,15 +73,15 @@ export interface Guest { id: string; eventId: string; name: string; email: strin
 export const guestDefaults = (g: Partial<Guest> & { id: string; eventId: string; name: string }): Guest => ({ email: "", phone: "", status: "draft", table: "", invitees: 1, message: "", channel: g.phone && !g.email ? "whatsapp" : g.email ? "email" : "whatsapp", country: "MX", lang: "es", token: uid() + uid(), sentAt: 0, sentVia: "", ...g });
 /** A hand-built HTML invitation (made in the invitation studio editor). */
 export interface InvVersion { id: string; at: number; name: string; html: string; css: string }
-export interface Invitation { id: string; eventId: string; name: string; html: string; css: string; createdAt: number; modifiedAt: number; versions: InvVersion[]; /** who made it: an A plan designer, or the user from a template / the AI. Nobody but A plan staff edits the HTML. */ source?: "staff" | "template" | "ai"; comments?: Comment[]; likes?: string[]; requestId?: string }
-/** A custom design requested from the A plan design team. */
+export interface Invitation { id: string; eventId: string; name: string; html: string; css: string; createdAt: number; modifiedAt: number; versions: InvVersion[]; /** who made it: an 1Plan designer, or the user from a template / the AI. Nobody but 1Plan staff edits the HTML. */ source?: "staff" | "template" | "ai"; comments?: Comment[]; likes?: string[]; requestId?: string }
+/** A custom design requested from the 1Plan design team. */
 export interface DesignRequest { id: string; eventId: string; colors: string; tone: string; vibe: string; links: string[]; images: string[]; ref: string; createdAt: number; delivered: boolean }
 export interface Design { template: string; title: string; message: string; color: string; font: string; edits: number; sent: boolean }
 export interface SubUser { id: string; name: string; email: string; password: string }
 export type EventStatus = "active" | "archived" | "cancelled";
 export interface EventT {
-  id: string; name: string; type: string; date: string; location: string; venue: string; description: string; picture: string; createdAt: number;
-  status: EventStatus; /** name used in the RSVP links of this event (…/rsvp/<name>/<guest>) */ rsvpSlug?: string; /** colours recently used in this event's seating plans */ recentColors?: string[]; sections: string[]; hiddenTabs: string[]; tabOrder: string[]; statuses: Status[]; fields: TaskField[]; design: Design; subUsers: SubUser[];
+  id: string; name: string; type: string; date: string; /** start time of the event, "HH:MM" (empty = not set) */ time?: string; /** who changed what and when (event details and status) */ log?: EventChange[]; location: string; venue: string; description: string; picture: string; createdAt: number;
+  status: EventStatus; /** name used in the RSVP links of this event (…/rsvp/<name>/<guest>) */ rsvpSlug?: string; /** the link name can be changed once by the planner; after that only the 1Plan team can change it */ rsvpSlugLocked?: boolean; /** colours recently used in this event's seating plans */ recentColors?: string[]; sections: string[]; hiddenTabs: string[]; tabOrder: string[]; statuses: Status[]; fields: TaskField[]; design: Design; subUsers: SubUser[];
 }
 export type SeatShape = "round" | "square" | "rect" | "oval" | "serpent" | "head" | "rows";
 export interface Seat { id: string; label: string; color: string; guestId: string; party: number }
@@ -143,20 +152,25 @@ export interface Billing { name: string; taxId: string; address: string; city: s
 export interface EventType { id: string; color: string; name?: string; custom?: boolean }
 
 export interface State {
-  lang: Lang; theme: Theme; plan: Plan; sidebarCollapsed: boolean; businessLogo: string; defaultFields: TaskField[]; defaultFieldsCustom: boolean; loggedIn: boolean; sub: Subscription; eventLog: number[]; invoices: Invoice[]; card: Card | null; sessionId: string; accounts: Account[]; outbox: Mail[]; accountType: "planner" | "supplier" | null; userName: string; avatar: string;
+  lang: Lang; theme: Theme; plan: Plan; sidebarCollapsed: boolean; businessLogo: string; userLastName: string; budgets: Budget[]; defaultFields: TaskField[]; defaultFieldsCustom: boolean; loggedIn: boolean; sub: Subscription; eventLog: number[]; invoices: Invoice[]; card: Card | null; sessionId: string; accounts: Account[]; outbox: Mail[]; accountType: "planner" | "supplier" | null; userName: string; avatar: string;
   tags: string[]; team: Member[]; events: EventT[]; tasks: Task[]; todos: Todo[]; guests: Guest[]; invitations: Invitation[]; seatings: Seating[]; menu: MenuItem[]; menuLibrary: MenuItem[]; services: Service[]; documents: Doc[]; meetings: Meeting[]; dots: Dot[]; itineraries: Itinerary[]; talents: Talent[]; signoffs: Signoff[]; agreements: Agreement[]; designRequests: DesignRequest[]; folders: Folder[]; defaultSurvey: DefaultSurvey | null; userEmail: string; userPhone: string; billing: Billing;
   supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
   eventTypes: EventType[]; upsell: string | null; supportOpen: boolean; viewAs: string; seatEditor: boolean; seatDirty: boolean;
 }
 
-export const COLORS = { teal: "#46C8B2", gold: "#C7B146", blue: "#4EB1E8", rose: "#C7465C" };
+/** Brand colors (Paper + Coral Spark palette). gold = sun yellow, blue = soft blue, rose = coral. */
+export const COLORS = { teal: "#46C8B2", gold: "#F0B429", blue: "#6FA8FF", rose: "#FF7A59" };
+/** Colors used before the palette change: data saved with them is moved to the new ones when it loads. */
+const OLD_COLORS: Record<string, string> = { "#F0B429": "#F0B429", "#6FA8FF": "#6FA8FF", "#FF7A59": "#FF7A59" };
 
-/** Every plan includes every feature and unlimited collaborators and client accounts; plans differ only in events per 30 days and invitations per event (archived, cancelled and deleted events still count). */
-const ALL_FEATURES = { invites: Infinity, tables: true, customTemplates: true, designEdits: Infinity, editContacts: true, assign: true, todos: true, subUsers: Infinity, ai: true };
-export const PLANS: Record<Plan, { events: number; invites: number; tables: boolean; customTemplates: boolean; designEdits: number; editContacts: boolean; assign: boolean; todos: boolean; subUsers: number; ai: boolean }> = {
-  basic: { events: 3, ...ALL_FEATURES, invites: 20 },
-  planner: { events: 10, ...ALL_FEATURES, invites: 100 },
-  pro: { events: Infinity, ...ALL_FEATURES },
+/** What each plan allows. Ids stay "basic" / "planner" / "pro" (stored in accounts); names shown to users are Essential / Premier / Unlimited.
+ *  events = per 30 days (archived, cancelled and deleted still count). tables / itineraries / collabs / designEdits = maximum amounts; customStatuses = tasks can have more than To do / In progress / Done. */
+export interface PlanRules { events: number; invites: number; tables: number; printTables: boolean; customStatuses: boolean; documents: boolean; itineraries: number; designRequest: boolean; designEdits: number; customLink: boolean; agreements: boolean; meetings: boolean; collabs: number; customTemplates: boolean; editContacts: boolean; assign: boolean; todos: boolean; subUsers: number; ai: boolean }
+const FULL: PlanRules = { events: Infinity, invites: Infinity, tables: Infinity, printTables: true, customStatuses: true, documents: true, itineraries: Infinity, designRequest: true, designEdits: Infinity, customLink: true, agreements: true, meetings: true, collabs: Infinity, customTemplates: true, editContacts: true, assign: true, todos: true, subUsers: Infinity, ai: false };
+export const PLANS: Record<Plan, PlanRules> = {
+  basic: { ...FULL, events: 2, invites: 25, tables: 1, printTables: false, customStatuses: false, documents: false, itineraries: 1, designRequest: false, designEdits: 0, customLink: false, agreements: false, meetings: false, collabs: 2 },
+  planner: { ...FULL, events: 4, invites: 50, tables: 2, printTables: false, designEdits: 3, customLink: false, collabs: 5 },
+  pro: { ...FULL },
 };
 
 /** Profile in use: the account owner, or (demo) a collaborator the owner is viewing the platform as. */
@@ -179,10 +193,10 @@ const testAccounts = (): Account[] => [
 export const HOWTO_VIDEO_URL = "";
 export const TRIAL_DAYS = 7;
 /** Plan prices in USD. Yearly is billed once a year with 10% off (12 x monthly x 0.9). */
-export const PRICES: Record<Plan, { monthly: number; yearly: number }> = { basic: { monthly: 25, yearly: 270 }, planner: { monthly: 60, yearly: 648 }, pro: { monthly: 95, yearly: 1026 } };
+export const PRICES: Record<Plan, { monthly: number; yearly: number }> = { basic: { monthly: 40, yearly: 432 }, planner: { monthly: 70, yearly: 756 }, pro: { monthly: 110, yearly: 1188 } };
 /** USD saved per year by paying annually instead of monthly. */
 export const yearlySaving = (p: Plan) => Math.round((PRICES[p].monthly * 12 - PRICES[p].yearly) * 100) / 100;
-export const PLAN_NAMES: Record<Plan, string> = { basic: "Basic", planner: "Event planner", pro: "Pro Event Planner" };
+export const PLAN_NAMES: Record<Plan, string> = { basic: "Essential", planner: "Premier", pro: "Unlimited" };
 /** A free trial of a plan, starting now. */
 export const newTrial = (plan: Plan): Subscription => ({ plan, cycle: "monthly", status: "trialing", startedAt: Date.now(), renewsAt: 0, trialEndsAt: Date.now() + TRIAL_DAYS * 86400000, cancelAtEnd: false, promo: "" });
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -198,8 +212,8 @@ const defaultDesign = (type: string): Design => ({
   template: type === "wedding" ? "classic" : "party", title: "", message: "", color: type === "wedding" ? COLORS.rose : type === "birthday" ? COLORS.gold : COLORS.teal, font: type === "wedding" ? "serif" : "sans", edits: 0, sent: false,
 });
 export const DEFAULT_FIELDS: TaskField[] = [];
-export const newEvent = (p: { name: string; type: string; date: string; location?: string; venue?: string; description?: string; picture?: string }, fields: TaskField[] = DEFAULT_FIELDS): EventT => ({
-  id: uid(), name: p.name, type: p.type, date: p.date, location: p.location ?? "", venue: p.venue ?? "", description: p.description ?? "", picture: p.picture ?? "",
+export const newEvent = (p: { name: string; type: string; date: string; time?: string; location?: string; venue?: string; description?: string; picture?: string }, fields: TaskField[] = DEFAULT_FIELDS): EventT => ({
+  id: uid(), name: p.name, type: p.type, date: p.date, time: p.time ?? "", location: p.location ?? "", venue: p.venue ?? "", description: p.description ?? "", picture: p.picture ?? "",
   createdAt: Date.now(), status: "active", sections: [],
   // new events start with Tasks, Itinerary and Invitation Studio; the rest are hidden (listed under "+")
   hiddenTabs: ["todos", "documents", "guests", "invitations", "tables", "menu"], tabOrder: ["tasks", "todos", "documents", "itinerary", "design", "guests", "invitations", "tables", "menu", "talent", "agreement"], statuses: defaultStatuses(), fields: [...fields], design: defaultDesign(p.type), subUsers: [],
@@ -246,6 +260,22 @@ export const defaultMenuLibrary = (): MenuItem[] => ([
   ["dessert", "Pastel de tres leches", "Con fresas frescas.", 5], ["dessert", "Mesa de postres", "Selección de mini postres.", 7], ["kids", "Mini hamburguesas y papas", "Menú infantil.", 8],
 ] as [string, string, string, number][]).map(([category, name, description, price]) => ({ id: uid(), eventId: "", category, name, description, price, image: "", selected: false, createdAt: Date.now() }));
 
+/** Two extra demo events (corporate and anniversary), so the My events list has more than one row of cards. */
+const SAMPLES_KEY = "fiesta-proto-samples-v1";
+function sampleEvents(): { events: EventT[]; tasks: Task[] } {
+  const c = newEvent({ name: "Cumbre de equipo 2027", type: "corporate", date: iso(119), venue: "Hotel Central", location: "Monterrey, México", description: "Reunión anual del equipo, 85 personas." });
+  const a = newEvent({ name: "Bodas de plata (25 años)", type: "anniversary", date: iso(143), venue: "Casa Lomas", location: "Guadalajara, México", description: "Celebración de aniversario para 40 invitados." });
+  for (const e of [c, a]) { e.createdAt -= 40 * DAY; e.hiddenTabs = ["tables", "menu"]; e.tabOrder = []; } // older than 30 days: they do not use up the monthly event limit
+  const mk = (eventId: string, name: string, off: number, len: number, tag: string, priority: Priority, statusId: string): Task =>
+    newTask({ eventId, name, statusId, tags: [tag], assignees: ["Laura"], priority, start: iso(off), due: iso(off + len), createdAt: Date.now() - 20 * DAY });
+  const tasks = [
+    mk(c.id, "Reservar hotel", -10, 8, "Venue", "high", "done"), mk(c.id, "Armar la agenda", 10, 20, "Admin", "medium", "todo"), mk(c.id, "Contratar ponentes", 15, 40, "Suppliers", "high", "todo"),
+    mk(c.id, "Catering del evento", 30, 30, "Food", "medium", "todo"), mk(c.id, "Material impreso", 60, 20, "Admin", "low", "todo"),
+    mk(a.id, "Reservar salón", -5, 10, "Venue", "high", "doing"), mk(a.id, "Lista de invitados", 5, 25, "Invitations", "medium", "todo"),
+    mk(a.id, "Pastel y bocadillos", 40, 30, "Food", "medium", "todo"), mk(a.id, "Música en vivo", 50, 40, "Suppliers", "low", "todo"),
+  ];
+  return { events: [c, a], tasks };
+}
 function seed(): State {
   const w = newEvent({ name: "Boda de Sofía & Daniel", type: "wedding", date: iso(75), venue: "Hacienda Los Arcos", location: "Valle de Bravo, México", description: "Ceremonia y recepción para 120 invitados." });
   w.fields = ["start", "due", "tag", "priority", "links"];
@@ -255,6 +285,7 @@ function seed(): State {
   const b = newEvent({ name: "Cumpleaños de Valentina (15)", type: "birthday", date: iso(30), venue: "Salón Aurora", location: "Ciudad de México" });
   b.createdAt -= 12 * DAY;
   b.hiddenTabs = ["tables", "menu"]; b.tabOrder = [];
+  const sm = sampleEvents();
   const mk = (eventId: string, name: string, off: number, len: number, tag: string, who: string, priority: Priority, statusId: string, notes = ""): Task => ({
     ...newTask({ eventId, name, statusId, tags: tag ? [tag] : [], assignees: who ? [who] : [], priority, start: iso(off), due: iso(off + len), createdAt: Date.now() - 20 * DAY }),
     notes: notes ? [{ id: uid(), html: notes, at: Date.now() - 18 * DAY }] : [],
@@ -271,8 +302,8 @@ function seed(): State {
     { ...mk("", "Revisar contratos pendientes", 0, 3, "Admin", "Laura", "medium", "todo"), eventId: null }];
   const g = (eventId: string, name: string, email: string, phone: string, status: Guest["status"], table = ""): Guest => guestDefaults({ id: uid(), eventId, name, email, phone, status, table, sentAt: status === "draft" ? 0 : Date.now() - 3 * DAY, sentVia: status === "draft" ? "" : "email", channel: "email" });
   return {
-    lang: "es", theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light", plan: "pro", sidebarCollapsed: false, businessLogo: "", defaultFields: [...DEFAULT_FIELDS], defaultFieldsCustom: false, documents: [], folders: [], defaultSurvey: null, userEmail: "laura@planner.test", userPhone: "+52 55 0000 0000", billing: { name: "", taxId: "", address: "", city: "", country: "" }, loggedIn: false, sub: newTrial("pro"), eventLog: [Date.now() - 12 * DAY, Date.now()], invoices: [], card: { brand: "Visa", last4: "4242", exp: "12/30", holder: "Laura" }, sessionId: "", accounts: testAccounts(), outbox: [], accountType: "planner", userName: "Laura", avatar: "",
-    tags: [...new Set(tasks.flatMap((x) => x.tags))].reverse(), team: [memberDefaults({ name: "Sofía", lastName: "Ramos", ...TEST_CLIENT, eventIds: [w.id] }), memberDefaults({ name: "Daniel", lastName: "Torres", ...TEST_COLLAB })], events: [w, b], tasks,
+    lang: "es", theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light", plan: "pro", sidebarCollapsed: false, businessLogo: "", userLastName: "", budgets: [], defaultFields: [...DEFAULT_FIELDS], defaultFieldsCustom: false, documents: [], folders: [], defaultSurvey: null, userEmail: "laura@planner.test", userPhone: "+52 55 0000 0000", billing: { name: "", taxId: "", address: "", city: "", country: "" }, loggedIn: false, sub: newTrial("pro"), eventLog: [Date.now() - 12 * DAY, Date.now()], invoices: [], card: { brand: "Visa", last4: "4242", exp: "12/30", holder: "Laura" }, sessionId: "", accounts: testAccounts(), outbox: [], accountType: "planner", userName: "Laura", avatar: "",
+    tags: [...new Set(tasks.flatMap((x) => x.tags))].reverse(), team: [memberDefaults({ name: "Sofía", lastName: "Ramos", ...TEST_CLIENT, eventIds: [w.id] }), memberDefaults({ name: "Daniel", lastName: "Torres", ...TEST_COLLAB })], events: [w, b, ...sm.events], tasks: [...tasks, ...sm.tasks],
     todos: [{ id: uid(), eventId: w.id, text: "Probar vestido", done: false }, { id: uid(), eventId: w.id, text: "Confirmar música", done: true }],
     invitations: [], seatings: [], menuLibrary: defaultMenuLibrary(), services: defaultServices(),
     menu: [
@@ -308,7 +339,7 @@ function seed(): State {
     feedback: [],
     eventTypes: [
       { id: "wedding", color: COLORS.rose }, { id: "birthday", color: COLORS.gold }, { id: "babyshower", color: COLORS.blue },
-      { id: "graduation", color: COLORS.teal }, { id: "anniversary", color: COLORS.rose }, { id: "corporate", color: COLORS.blue },
+      { id: "graduation", color: COLORS.teal }, { id: "anniversary", color: "#9B87F5" }, { id: "corporate", color: "#B8A98A" },
     ],
     dots: [
       ["Llegada de invitados", "17:30", 30, "Jardín"], ["Ceremonia", "18:00", 60, "Capilla"], ["Cena", "20:00", 120, "Salón principal"], ["Brindis", "20:30", 15, "Salón principal"],
@@ -373,11 +404,13 @@ function load(): State {
       st.designRequests = st.designRequests ?? []; st.agreements = st.agreements ?? [];
       st.team.forEach((m) => { if (!m.access.includes("agreement") && (m.kind === "client" || m.access.length >= 10)) m.access.push("agreement"); });
       if (st.loggedIn && !st.sessionId) st.loggedIn = false; // sessions from before real log-in existed
+      if ((st.lang as string) === "pt") st.lang = "es"; // Portuguese was removed (Spanish and English only for now)
+      st.userLastName = st.userLastName ?? ""; st.budgets = (st.budgets ?? []).map((b) => { const items = b.items ?? (b.tables ?? []).flatMap((tb) => tb.rows.map((r) => ({ ...r, category: r.category ?? tb.name }))); const { tables: _old, ...rest } = b; return { ...rest, items, ledger: b.ledger ?? [], lists: b.lists ?? [] }; });
       st.invoices = st.invoices ?? []; st.card = st.card ?? null; st.sub = st.sub ?? newTrial(st.plan);
       if ((st.plan as string) === "free") st.plan = "planner"; if ((st.sub.plan as string) === "free") { st.sub.plan = "planner"; if (st.sub.status === "active") st.sub.status = "expired"; } // the Free plan no longer exists
       if (st.sub.status === "trialing" && st.sub.trialEndsAt < Date.now()) { // the trial ended: the card on file is charged (simulated), otherwise the account has no active plan
         if (st.card && st.sub.plan) { const p = st.sub.plan, c = st.sub.cycle, amount = PRICES[p][c]; st.sub = { ...st.sub, status: "active", startedAt: st.sub.trialEndsAt, renewsAt: st.sub.trialEndsAt + (c === "monthly" ? 30 : 365) * DAY };
-          st.invoices.unshift({ id: uid(), number: `INV-${new Date().getFullYear()}-${String(st.invoices.length + 1).padStart(4, "0")}`, at: st.sub.trialEndsAt, description: `A plan ${PLAN_NAMES[p]} · ${c}`, plan: p, cycle: c, subtotal: amount, discount: 0, total: amount, promo: "", last4: st.card.last4, billTo: st.billing.name || st.userName, address: [st.billing.address, st.billing.city, st.billing.country].filter(Boolean).join(", ") }); }
+          st.invoices.unshift({ id: uid(), number: `INV-${new Date().getFullYear()}-${String(st.invoices.length + 1).padStart(4, "0")}`, at: st.sub.trialEndsAt, description: `1Plan ${PLAN_NAMES[p]} · ${c}`, plan: p, cycle: c, subtotal: amount, discount: 0, total: amount, promo: "", last4: st.card.last4, billTo: st.billing.name || st.userName, address: [st.billing.address, st.billing.city, st.billing.country].filter(Boolean).join(", ") }); }
         else st.sub.status = "expired"; }
       st.eventLog = st.eventLog ?? st.events.map((e) => e.createdAt);
       st.accounts = st.accounts ?? []; st.outbox = st.outbox ?? []; st.sessionId = st.sessionId ?? "";
@@ -390,9 +423,16 @@ function load(): State {
       st.dots = (st.dots ?? []).flatMap((d) => (d.activities.length > 1 ? d.activities.map((a) => ({ id: uid(), eventId: d.eventId, activities: [a] })) : [d])); // one activity per dot
       st.dots.forEach((d) => d.activities.forEach((a) => { a.comments = a.comments ?? []; a.history = a.history ?? []; }));
       st.events = st.events.map((e) => ({ ...e, sections: e.sections ?? [], hiddenTabs: e.hiddenTabs ?? [], tabOrder: e.tabOrder ?? [], location: e.location ?? "", description: e.description ?? "", picture: e.picture ?? "", status: e.status ?? ("active" as const) }));
+      { // palette change: old default colors of event types and task statuses become the new palette colors
+        const swap = (c: string) => OLD_COLORS[(c ?? "").toUpperCase()] ?? c;
+        st.eventTypes = (st.eventTypes ?? []).map((x) => ({ ...x, color: x.id === "anniversary" && (x.color ?? "").toUpperCase() === "#FF7A59" ? "#9B87F5" : x.id === "corporate" && (x.color ?? "").toUpperCase() === "#6FA8FF" ? "#B8A98A" : swap(x.color) }));
+        st.events.forEach((e) => e.statuses?.forEach((s) => { s.color = swap(s.color); }));
+      }
+      if (!localStorage.getItem(SAMPLES_KEY)) { const sm = sampleEvents(); st.events.push(...sm.events); st.tasks.push(...sm.tasks); localStorage.setItem(KEY, JSON.stringify(st)); localStorage.setItem(SAMPLES_KEY, "1"); } // saved right away, in case load() runs again before the next update // add the demo events once to data saved before they existed
       return st;
     }
   } catch {}
+  try { localStorage.setItem(SAMPLES_KEY, "1"); } catch {} // fresh data already includes them
   return seed();
 }
 let state: State = load();
@@ -455,14 +495,14 @@ export function downloadCsv(filename: string, rows: (string | number)[][]) {
 export const isLocalHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || location.hostname.endsWith(".localhost");
 export const subscribe = (cb: () => void) => { subs.add(cb); return () => { subs.delete(cb); }; };
 /** Fields NOT saved to the cloud workspace: sign-in state, per-device settings and transient UI flags. */
-export const CLOUD_SKIP = new Set(["accounts", "outbox", "loggedIn", "sessionId", "viewAs", "upsell", "supportOpen", "seatEditor", "seatDirty", "accDraft", "confirmOut", "lang", "theme", "sidebarCollapsed", "userEmail"]);
+export const CLOUD_SKIP = new Set(["accounts", "outbox", "loggedIn", "sessionId", "viewAs", "upsell", "supportOpen", "seatEditor", "seatDirty", "accDraft", "confirmOut", "lang", "theme", "sidebarCollapsed", "userEmail", "sub", "plan", "card", "invoices"]);
 /** A brand-new real account starts with an empty workspace (no demo events, guests or tasks). */
 export const blankWorkspace = (): Partial<State> => {
   const w: Partial<State> = {
     ...seed(), events: [], tasks: [], todos: [], guests: [], invitations: [], seatings: [], menu: [], team: [], tags: [], dots: [], meetings: [], itineraries: [], talents: [],
     signoffs: [], agreements: [], designRequests: [], documents: [], folders: [], threads: [], notifs: [], support: [], supplierChats: {}, surveys: [], feedback: [],
-    cancelSurveys: [], tourSeen: [], eventLog: [], invoices: [], card: null, defaultSurvey: null, userName: "", userPhone: "", avatar: "", businessLogo: "",
-    billing: { name: "", taxId: "", address: "", city: "", country: "" }, supplierProfile: emptyProfile(), plan: "planner", sub: { ...newTrial("planner"), status: "none" }, accountType: null,
+    cancelSurveys: [], tourSeen: [], eventLog: [], invoices: [], card: null, defaultSurvey: null, userName: "", userPhone: "", avatar: "", businessLogo: "", userLastName: "", budgets: [],
+    billing: { name: "", taxId: "", address: "", city: "", country: "" }, supplierProfile: emptyProfile(), plan: "basic", sub: { ...newTrial("basic"), status: "none" }, accountType: null,
   };
   for (const k of CLOUD_SKIP) delete (w as Record<string, unknown>)[k];
   return w;

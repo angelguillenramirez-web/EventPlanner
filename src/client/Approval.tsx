@@ -87,7 +87,7 @@ export default function ApprovalButton({ event, scope, subject, summary, snap, b
                           <b>{a.name}</b><span className="muted small">{a.userId === "owner" ? t("apv.owner") : t("collab.kind." + (s.team.find((m) => m.id === a.userId)?.kind ?? "team"))}</span>
                           {a.at ? <><span className="apvok"><Check size={13} /> {t("apv.approvedby", { by: a.by })}</span><span className="muted">{when(a.at)}</span></>
                             : a.userId !== who.id ? <span className="muted small">{t("apv.only", { name: a.name })}</span>
-                            : confirmId === `${x.id}:${a.id}` ? <><span className="small" style={{ color: "var(--rose)" }}>{t("apv.sure")}</span><span className="row" style={{ gap: 6 }}><button className="ghost sm" onClick={() => setConfirmId(null)}>{t("cancel")}</button><button className="sm" onClick={() => approve(x.id, a.id)}>{t("apv.yes")}</button></span></>
+                            : confirmId === `${x.id}:${a.id}` ? <><span className="small" style={{ color: "var(--danger)" }}>{t("apv.sure")}</span><span className="row" style={{ gap: 6 }}><button className="ghost sm" onClick={() => setConfirmId(null)}>{t("cancel")}</button><button className="sm" onClick={() => approve(x.id, a.id)}>{t("apv.yes")}</button></span></>
                             : <button className="sm" onClick={() => setConfirmId(`${x.id}:${a.id}`)}>{t("apv.approve")}</button>}
                         </div>
                         <i className={`apvdot${a.at ? " on" : ""}`} />

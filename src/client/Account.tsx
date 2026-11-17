@@ -3,11 +3,12 @@ import { useT } from "../i18n";
 import { Checkout, CardModal, InvoiceModal, money, planBullets, usePrices } from "./Billing";
 import { yearlySaving, RESET_MINUTES, TRIAL_DAYS, askLogout, go, logout, eventLimit, queueReset, eventsLast30, resetDemo, uid, update, useStore, type Invoice, type Plan } from "../store";
 import CancelSurvey from "./CancelSurvey";
-import { cloudResetRequest, isCloudId } from "../cloud";
+import { cloudResetRequest, goCheckout, goPortal, isCloudId } from "../cloud";
 import { Modal } from "./ui";
 import SupplierProfileTab from "./SupplierProfile";
 import { ResetMail } from "../Reset";
 import { Check, CreditCard, Pencil } from "../icons";
+import { ask } from "./Ask";
 
 const TABS = ["basic", "supplier", "identity", "billing", "subscription"] as const;
 
@@ -50,7 +51,7 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
     <Modal title={t(kind === "email" ? "acct.change.email" : "acct.change.phone")} onClose={onClose}>
       <form onSubmit={save} className="form">
         <div className="full"><label htmlFor="cv">{t(kind === "email" ? "email" : "account.phone")}</label><input id="cv" autoFocus type={kind === "email" ? "email" : "tel"} value={v} onChange={(e) => { setV(e.target.value); setErr(""); }} />
-          <div className="muted small">{t(kind === "email" ? "acct.notify.email" : "acct.notify.phone")}</div>{err && <div className="small" style={{ color: "var(--rose)" }}>{err}</div>}</div>
+          <div className="muted small">{t(kind === "email" ? "acct.notify.email" : "acct.notify.phone")}</div>{err && <div className="small" style={{ color: "var(--danger)" }}>{err}</div>}</div>
         <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button>{t("save")}</button></div>
       </form>
     </Modal>
@@ -60,7 +61,7 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
 /** Names of the details edited but not saved yet. */
 export const unsavedList = (s: ReturnType<typeof useStore>, t: (k: string) => string): string[] => {
   const d = s.accDraft; if (!d) return [];
-  return [d.name !== undefined && d.name !== s.userName ? t("name") : "", d.avatar !== undefined && d.avatar !== s.avatar ? t("account.photo") : "", d.logo !== undefined && d.logo !== s.businessLogo ? t("account.logo") : ""].filter(Boolean);
+  return [d.name !== undefined && d.name !== s.userName ? t("name") : "", d.last !== undefined && d.last !== s.userLastName ? t("team.lastname") : "", d.avatar !== undefined && d.avatar !== s.avatar ? t("account.photo") : "", d.logo !== undefined && d.logo !== s.businessLogo ? t("account.logo") : ""].filter(Boolean);
 };
 
 function BasicInfo() {
@@ -70,7 +71,7 @@ function BasicInfo() {
   const [contact, setContact] = useState<"email" | "phone" | null>(null);
   const [saved, setSaved] = useState(false);
   const d = s.accDraft ?? {};
-  const name = d.name ?? s.userName, avatar = d.avatar ?? s.avatar, logo = d.logo ?? s.businessLogo;
+  const name = d.name ?? s.userName, last = d.last ?? s.userLastName, avatar = d.avatar ?? s.avatar, logo = d.logo ?? s.businessLogo;
   const setDraft = (p: Partial<import("../store").AccDraft>) => { setSaved(false); update((st) => { st.accDraft = { ...(st.accDraft ?? {}), ...p }; }); };
   const dirty = unsavedList(s, t).length > 0;
   const read = (f: File | undefined, apply: (data: string) => void) => {
@@ -80,7 +81,7 @@ function BasicInfo() {
     r.onload = () => apply(String(r.result));
     r.readAsDataURL(f);
   };
-  const save = () => { update((st) => { const d2 = st.accDraft; if (d2?.name !== undefined && d2.name.trim()) { st.userName = d2.name.trim(); const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.name = d2.name.trim(); } if (d2?.avatar !== undefined) st.avatar = d2.avatar; if (d2?.logo !== undefined) st.businessLogo = d2.logo; st.accDraft = null; }); setSaved(true); };
+  const save = () => { update((st) => { const d2 = st.accDraft; if (d2?.name !== undefined && d2.name.trim()) { st.userName = d2.name.trim(); const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.name = d2.name.trim(); } if (d2?.last !== undefined) st.userLastName = d2.last.trim(); if (d2?.avatar !== undefined) st.avatar = d2.avatar; if (d2?.logo !== undefined) st.businessLogo = d2.logo; st.accDraft = null; }); setSaved(true); };
   const row = (label: string, value: string, edit: () => void, ariaEdit: string) => (
     <div><label>{label}</label><div className="row between acctrow"><span>{value || <span className="muted">—</span>}</span><button className="ghost icon" aria-label={ariaEdit} title={ariaEdit} onClick={edit}><Pencil size={15} /></button></div></div>
   );
@@ -95,6 +96,7 @@ function BasicInfo() {
         <div className="muted small" style={{ marginTop: 4 }}>{t("account.photo.hint")}</div>
       </div>
       <div><label htmlFor="nm">{t("name")}</label><input id="nm" value={name} onChange={(e) => setDraft({ name: e.target.value })} /></div>
+      <div><label htmlFor="ln">{t("team.lastname")}</label><input id="ln" value={last} onChange={(e) => setDraft({ last: e.target.value })} /></div>
       {row(t("email"), s.userEmail, () => setContact("email"), t("acct.change.email"))}
       {row(t("account.phone"), s.userPhone, () => setContact("phone"), t("acct.change.phone"))}
       <div><label>{t("account.logo")}</label>
@@ -103,9 +105,8 @@ function BasicInfo() {
           <span className="ov"><Pencil size={26} /></span>
           <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { read(e.target.files?.[0], (v) => setDraft({ logo: v })); e.target.value = ""; }} />
         </label>
-        <div className="muted small" style={{ marginTop: 4 }}>{t("account.logo.note")}</div>
       </div>
-      {msg && <p role="alert" style={{ margin: 0, color: "var(--rose)" }}>{msg}</p>}
+      {msg && <p role="alert" style={{ margin: 0, color: "var(--danger)" }}>{msg}</p>}
       <div className="row"><button disabled={!dirty} onClick={save}>{t("save")}</button><button className="ghost" disabled={!dirty} onClick={() => update((st) => { st.accDraft = null; })}>{t("acct.discard")}</button>{saved && !dirty && <span role="status" className="row" style={{ color: "var(--teal)", gap: 4 }}><Check size={15} />{t("saved")}</span>}</div>
       <hr style={{ border: 0, borderTop: "1px solid var(--line)", width: "100%" }} />
       <div><button className="ghost" onClick={askLogout}>{t("logout")}</button></div>
@@ -124,7 +125,7 @@ function Identity() {
     <div className="grid" style={{ maxWidth: 720 }}>
       <div className="card">
         <h3>{t("account.signin")}</h3>
-        <div className="row between" style={{ padding: "8px 0" }}><span>{t("email")}: <b>{s.userEmail}</b></span><span className="badge" style={{ background: "var(--teal)", color: "#0c2a25" }}>{t("account.on")}</span></div>
+        <div className="row between" style={{ padding: "8px 0" }}><span>{t("email")}: <b>{s.userEmail}</b></span><span className="badge" style={{ background: "var(--teal)", color: "#14203A" }}>{t("account.on")}</span></div>
       </div>
       <div className="card">
         <h3>{t("account.resetpw")}</h3>
@@ -177,7 +178,13 @@ function Subscription() {
   const s = useStore();
   const { t, locale } = useT();
   const price = usePrices();
-  const [co, setCo] = useState<Plan | null>(null);
+  const [co0, setCo0] = useState<Plan | null>(null);
+  const cloud = isCloudId(s.sessionId); // real accounts pay and manage billing on Stripe
+  const [stripeErr, setStripeErr] = useState("");
+  const [stripeBusy, setStripeBusy] = useState(false);
+  const toStripe = async (p?: Plan) => { setStripeBusy(true); setStripeErr(""); const e = p ? await goCheckout(p, cyc) : await goPortal(); if (e) { setStripeErr(t("bill.err.stripe")); setStripeBusy(false); } };
+  const co = cloud ? null : co0; // demo accounts keep the simulated checkout window
+  const setCo = (p: Plan | null) => { if (cloud) { if (p) void toStripe(p); } else setCo0(p); };
   const [cancel, setCancel] = useState(false);
   const [cyc, setCyc] = useState<"monthly" | "yearly">(s.sub.cycle);
   const n = (v: number) => (v === Infinity ? t("unlimited") : String(v));
@@ -190,15 +197,16 @@ function Subscription() {
     if (st.sub.status !== "active") return;
     if (st.sub.cancelAtEnd) { st.sub = { ...st.sub, status: "canceled", renewsAt: 0, cancelAtEnd: false }; return; }
     const amount = price(st.sub.plan, st.sub.cycle);
-    st.invoices.unshift({ id: Math.random().toString(36).slice(2, 10), number: `INV-${new Date().getFullYear()}-${String(st.invoices.length + 1).padStart(4, "0")}`, at: Date.now(), description: `A plan ${t("plan." + st.sub.plan)} · ${t("bill." + st.sub.cycle)}`, plan: st.sub.plan, cycle: st.sub.cycle, subtotal: amount, discount: 0, total: amount, promo: "", last4: st.card?.last4 ?? "0000", billTo: st.billing.name || st.userName, address: [st.billing.address, st.billing.city, st.billing.country].filter(Boolean).join(", ") });
+    st.invoices.unshift({ id: Math.random().toString(36).slice(2, 10), number: `INV-${new Date().getFullYear()}-${String(st.invoices.length + 1).padStart(4, "0")}`, at: Date.now(), description: `1Plan ${t("plan." + st.sub.plan)} · ${t("bill." + st.sub.cycle)}`, plan: st.sub.plan, cycle: st.sub.cycle, subtotal: amount, discount: 0, total: amount, promo: "", last4: st.card?.last4 ?? "0000", billTo: st.billing.name || st.userName, address: [st.billing.address, st.billing.city, st.billing.country].filter(Boolean).join(", ") });
     st.sub.renewsAt += (st.sub.cycle === "monthly" ? 30 : 365) * 86400000;
   });
   return (
     <>
       {cancel && <CancelSurvey sub={sub} when={date(sub.renewsAt)} onClose={() => setCancel(false)} onDone={() => setCancel(false)} />}
+      {stripeErr && <p role="alert" style={{ color: "var(--danger)" }}>{stripeErr}</p>}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="row between">
-          <div><span className="muted small">{t("account.current")}</span><h2 style={{ margin: "2px 0" }}>{access ? t("plan." + s.plan) : t("plan.inactive")} <span className="badge" style={{ verticalAlign: 3, background: sub.status === "active" && !sub.cancelAtEnd ? "var(--teal)" : undefined, color: sub.status === "active" && !sub.cancelAtEnd ? "#0c2a25" : undefined }}>{status}</span></h2>
+          <div><span className="muted small">{t("account.current")}</span><h2 style={{ margin: "2px 0" }}>{access ? t("plan." + s.plan) : t("plan.inactive")} <span className="badge" style={{ verticalAlign: 3, background: sub.status === "active" && !sub.cancelAtEnd ? "var(--teal)" : undefined, color: sub.status === "active" && !sub.cancelAtEnd ? "#14203A" : undefined }}>{status}</span></h2>
             <span className="muted small">{events(s, t, n)}</span></div>
           <div style={{ textAlign: "right" }}>
             {sub.status === "active" && <><div><b>{money(price(sub.plan, sub.cycle), locale)}</b> <span className="muted small">/ {t("bill." + (sub.cycle === "monthly" ? "mo" : "yr"))}</span></div><div className="muted small">{sub.cancelAtEnd ? t("bill.endson", { when: date(sub.renewsAt) }) : t("bill.nextcharge", { when: date(sub.renewsAt) })}</div></>}
@@ -206,8 +214,9 @@ function Subscription() {
             {sub.status === "trialing" && <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => setCancel(true)}>{t("bill.canceltrial")}</button>}
             <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
               {sub.status === "active" && !sub.cancelAtEnd && <button className="ghost sm" onClick={() => setCancel(true)}>{t("bill.cancel")}</button>}
-              {sub.status === "active" && sub.cancelAtEnd && <button className="sm" onClick={() => update((st) => { st.sub.cancelAtEnd = false; })}>{t("bill.resume")}</button>}
-              {sub.status === "active" && sub.cycle === "monthly" && <button className="ghost sm" onClick={() => setCo(sub.plan)}>{t("bill.toyearly")}</button>}
+              {sub.status === "active" && sub.cancelAtEnd && <button className="sm" onClick={() => { if (cloud) void toStripe(); else update((st) => { st.sub.cancelAtEnd = false; }); }}>{t("bill.resume")}</button>}
+              {cloud && sub.status !== "none" && <button className="ghost sm" disabled={stripeBusy} onClick={() => void toStripe()}>{t("bill.manage")}</button>}
+              {!cloud && sub.status === "active" && sub.cycle === "monthly" && <button className="ghost sm" onClick={() => setCo(sub.plan)}>{t("bill.toyearly")}</button>}
             </div>
           </div>
         </div>
@@ -218,7 +227,7 @@ function Subscription() {
           const cur = s.plan === p && (sub.status === "active" || sub.status === "trialing");
           return (
             <div key={p} className="card" style={cur ? { borderColor: "var(--teal)", borderWidth: 2 } : {}}>
-              <div className="row between"><h3 style={{ margin: 0 }}>{t("plan." + p)}</h3>{cur && <span className="badge" style={{ background: "var(--teal)", color: "#0c2a25" }}>{t("account.current")}</span>}</div>
+              <div className="row between"><h3 style={{ margin: 0 }}>{t("plan." + p)}</h3>{cur && <span className="badge" style={{ background: "var(--teal)", color: "#14203A" }}>{t("account.current")}</span>}</div>
               <p className="muted small" style={{ margin: "2px 0 0" }}>{t("plan.tag." + p)}</p>
               <div className="price" style={{ margin: "6px 0" }}>{money(price(p, cyc), locale)}<span className="muted small"> / {t("bill." + (cyc === "monthly" ? "mo" : "yr"))}</span></div>
               {cyc === "yearly" && <p className="small" style={{ color: "var(--teal)", margin: "0 0 4px" }}>{t("bill.yearsave", { save: money(yearlySaving(p), locale) })}</p>}
@@ -231,7 +240,7 @@ function Subscription() {
       <p className="muted small" style={{ marginTop: 12 }}>{t("plan.countnote")}</p>
       <p className="muted small" style={{ marginTop: 16 }}>
         {t("bill.demo")} <button className="ghost sm" disabled={sub.status !== "active"} onClick={simulateRenewal}>{t("bill.simrenew")}</button>{" "}
-        <button className="ghost sm" onClick={() => { if (confirm(t("account.resetdemo") + "?")) resetDemo(); }}>{t("account.resetdemo")}</button>
+        <button className="ghost sm" onClick={() => ask(t("account.resetdemo") + "?", () => resetDemo(), { danger: true })}>{t("account.resetdemo")}</button>
       </p>
       {co && <Checkout plan={co} cycle={cyc} onClose={() => setCo(null)} />}
     </>

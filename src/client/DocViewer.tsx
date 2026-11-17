@@ -25,7 +25,7 @@ const parseCsv = (txt: string, sep: string) => {
   if (cell || row.length) { row.push(cell); rows.push(row); }
   return rows;
 };
-const DOC_CSS = "body{font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.55;color:#222;padding:24px 32px;max-width:820px;margin:0 auto}img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}";
+const DOC_CSS = "body{font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.55;color:#14203A;padding:24px 32px;max-width:820px;margin:0 auto}img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #EDE6D8;padding:4px 8px}";
 
 /** Read-only viewer for documents: PDF, images, text/XML/JSON/CSV, Word (.docx), Excel (.xlsx) and PowerPoint (.pptx). All rendered in the browser with free, open-source libraries. */
 export default function DocViewer({ name, data }: { name: string; data: string }) {
@@ -83,8 +83,8 @@ export default function DocViewer({ name, data }: { name: string; data: string }
 
   if (state === "loading") return <p className="muted">…</p>;
   if (state === "unsupported" || state === "error") return <div style={{ textAlign: "center", padding: "30px 0" }}><p className="muted">{state === "error" ? t("docs.viewerr") : t("docs.nopreview")}</p><p className="muted small">{t("docs.legacy")}</p></div>;
-  const box: React.CSSProperties = { width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 4, background: "var(--surface)" };
-  if (IMG.includes(e)) return <div style={{ textAlign: "center" }}><img src={url} alt={name} style={{ maxWidth: "100%", maxHeight: "68vh", borderRadius: 4 }} /></div>;
+  const box: React.CSSProperties = { width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 12, background: "var(--surface)" };
+  if (IMG.includes(e)) return <div style={{ textAlign: "center" }}><img src={url} alt={name} style={{ maxWidth: "100%", maxHeight: "68vh", borderRadius: 12 }} /></div>;
   if (e === "pdf") return <iframe title={name} src={url} style={box} />;
   if (e === "pptx") return <div ref={slides} className="pptview" style={{ ...box, overflow: "auto", display: "grid", placeItems: "center" }} />;
   if (html) return <iframe title={name} sandbox="" srcDoc={`<!doctype html><meta charset="utf-8"><style>${DOC_CSS}</style>${html}`} style={{ ...box, background: "#fff" }} />;

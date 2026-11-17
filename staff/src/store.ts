@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { hashPassword, newTotpSecret } from "./crypto";
-import { seedArticles } from "./kbSeed";
+import { KB_VERSION, seedArticles } from "./kbSeed";
 
 // ───────── Types ─────────
 export type Role = "super_admin" | "support" | "designer";
@@ -20,7 +20,7 @@ export const PRESENCE: Record<Presence, { label: string; color: string }> = {
 export const PRESENCE_LIST = Object.keys(PRESENCE) as Presence[];
 export interface Staff {
   id: string; name: string; email: string; role: Role; active: boolean;
-  /** Profile picture (small data URL), job title, and availability. Staff-only: never sent to the Event Planner app or customers. */
+  /** Profile picture (small data URL), job title, and availability. Staff-only: never sent to the 1Plan app or customers. */
   avatar: string; title: string; presence: Presence; presenceNote: string; presenceAt: number;
   salt: string; hash: string; mustChangePassword: boolean;
   totpSecret: string; totpEnrolled: boolean; lastTotpStep: number;
@@ -36,7 +36,7 @@ export interface Task {
   id: string; kind: TaskKind; title: string; description: string; requester: string; customerId: string; priority: Priority;
   status: TaskStatus; assigneeId: string | null; createdAt: number; updatedAt: number; resolvedAt: number; source: "platform" | "staff";
   templateId: string; notes: TaskNote[]; history: TaskEvent[];
-  /** Reference given by the Event Planner app when the request came from a customer. */
+  /** Reference given by the 1Plan app when the request came from a customer. */
   ref?: string;
   /** How the customer reached us: live chat or a written request. */
   channel: "chat" | "written";
@@ -48,7 +48,7 @@ export interface Task {
 export type PayStatus = "paid" | "failed" | "refunded" | "pending";
 export interface Payment { id: string; at: number; amount: number; plan: string; method: string; status: PayStatus; issue: string }
 export interface Customer {
-  id: string; name: string; email: string; plan: "free" | "planner" | "pro"; status: "active" | "blocked" | "locked";
+  id: string; name: string; email: string; plan: CustomerPlan; status: "active" | "blocked" | "locked";
   createdAt: number; lastLogin: number; payments: Payment[]; tempPassword: string; tempPasswordAt: number;
 }
 export type TplStatus = "draft" | "published";
@@ -57,9 +57,33 @@ export const SOURCE_LABEL: Record<TplSource, string> = { template: "Template", r
 export interface TplComment { id: string; by: string; at: number; text: string }
 export interface Template { id: string; name: string; category: string; status: TplStatus; html: string; css: string; version: number; updatedAt: number; publishedAt: number; by: string; source: TplSource; tags: string[]; comments: TplComment[]; taskId?: string; versions?: { id: string; at: number; name: string; html: string; css: string }[] }
 export interface ApiKey { id: string; name: string; service: string; last4: string; status: "active" | "revoked"; createdAt: number; rotatedAt: number }
+/** Customer plans of 1Plan. Ids stay basic / planner / pro (as stored by the customer app); the names customers see are Essential / Premier / Unlimited. "none" = no active plan or trial. */
+export type CustomerPlan = "none" | "basic" | "planner" | "pro";
+export const PLAN_LABEL: Record<CustomerPlan, string> = { none: "No plan", basic: "Essential", planner: "Premier", pro: "Unlimited" };
+export const TRIAL_DAYS = 7;
+/** What each plan allows, as defined in the customer app (Infinity = unlimited). Reference for support; the customer app enforces it. */
+export const PLAN_RULES: { label: string; values: Record<"basic" | "planner" | "pro", string> }[] = [
+  { label: "Events per 30 days (archived, cancelled and deleted count)", values: { basic: "2", planner: "4", pro: "Unlimited" } },
+  { label: "Invitations per event", values: { basic: "25", planner: "50", pro: "Unlimited" } },
+  { label: "Table arrangements per event (active and archived count)", values: { basic: "1", planner: "2", pro: "Unlimited" } },
+  { label: "Print table arrangements", values: { basic: "No", planner: "No", pro: "Yes" } },
+  { label: "Custom task statuses (otherwise To do / In progress / Done)", values: { basic: "No", planner: "Yes", pro: "Yes" } },
+  { label: "Documents", values: { basic: "No", planner: "Yes", pro: "Yes" } },
+  { label: "Itineraries per event", values: { basic: "1", planner: "Unlimited", pro: "Unlimited" } },
+  { label: "Request a custom invitation design", values: { basic: "No", planner: "Yes", pro: "Yes" } },
+  { label: "Design changes per invitation", values: { basic: "0", planner: "3", pro: "Unlimited" } },
+  { label: "Custom RSVP link name", values: { basic: "No", planner: "No", pro: "Yes" } },
+  { label: "Agreements", values: { basic: "No", planner: "Yes", pro: "Yes" } },
+  { label: "Meetings", values: { basic: "No", planner: "Yes", pro: "Yes" } },
+  { label: "Collaborators", values: { basic: "2", planner: "5", pro: "Unlimited" } },
+];
+export const DEFAULT_PLANS: Plans = { basic: { name: "Essential", monthly: 40, yearly: 432 }, planner: { name: "Premier", monthly: 70, yearly: 756 }, pro: { name: "Unlimited", monthly: 110, yearly: 1188 } };
 export interface Plans { [k: string]: { monthly: number; yearly: number; name: string } }
+/** Discount coupon created by a super admin: the customer types `code` at checkout and gets `percent` off. */
+export interface Coupon { id: string; code: string; percent: number; note: string; active: boolean; expires: string; createdAt: number; by: string }
 export interface Config {
   plans: Plans;
+  coupons?: Coupon[];
   apiKeys: ApiKey[];
   web: { maintenance: boolean; banner: string; seoTitle: string; seoDescription: string; analyticsId: string };
   design: { primary: string; accent: string; heroTitle: string; heroSubtitle: string; ctaLabel: string };
@@ -85,7 +109,7 @@ export interface State {
   presenceLog: { staffId: string; status: Presence; at: number }[];
   work: WorkTask[]; wstatuses: WStatus[]; wtags: string[];
   channels: Channel[]; messages: Msg[]; reads: Record<string, Record<string, number>>;
-  kb: Article[]; kbSeededAt: number;
+  kb: Article[]; kbSeededAt: number; kbVersion?: number;
   seeded: number;
 }
 
@@ -96,7 +120,19 @@ const H = 3600_000;
 
 let state: State = load() ?? ({ seeded: 0 } as State);
 const subs = new Set<() => void>();
-function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? (JSON.parse(r) as State) : null; } catch { return null; } }
+function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? migrate(JSON.parse(r) as State) : null; } catch { return null; } }
+/** Brings data saved by an older version up to date (new plans of 1Plan) without touching anything else. */
+function migrate(s: State): State {
+  if (s.config?.plans && "free" in s.config.plans) s.config.plans = structuredClone(DEFAULT_PLANS); // old Free / Planner / Pro price list
+  for (const c of s.customers ?? []) if ((c.plan as string) === "free") c.plan = "none";
+  // knowledge base: replace the untouched first-version articles with the current ones; articles a super admin edited or added are kept
+  if (s.kb && (s.kbVersion ?? 1) < KB_VERSION) {
+    const now = Date.now();
+    s.kb = [...seedArticles(now, "Ana Ruiz"), ...s.kb.filter((a) => !(/^kb\d+$/.test(a.id) && a.updatedAt === s.kbSeededAt))];
+    s.kbSeededAt = now; s.kbVersion = KB_VERSION;
+  }
+  return s;
+}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* quota */ } }
 export const getState = () => state;
 // another tab of this browser changed the data (e.g. a colleague's chat message in the prototype): pick it up
@@ -248,31 +284,31 @@ export async function ensureSeed() {
   }
   const pay = (d: number, amount: number, plan: string, status: PayStatus, issue = ""): Payment => ({ id: "pay_" + uid(), at: now - d * 24 * H, amount, plan, method: "Visa •••• 4242", status, issue });
   const customers: Customer[] = [
-    { id: uid(), name: "Valeria Gómez", email: "valeria@example.com", plan: "pro", status: "active", createdAt: now - 120 * 24 * H, lastLogin: now - 2 * H, payments: [pay(90, 29, "Pro", "paid"), pay(60, 29, "Pro", "paid"), pay(30, 29, "Pro", "paid"), pay(0, 29, "Pro", "failed", "Card declined: insufficient funds")], tempPassword: "", tempPasswordAt: 0 },
-    { id: uid(), name: "Carlos Mendoza", email: "carlos@example.com", plan: "planner", status: "locked", createdAt: now - 60 * 24 * H, lastLogin: now - 5 * 24 * H, payments: [pay(35, 12, "Planner", "paid"), pay(5, 12, "Planner", "paid")], tempPassword: "", tempPasswordAt: 0 },
-    { id: uid(), name: "Renata Díaz", email: "renata@example.com", plan: "pro", status: "active", createdAt: now - 200 * 24 * H, lastLogin: now - 24 * H, payments: [pay(10, 29, "Pro", "paid"), pay(9, 29, "Pro", "refunded", "Duplicate charge refunded")], tempPassword: "", tempPasswordAt: 0 },
-    { id: uid(), name: "Tomás Herrera", email: "tomas@example.com", plan: "free", status: "blocked", createdAt: now - 20 * 24 * H, lastLogin: now - 8 * 24 * H, payments: [], tempPassword: "", tempPasswordAt: 0 },
-    { id: uid(), name: "Paula Ortega", email: "paula@example.com", plan: "planner", status: "active", createdAt: now - 45 * 24 * H, lastLogin: now - 3 * H, payments: [pay(15, 12, "Planner", "pending", "Bank transfer awaiting confirmation")], tempPassword: "", tempPasswordAt: 0 },
+    { id: uid(), name: "Valeria Gómez", email: "valeria@example.com", plan: "pro", status: "active", createdAt: now - 120 * 24 * H, lastLogin: now - 2 * H, payments: [pay(90, 110, "Unlimited", "paid"), pay(60, 110, "Unlimited", "paid"), pay(30, 110, "Unlimited", "paid"), pay(0, 110, "Unlimited", "failed", "Card declined: insufficient funds")], tempPassword: "", tempPasswordAt: 0 },
+    { id: uid(), name: "Carlos Mendoza", email: "carlos@example.com", plan: "planner", status: "locked", createdAt: now - 60 * 24 * H, lastLogin: now - 5 * 24 * H, payments: [pay(35, 70, "Premier", "paid"), pay(5, 70, "Premier", "paid")], tempPassword: "", tempPasswordAt: 0 },
+    { id: uid(), name: "Renata Díaz", email: "renata@example.com", plan: "pro", status: "active", createdAt: now - 200 * 24 * H, lastLogin: now - 24 * H, payments: [pay(10, 110, "Unlimited", "paid"), pay(9, 110, "Unlimited", "refunded", "Duplicate charge refunded")], tempPassword: "", tempPasswordAt: 0 },
+    { id: uid(), name: "Tomás Herrera", email: "tomas@example.com", plan: "none", status: "blocked", createdAt: now - 20 * 24 * H, lastLogin: now - 8 * 24 * H, payments: [], tempPassword: "", tempPasswordAt: 0 },
+    { id: uid(), name: "Paula Ortega", email: "paula@example.com", plan: "planner", status: "active", createdAt: now - 45 * 24 * H, lastLogin: now - 3 * H, payments: [pay(15, 70, "Premier", "pending", "Bank transfer awaiting confirmation")], tempPassword: "", tempPasswordAt: 0 },
   ];
   const templates: Template[] = [
     ["Classic Gold", "wedding", "#17130a", "#C7B146", "published"], ["Garden Party", "birthday", "#e9f5f2", "#14302c", "published"], ["Baby Blue", "babyshower", "#eaf4fb", "#1d4f73", "draft"],
   ].map(([name, category, bg, fg, status]) => ({ id: uid(), name, category, status: status as TplStatus, html: tplHtml(name, "Join us for a special celebration", bg, fg), css: "", version: 1, updatedAt: now - 3 * 24 * H, publishedAt: status === "published" ? now - 2 * 24 * H : 0, by: "Diego Vega", source: (status === "draft" ? "draft" : "template") as TplSource, tags: [category, status === "published" ? "catalogue" : "wip"], comments: status === "draft" ? [{ id: uid(), by: "Ana Ruiz", at: now - 24 * H, text: "Please try a softer blue before we publish." }] : [] }));
   const config: Config = {
-    plans: { free: { name: "Free", monthly: 0, yearly: 0 }, planner: { name: "Planner", monthly: 12, yearly: 120 }, pro: { name: "Pro", monthly: 29, yearly: 290 } },
+    plans: structuredClone(DEFAULT_PLANS),
     apiKeys: [
       { id: uid(), name: "Email delivery", service: "Email provider", last4: "a91f", status: "active", createdAt: now - 80 * 24 * H, rotatedAt: 0 },
       { id: uid(), name: "WhatsApp invitations", service: "WhatsApp Business", last4: "77c2", status: "active", createdAt: now - 50 * 24 * H, rotatedAt: 0 },
       { id: uid(), name: "Payments", service: "Payment processor", last4: "0d3e", status: "active", createdAt: now - 100 * 24 * H, rotatedAt: 0 },
     ],
-    web: { maintenance: false, banner: "", seoTitle: "Event Planner — plan every event in one place", seoDescription: "Tasks, guests, invitations, seating and suppliers for any event.", analyticsId: "" },
+    web: { maintenance: false, banner: "", seoTitle: "1Plan — plan every event in one place", seoDescription: "Tasks, guests, invitations, seating and suppliers for any event.", analyticsId: "" },
     design: { primary: "#46C8B2", accent: "#C7B146", heroTitle: "Plan your event, without the chaos", heroSubtitle: "Guests, invitations, seating and suppliers in one place.", ctaLabel: "Start free" },
   };
   update((s) => {
     Object.assign(s, { theme: "light", staff, customers, templates, config, tasks: [], audit: [], counters: { support: 0, design: 0, admin: 0 }, seeded: 2,
-      presenceLog: [], work: [], wtags: ["design", "support", "admin", "urgent"], reads: {}, messages: [], kb: seedArticles(now, "Ana Ruiz"), kbSeededAt: now,
+      presenceLog: [], work: [], wtags: ["design", "support", "admin", "urgent"], reads: {}, messages: [], kb: seedArticles(now, "Ana Ruiz"), kbSeededAt: now, kbVersion: KB_VERSION,
       wstatuses: [{ id: "todo", name: "To do", color: "#4EB1E8" }, { id: "doing", name: "In progress", color: "#C7B146" }, { id: "review", name: "In review", color: "#46C8B2" }, { id: "done", name: "Done", color: "#2f9e6e" }],
       channels: [
-        { id: "general", name: "general", kind: "group", members: staff.map((m) => m.id), by: staff[0].id, at: now, topic: "Everyone at Event Planner" },
+        { id: "general", name: "general", kind: "group", members: staff.map((m) => m.id), by: staff[0].id, at: now, topic: "Everyone at 643" },
         { id: "support-design", name: "support-design", kind: "group", members: staff.filter((m) => m.role !== "super_admin").map((m) => m.id), by: staff[0].id, at: now, topic: "Hand-offs between support and design" },
       ] });
   });

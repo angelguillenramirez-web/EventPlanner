@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
-import { CLOUD_SKIP, blankWorkspace, getState, go, subscribe, update, type State } from "./store";
+import { CLOUD_SKIP, blankWorkspace, getState, go, subscribe, update, type Plan, type State } from "./store";
 
 /**
  * Real accounts and cloud saving (Supabase).
@@ -74,6 +74,7 @@ async function loadFor(user: User, fromLink: boolean) {
     });
   } else update((st) => { st.loggedIn = true; st.userEmail = user.email ?? ""; });
   ready = true;
+  if (cameBackFromStripe()) void waitForSubscription(); else void refreshSubscription();
   const st = getState(); const data = toWorkspace(st); const json = JSON.stringify(data);
   pending = { uid: user.id, json, data };
   if (keepLocal || !saved) await push(user.id, data, json); else { lastSaved = json; writeSync(user.id, false); setStatus("saved"); }
@@ -146,3 +147,53 @@ export const authErrorKey = (e: { message?: string; code?: string } | null): str
   if (m.includes("weak") || m.includes("password should")) return "auth.pwshort";
   return "auth.err.generic";
 };
+
+/* ── subscription (Stripe). The truth lives in the `subscriptions` table, written only by the Stripe webhook. ── */
+const DAY_MS = 86400000;
+/** Reads the signed-in user's subscription row and copies it into the app state (plan limits follow it). */
+export async function refreshSubscription(): Promise<void> {
+  if (!loadedFor) return;
+  const { data: r, error } = await supabase.from("subscriptions").select("*").eq("user_id", loadedFor).maybeSingle();
+  if (error) { console.error("subscription load failed", error.message); return; }
+  update((st) => {
+    if (!r || !r.plan || !r.cycle || ["none", "incomplete", "incomplete_expired"].includes(r.status)) { st.sub = { plan: "basic", cycle: "monthly", status: "none", startedAt: 0, renewsAt: 0, trialEndsAt: 0, cancelAtEnd: false, promo: "" }; st.plan = "basic"; return; }
+    const status = r.status === "trialing" ? "trialing" : ["active", "past_due"].includes(r.status) ? "active" : r.status === "canceled" ? "canceled" : "expired";
+    st.plan = r.plan as Plan;
+    st.sub = { plan: r.plan as Plan, cycle: r.cycle, status, startedAt: st.sub.startedAt || Date.now(), renewsAt: r.current_period_end ? Date.parse(r.current_period_end) : 0, trialEndsAt: r.trial_end ? Date.parse(r.trial_end) : 0, cancelAtEnd: !!r.cancel_at_period_end, promo: "" };
+  });
+}
+/** After coming back from Stripe the webhook may take a few seconds: ask again until the subscription shows up. */
+export async function waitForSubscription(tries = 10): Promise<void> {
+  for (let i = 0; i < tries; i++) { await refreshSubscription(); if (getState().sub.status !== "none") return; await new Promise((r) => setTimeout(r, 1500)); }
+}
+const call = async (fn: string, body: Record<string, unknown>): Promise<{ url?: string; error?: string }> => {
+  const { data, error } = await supabase.functions.invoke(fn, { body: { ...body, origin: location.origin } });
+  if (error) { let msg = "server"; try { msg = (await (error as { context?: Response }).context?.json())?.error ?? msg; } catch { /* ignore */ } return { error: msg }; }
+  return data ?? { error: "server" };
+};
+/** Goes to Stripe's secure payment page (the free trial applies only to Essential, once per account). */
+export const startCheckout = (plan: Plan, cycle: "monthly" | "yearly") => call("create-checkout", { plan, cycle });
+/** Stripe's customer portal: card, plan change, invoices. */
+export const openBillingPortal = () => call("billing-portal", {});
+/** A trial ends now; a paid plan stops at the end of the paid period. */
+export const cancelSubscriptionNow = async () => { const r = await call("cancel-subscription", {}); if (!r.error) await waitForChange(); return r; };
+async function waitForChange() { for (let i = 0; i < 6; i++) { await new Promise((r) => setTimeout(r, 1500)); const before = JSON.stringify(getState().sub); await refreshSubscription(); if (JSON.stringify(getState().sub) !== before) return; } }
+void DAY_MS;
+
+const RETURN_KEY = "aplan-checkout"; // set before leaving for Stripe, so we know to wait for the subscription on return
+/** Leaves for Stripe's payment page. Returns an error code only if it could not start. */
+export async function goCheckout(plan: Plan, cycle: "monthly" | "yearly"): Promise<string | undefined> {
+  const r = await startCheckout(plan, cycle);
+  if (r.error === "already_subscribed") return goPortal();
+  if (!r.url) return r.error ?? "server";
+  try { sessionStorage.setItem(RETURN_KEY, "1"); } catch { /* ignore */ }
+  location.href = r.url;
+}
+export async function goPortal(): Promise<string | undefined> {
+  const r = await openBillingPortal();
+  if (!r.url) return r.error ?? "server";
+  try { sessionStorage.setItem(RETURN_KEY, "1"); } catch { /* ignore */ }
+  location.href = r.url;
+}
+/** True once, when the user just came back from Stripe. */
+export const cameBackFromStripe = () => { try { const v = sessionStorage.getItem(RETURN_KEY); sessionStorage.removeItem(RETURN_KEY); return !!v; } catch { return false; } };

@@ -3,14 +3,8 @@ import { useT } from "../i18n";
 import { COLORS, uid, update, useStore } from "../store";
 import { ImagePlus, MapPin, Navigation, TypeIcon } from "../icons";
 
-export interface EventValues { name: string; type: string; picture: string; description: string; date: string; location: string; venue: string }
+export interface EventValues { name: string; type: string; picture: string; description: string; date: string; time?: string; location: string; venue: string }
 
-/** Picture shown for an event: its own, else the planner's business logo, else an icon. */
-export function EventThumb({ picture, type, size = 112, className = "" }: { picture: string; type: string; size?: number; className?: string }) {
-  const { businessLogo } = useStore();
-  const src = picture || businessLogo;
-  return <div className={`thumb ${picture ? "" : "logo"} ${className}`} style={{ width: size, height: size }}>{src ? <img src={src} alt="" /> : <TypeIcon type={type} size={36} />}</div>;
-}
 
 export const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 export const mapsDirections = (q: string) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`;
@@ -59,21 +53,9 @@ export default function EventForm({ initial, submitLabel, onSubmit, onCancel }: 
         )}
         {adding && <p className="muted small" style={{ margin: "4px 0 0" }}>{t("event.type.note")}</p>}
       </div>
-      <div className="full">
-        <label htmlFor="ep">{t("event.picture")}</label>
-        <div className="row" style={{ alignItems: "flex-start" }}>
-          <EventThumb picture={v.picture} type={v.type} size={140} />
-          <div className="grow">
-            <label className="btn ghost" style={{ cursor: "pointer", color: "var(--ink)" }}><ImagePlus size={16} /> {t("event.picture.choose")}<input id="ep" type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => onFile(e.target.files?.[0])} /></label>
-            {v.picture && <button type="button" className="ghost sm" style={{ marginLeft: 8 }} onClick={() => set({ picture: "" })}>{t("event.picture.remove")}</button>}
-            <p className="muted small" style={{ margin: "6px 0 0" }}><b>{t("event.picture.preferred")}</b> {t("event.picture.preferred.v")}<br /><b>{t("event.picture.standard")}</b> {t("event.picture.standard.v")}</p>
-            <p className="muted small" style={{ margin: "4px 0 0" }}>{t("event.picture.note")}</p>
-            {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
-          </div>
-        </div>
-      </div>
       <div className="full"><label htmlFor="ed">{t("description")}</label><textarea id="ed" rows={3} value={v.description} onChange={(e) => set({ description: e.target.value })} /></div>
       <div><label htmlFor="edt">{t("event.date")}</label><input id="edt" type="date" value={v.date} onChange={(e) => set({ date: e.target.value })} /></div>
+      <div><label htmlFor="etm">{t("event.time")}</label><input id="etm" type="time" value={v.time ?? ""} onChange={(e) => set({ time: e.target.value })} /></div>
       <div className="full">
         <label htmlFor="el">{t("location")} · Google Maps</label>
         <div className="row" style={{ flexWrap: "nowrap" }}><MapPin size={18} className="muted" /><input id="el" value={v.location} placeholder={t("location.ph")} onChange={(e) => set({ location: e.target.value })} /></div>

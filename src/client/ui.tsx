@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { useT } from "../i18n";
 import type { Priority } from "../store";
 import { LockI, X } from "../icons";
+import { reduce } from "../motion";
 
 export const Bar = ({ value, max }: { value: number; max: number }) => (
   <div className="bar" role="progressbar" aria-valuenow={max ? Math.round((value / max) * 100) : 0} aria-valuemin={0} aria-valuemax={100}><i style={{ width: (max ? (value / max) * 100 : 0) + "%" }} /></div>
@@ -13,15 +14,17 @@ export function PriBadge({ p }: { p: Priority }) {
   return <span className={`pill pri-${p}`}>{t("pri." + p)}</span>;
 }
 export function Modal({ title, onClose, children, wide, headerExtra }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; headerExtra?: React.ReactNode }) {
+  const [out, setOut] = useState(false); // closing: play the exit animation first
+  const close = () => { if (out) return; if (reduce()) { onClose(); return; } setOut(true); setTimeout(onClose, 170); };
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const k = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [onClose]);
+  }); // eslint-disable-line
   return (
-    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className={`modal-bg${out ? " out" : ""}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
       <div className="modal" style={wide ? { width: 860 } : undefined}>
-        <div className="row between"><div className="row" style={{ flexWrap: "nowrap" }}><h3 style={{ margin: 0 }}>{title}</h3>{headerExtra}</div><button className="ghost sm icon" aria-label="Close" onClick={onClose}><X size={14} /></button></div>
+        <div className="row between"><div className="row" style={{ flexWrap: "nowrap" }}><h3 style={{ margin: 0 }}>{title}</h3>{headerExtra}</div><button className="ghost sm icon" aria-label="Close" onClick={close}><X size={14} /></button></div>
         {children}
       </div>
     </div>
@@ -31,8 +34,8 @@ export function Lock({ on, children }: { on: boolean; children?: React.ReactNode
   return on ? <span className="lock" ><LockI /> {children}</span> : <>{children}</>;
 }
 
-const PALETTE = ["#C7465C", "#e98a3c", "#C7B146", "#46C8B2", "#4EB1E8", "#8b6fd6", "#14302c", "#6b7b78", "#ffffff"];
-const HL_PALETTE = ["#fff3a3", "#C7B146", "#ffd0a8", "#a8e6d8", "#a8d8f5", "#f3b4c0", "#d9c8ff"];
+const PALETTE = ["#FF7A59", "#FF9C7F", "#F0B429", "#46C8B2", "#6FA8FF", "#9B87F5", "#14203A", "#6B6458", "#ffffff"];
+const HL_PALETTE = ["#FFF3C4", "#F0B429", "#FFE9E2", "#E6F7F4", "#E3F0FF", "#FFE9E2", "#EEE8FF"];
 
 /** Keeps note HTML to a small safe set of tags/styles (notes come from a contentEditable). */
 export function sanitizeHtml(html: string): string {
@@ -59,7 +62,7 @@ export const RichText = forwardRef<{ clear: () => void }, { onChange: (html: str
   const { t } = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [color, setColor] = useState<string | null>(null); // null = theme text colour
-  const [hl, setHl] = useState("#C7B146");
+  const [hl, setHl] = useState("#F0B429");
   const [pop, setPop] = useState<"color" | "hl" | null>(null);
   useImperativeHandle(outer, () => ({ clear: () => { if (ref.current) ref.current.innerHTML = ""; onChange(""); } }));
   const emit = () => onChange(ref.current!.innerHTML);
@@ -89,7 +92,7 @@ export const RichText = forwardRef<{ clear: () => void }, { onChange: (html: str
         </span>
         <span style={{ position: "relative" }}>
           <button type="button" className="rtbtn" aria-label={t("rte.highlightcolor")} title={t("rte.highlightcolor")} aria-expanded={pop === "hl"} onMouseDown={keep} onClick={() => setPop(pop === "hl" ? null : "hl")}>
-            <span style={{ background: hl, color: "#14302c", fontWeight: 700, padding: "0 5px", borderRadius: 2 }}>F</span>
+            <span style={{ background: hl, color: "#14203A", fontWeight: 700, padding: "0 5px", borderRadius: 2 }}>F</span>
           </button>
           {pop === "hl" && (
             <div className="swatches" role="menu" onMouseDown={keep}>

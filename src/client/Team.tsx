@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "../i18n";
-import { KIND_PRESET, MEMBER_FEATURES, getState, memberDefaults, queueReset, uid, update, useStore, type CollabKind, type Mail as MailT, type Member } from "../store";
+import { KIND_PRESET, MEMBER_FEATURES, getState, memberDefaults, PLANS, openUpsell, queueReset, uid, update, useStore, type CollabKind, type Mail as MailT, type Member } from "../store";
 import { Check, Copy, Mail, Eye, EyeOff, KeyRound, Pencil, Plus, Trash2, Users } from "../icons";
 import { Modal } from "./ui";
 import { ResetMail } from "../Reset";
@@ -57,6 +57,7 @@ function MemberModal({ member, kind, onClose, onSent }: { member?: Member; kind?
     if (f.kind !== "client" && !f.scopeAll && f.eventIds.length === 0) { setErr(t("team.scope.none")); return; }
     const base = { ...f, name: f.name.trim(), lastName: f.lastName.trim(), email, username: email, scopeAll: f.kind === "client" ? false : f.scopeAll };
     if (member) { update((st) => { st.team = st.team.map((m) => (m.id === base.id ? base : m)); }); onClose(); return; }
+    if (f.kind !== "client" && s.team.filter((m) => m.kind !== "client").length >= PLANS[s.plan].collabs) { openUpsell("collabs"); return; }
     const v: Member = f.kind === "client"
       ? { ...base, password: genPw(), mustChange: true, tempExpires: Date.now() + INVITE_DAYS * DAY_MS, status: "pending" }
       : { ...base, password: "", mustChange: false, tempExpires: 0, status: "pending" };
@@ -68,7 +69,7 @@ function MemberModal({ member, kind, onClose, onSent }: { member?: Member; kind?
       <form onSubmit={submit} className="form">
         <div><label htmlFor="tmn">{t("name")} *</label><input id="tmn" autoFocus required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div><label htmlFor="tml">{t("team.lastname")} *</label><input id="tml" required value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} /></div>
-        <div className="full"><label htmlFor="tme">{t("team.email")} *</label><input id="tme" type="email" required autoComplete="off" disabled={locked} value={f.email} onChange={(e) => { setErr(""); setF({ ...f, email: e.target.value }); }} />{err && <div className="small" style={{ color: "var(--rose)" }}>{err}</div>}</div>
+        <div className="full"><label htmlFor="tme">{t("team.email")} *</label><input id="tme" type="email" required autoComplete="off" disabled={locked} value={f.email} onChange={(e) => { setErr(""); setF({ ...f, email: e.target.value }); }} />{err && <div className="small" style={{ color: "var(--danger)" }}>{err}</div>}</div>
         <div className="full"><label htmlFor="tmk">{t("team.role")} *</label>
           <select id="tmk" value={f.kind === "employee" ? "team" : f.kind} disabled={!!member} onChange={(e) => setKind(e.target.value as CollabKind)}>{(["team", "supplier", "client"] as CollabKind[]).map((k) => <option key={k} value={k}>{t("collab.kind." + k)}</option>)}</select>
           <div className="muted small">{t("team.kindhint." + (f.kind === "client" ? "client" : "invite"))}</div></div>
@@ -84,7 +85,7 @@ function MemberModal({ member, kind, onClose, onSent }: { member?: Member; kind?
           {(f.kind === "client" || !f.scopeAll) && <div className="row" style={{ marginLeft: f.kind === "client" ? 0 : 22 }}>{s.events.map((ev) => (
             <label key={ev.id} className="row small" style={{ margin: 0, color: "var(--ink)", gap: 4 }}><input type="checkbox" checked={f.eventIds.includes(ev.id)} onChange={() => setF({ ...f, eventIds: toggle(f.eventIds, ev.id) })} />{ev.name}</label>
           ))}</div>}
-          {f.kind === "client" && f.eventIds.length === 0 && <div className="small" style={{ color: "var(--rose)", marginTop: 4 }}>{t("team.scope.clientreq")}</div>}
+          {f.kind === "client" && f.eventIds.length === 0 && <div className="small" style={{ color: "var(--danger)", marginTop: 4 }}>{t("team.scope.clientreq")}</div>}
         </div>
         <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button disabled={f.kind === "client" && f.eventIds.length === 0}>{member ? t("save") : t("team.sendinvite")}</button></div>
       </form>
@@ -136,9 +137,9 @@ export default function Team() {
                   {rows.length === 0 && <tr><td colSpan={7} className="muted"><Users size={15} style={{ verticalAlign: -3 }} /> {t("team.none")}</td></tr>}
                   {rows.map((m) => (
                     <tr key={m.id}>
-                      <td><b>{m.name} {m.lastName}</b>{pwState(m) === "temp" && <div className="muted small">{t("team.temppw")}{m.tempExpires > 0 && ` · ${t("team.expires")} ${new Date(m.tempExpires).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}`}</div>}{pwState(m) === "expired" && <div className="small" style={{ color: "var(--rose)" }}>{t("team.pw.expired")}</div>}</td>
+                      <td><b>{m.name} {m.lastName}</b>{pwState(m) === "temp" && <div className="muted small">{t("team.temppw")}{m.tempExpires > 0 && ` · ${t("team.expires")} ${new Date(m.tempExpires).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}`}</div>}{pwState(m) === "expired" && <div className="small" style={{ color: "var(--danger)" }}>{t("team.pw.expired")}</div>}</td>
                       <td className="small">{m.email}</td>
-                      <td className="small"><span className="pill" style={{ background: m.status === "accepted" ? "var(--teal)" : "var(--gold)", color: "#0c1a18" }}>{t("team.st." + m.status)}</span>{m.status === "pending" && <div><button className="ghost sm" style={{ marginTop: 4 }} onClick={() => { update((st) => { const x = st.team.find((y) => y.id === m.id)!; if (x.kind === "client") { x.tempExpires = Date.now() + INVITE_DAYS * DAY_MS; } queueMail(st, x); }); setSent(m); }}>{t("team.resend")}</button></div>}</td>
+                      <td className="small"><span className="pill" style={{ background: m.status === "accepted" ? "var(--teal)" : "var(--gold)", color: "#14203A" }}>{t("team.st." + m.status)}</span>{m.status === "pending" && <div><button className="ghost sm" style={{ marginTop: 4 }} onClick={() => { update((st) => { const x = st.team.find((y) => y.id === m.id)!; if (x.kind === "client") { x.tempExpires = Date.now() + INVITE_DAYS * DAY_MS; } queueMail(st, x); }); setSent(m); }}>{t("team.resend")}</button></div>}</td>
 
                       <td className="muted small">{m.access.length === MEMBER_FEATURES.length ? t("team.allfeat") : m.access.map((x) => t("tab." + x)).join(", ") || "—"}<br />{scopeText(m)}</td>
                       <td className="small">{new Date(m.createdAt).toLocaleDateString(locale, { dateStyle: "medium" })}</td>
@@ -170,7 +171,7 @@ export default function Team() {
           {!reset.pw ? (
             <>
               <p style={{ marginTop: 0 }}>{t("team.reset.warn", { name: resetMember.name })}</p>
-              <p className="small" style={{ color: resetsLeft(resetMember) > 0 ? "var(--muted)" : "var(--rose)" }}>
+              <p className="small" style={{ color: resetsLeft(resetMember) > 0 ? "var(--muted)" : "var(--danger)" }}>
                 {resetsLeft(resetMember) > 0 ? t("team.reset.left", { n: resetsLeft(resetMember), max: RESET_LIMIT }) : t("team.reset.limit", { when: new Date(nextReset(resetMember)).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" }) })}
               </p>
               <label htmlFor="rst">{t("team.reset.type")}</label>

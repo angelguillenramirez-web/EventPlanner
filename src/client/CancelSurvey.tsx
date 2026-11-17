@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useT } from "../i18n";
-import { CANCEL_FEATURES, CANCEL_REASONS, uid, update, type CancelReason, type CancelSurvey as Survey, type Subscription } from "../store";
+import { CANCEL_FEATURES, CANCEL_REASONS, getState, uid, update, type CancelReason, type CancelSurvey as Survey, type Subscription } from "../store";
 import { Modal } from "./ui";
+import { cancelSubscriptionNow, isCloudId } from "../cloud";
 
 /** Short exit survey shown before a trial or subscription is cancelled. The answers are saved so the platform can learn about features, prices and advantages. */
 export default function CancelSurvey({ sub, when, onClose, onDone }: { sub: Subscription; when: string; onClose: () => void; onDone: () => void }) {
@@ -20,7 +21,10 @@ export default function CancelSurvey({ sub, when, onClose, onDone }: { sub: Subs
   const submit = () => {
     if (!reason) { setErr(true); return; }
     const row: Survey = { id: uid(), at: Date.now(), plan: sub.plan, cycle: sub.cycle, stage: trial ? "trialing" : "active", reason, detail: askDetail ? detail.trim().slice(0, 500) : "", used, rating, stay: stay.trim().slice(0, 1000), contact };
-    update((st) => {
+    if (isCloudId(getState().sessionId)) { // real subscription: Stripe cancels it (a trial now, a paid plan at the end of the period)
+      update((st) => { st.cancelSurveys.unshift(row); });
+      void cancelSubscriptionNow();
+    } else update((st) => {
       st.cancelSurveys.unshift(row);
       if (trial) st.sub.status = "canceled"; else st.sub.cancelAtEnd = true;
     });
@@ -41,7 +45,7 @@ export default function CancelSurvey({ sub, when, onClose, onDone }: { sub: Subs
             </label>
           ))}
         </div>
-        {err && <div className="small" role="alert" style={{ color: "var(--red, #c0392b)", marginTop: 6 }}>{t("cs.err")}</div>}
+        {err && <div className="small" role="alert" style={{ color: "var(--danger)", marginTop: 6 }}>{t("cs.err")}</div>}
       </fieldset>
 
       {askDetail && (

@@ -22,7 +22,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
         ) : (
           <>
             <header className="card" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-              {s.businessLogo && <img src={s.businessLogo} alt="" style={{ width: 84, height: 84, objectFit: "contain", borderRadius: 6, background: "var(--soft)" }} />}
+              {s.businessLogo && <img src={s.businessLogo} alt="" style={{ width: 84, height: 84, objectFit: "contain", borderRadius: 12, background: "var(--soft)" }} />}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <h1 style={{ margin: 0 }}>{p.name}</h1>
                 {p.tagline && <p style={{ margin: "4px 0" }}>{p.tagline}</p>}
@@ -41,7 +41,7 @@ export default function PublicCatalog({ slug }: { slug: string }) {
             <div className="grid g3">
               {list.map((x) => (
                 <article className="card" key={x.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {x.image && <img src={x.image} alt="" style={{ width: "100%", height: 130, objectFit: "cover", borderRadius: 5 }} />}
+                  {x.image && <img src={x.image} alt="" style={{ width: "100%", height: 130, objectFit: "cover", borderRadius: 12 }} />}
                   <div className="row between" style={{ flexWrap: "nowrap" }}><b>{x.name}</b><b>{price(x)}</b></div>
                   <div className="row" style={{ gap: 4 }}><span className="badge">{t("svcc." + x.category)}</span>{x.duration && <span className="muted small">{x.duration}</span>}</div>
                   <p className="muted small" style={{ margin: 0 }}>{x.description}</p>

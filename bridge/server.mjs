@@ -12,14 +12,15 @@ import { fileURLToPath } from "node:url";
 const PORT = 5175;
 const STAFF_KEY = process.env.STAFF_BRIDGE_KEY || "dev-only-staff-key";
 // Each app has its own address (…​.localhost resolves to this machine, no hosts-file edit needed).
-const ORIGINS = new Set(["http://eventplanner.localhost:5173", "http://staff.eventplanner.localhost:5174", "http://localhost:5173", "http://localhost:5174"]);
+const ORIGINS = new Set(["http://eventplanner.localhost:5173", "http://643.localhost:5174", "http://localhost:5173", "http://localhost:5174"]);
 const FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "data.json");
-const empty = () => ({ inbox: [], chats: {}, published: { plans: null, web: null, design: null, templates: [], statuses: {} } });
+const empty = () => ({ inbox: [], chats: {}, published: { coupons: {}, plans: null, web: null, design: null, templates: [], statuses: {} } });
 let db = (() => { try { return { ...empty(), ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch { return empty(); } })();
 const save = () => fs.writeFileSync(FILE, JSON.stringify(db));
 const clip = (v, n) => String(v ?? "").slice(0, n);
 const same = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
+const cleanCoupons = (v) => { const o = {}; if (v && typeof v === "object") for (const [k, n] of Object.entries(v).slice(0, 500)) if (/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(k) && Number.isInteger(n) && n >= 1 && n <= 100) o[k] = n; return o; };
 const send = (res, code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
 const readBody = (req) => new Promise((ok, bad) => {
   let n = 0; const chunks = [];
@@ -74,7 +75,7 @@ http.createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/public") {
       const p = db.published;
-      return send(res, 200, { plans: p.plans, web: p.web && { maintenance: p.web.maintenance, banner: p.web.banner, seoTitle: p.web.seoTitle, seoDescription: p.web.seoDescription }, design: p.design, templates: p.templates });
+      return send(res, 200, { coupons: p.coupons || {}, plans: p.plans, web: p.web && { maintenance: p.web.maintenance, banner: p.web.banner, seoTitle: p.web.seoTitle, seoDescription: p.web.seoDescription }, design: p.design, templates: p.templates });
     }
     // ── staff ──
     if (url.pathname === "/api/chats/pull") {
@@ -92,7 +93,7 @@ http.createServer(async (req, res) => {
       }
       if (req.method === "PUT" && url.pathname === "/api/published") {
         const b = await readBody(req);
-        db.published = { plans: b.plans ?? null, web: b.web ?? null, design: b.design ?? null, templates: Array.isArray(b.templates) ? b.templates.slice(0, 200) : [], statuses: b.statuses && typeof b.statuses === "object" ? b.statuses : {} };
+        db.published = { coupons: cleanCoupons(b.coupons), plans: b.plans ?? null, web: b.web ?? null, design: b.design ?? null, templates: Array.isArray(b.templates) ? b.templates.slice(0, 200) : [], statuses: b.statuses && typeof b.statuses === "object" ? b.statuses : {} };
         save(); return send(res, 200, { ok: true });
       }
     }

@@ -22,10 +22,11 @@ export function ThemeToggle() {
     </button>
   );
 }
-import logoUrl from "./assets/logo.png";
-/** The calendar mark used in the upper-left corner of the app (not on the public website). */
-export const AppMark = ({ size = 30 }: { size?: number }) => <img className="appmark" src={logoUrl} alt="" width={size} height={size} />;
-export const Logo = ({ href }: { href: string }) => <a className="logo" href={href}>A <b>plan</b></a>;
+import { LogoLockup, LogoMark } from "./brand";
+/** The 1Plan badge on its own (collapsed sidebar). */
+export const AppMark = ({ size = 30 }: { size?: number }) => <LogoMark size={size} />;
+/** Full logo: badge + "Plan" wordmark. */
+export const Logo = ({ href, height = 30 }: { href: string; height?: number }) => <a className="logo" href={href} aria-label="1Plan"><LogoLockup height={height} /></a>;
 
 /** True while the media query matches (e.g. "(max-width: 700px)" for phones). */
 export function useMedia(q: string) {

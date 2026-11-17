@@ -38,7 +38,7 @@ export function Invite({ token }: { token: string }) {
       <form onSubmit={submit} className="card grid" style={{ gap: 12 }}>
         <div><h2 style={{ margin: 0 }}>{t("invite.title")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("invite.sub", { name: m.name, email: m.email })}</p></div>
         <PasswordFields f={f} setF={setF} />
-        {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+        {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
         <button type="submit">{t("invite.go")}</button>
       </form>
     </Shell>
@@ -72,7 +72,7 @@ export function Access({ token }: { token: string }) {
       <form onSubmit={submit} className="card grid" style={{ gap: 12 }}>
         <div><h2 style={{ margin: 0 }}>{t(first ? "access.title" : "access.again")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t(first ? "access.sub" : "access.sub2", { name: m.name, email: m.email })}</p></div>
         {first ? <PasswordFields f={f} setF={setF} temp /> : <div><label htmlFor="ap1">{t("password")}</label><input id="ap1" type="password" autoComplete="current-password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>}
-        {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+        {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
         <button type="submit">{t(first ? "access.go" : "login")}</button>
       </form>
     </Shell>

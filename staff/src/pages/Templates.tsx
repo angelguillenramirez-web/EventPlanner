@@ -11,7 +11,7 @@ type Ed = {
   getHtml: () => string; getCss: () => string; setComponents: (h: string) => void; setStyle: (c: string) => void; destroy: () => void; on: (e: string, f: () => void) => void;
 };
 
-/** Same fonts, blocks and exported document as the Event Planner app's invitation editor. */
+/** Same fonts, blocks and exported document as the 1Plan app's invitation editor. */
 const FONTS = ["Great Vibes", "Playfair Display", "Montserrat", "Dancing Script", "Cormorant Garamond", "Lobster", "Pacifico", "Lora"];
 const FONT_URL = "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;500;700&family=Dancing+Script:wght@500;700&family=Cormorant+Garamond:wght@400;600&family=Lobster&family=Pacifico&family=Lora:wght@400;600&display=swap";
 const PHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#e8e4dc"/><text x="200" y="160" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#8a8478">Double-click to add a photo</text></svg>');
@@ -48,7 +48,7 @@ function Library({ me }: { me: Staff }) {
   return (
     <>
       <h1>Templates & designs</h1>
-      <p className="muted" style={{ marginTop: -4 }}>Edit and publish catalogue <b>templates</b>, designs made for <b>event requests</b> from customers or handed over by support, and personal <b>drafts</b>. Published templates are what customers see in the Event Planner platform.</p>
+      <p className="muted" style={{ marginTop: -4 }}>Edit and publish catalogue <b>templates</b>, designs made for <b>event requests</b> from customers or handed over by support, and personal <b>drafts</b>. Published templates are what customers see in the 1Plan platform.</p>
       <form className="card form" style={{ marginBottom: 14 }} onSubmit={create}>
         <div><label htmlFor="tn">New design name</label><input id="tn" required value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div><label htmlFor="tk">Type</label><select id="tk" value={kind} onChange={(e) => setKind(e.target.value as TplSource)}><option value="template">Template (for the catalogue)</option><option value="draft">Draft (work in progress)</option></select></div>

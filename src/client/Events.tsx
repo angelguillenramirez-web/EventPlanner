@@ -1,18 +1,21 @@
 import { Fragment, useMemo, useState } from "react";
 import { useT } from "../i18n";
-import { eventLimit, eventsLast30, go, iso, newEvent, openUpsell, update, useStore, type EventStatus } from "../store";
-import { ArrowDownUp, Lock, Search, SlidersHorizontal, TypeIcon } from "../icons";
+import { eventLimit, eventsLast30, go, iso, me, newEvent, openUpsell, update, useStore, type EventStatus } from "../store";
+import { ArrowDownUp, CalendarDays, Hourglass, ListChecks, Lock, Plus, Search, SlidersHorizontal, TypeIcon, Users } from "../icons";
 import { Modal } from "./ui";
 import { Bar } from "./ui";
 import Countdown from "./Countdown";
-import EventForm, { EventThumb } from "./EventForm";
+import EventForm from "./EventForm";
+import { setSearch, useSearch } from "../search";
+import { DI } from "../navicons";
+import { confetti, toast } from "../motion";
 
 type VM = "cards" | "created" | "event" | "type";
 
 export function EventsList() {
   const s = useStore();
   const { t, tn, locale } = useT();
-  const [q, setQ] = useState("");
+  const q = useSearch(), setQ = setSearch; // shared with the search box in the top bar
   const [menu, setMenu] = useState(false);
   const [adv, setAdv] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -26,6 +29,23 @@ export function EventsList() {
   const used = eventsLast30(s);
   const lim = eventLimit(s);
   const createdDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  // greeting and the four summary cards (only the events this person can see)
+  const hour = new Date().getHours();
+  const greeting = t(hour < 12 ? "greet.morning" : hour < 19 ? "greet.afternoon" : "greet.evening", { name: me(s).name.split(" ")[0] });
+  const scoped = (() => {
+    const mem = s.viewAs ? s.team.find((m) => m.id === s.viewAs) : undefined;
+    return s.events.filter((e) => e.status === "active" && (!mem || mem.scopeAll || mem.eventIds.includes(e.id)));
+  })();
+  const scopedIds = new Set(scoped.map((e) => e.id));
+  const guestsOk = s.guests.filter((g) => scopedIds.has(g.eventId) && g.status === "confirmed").reduce((n, g) => n + (g.invitees || 1), 0);
+  const typesInUse = s.eventTypes.filter((x) => scoped.some((e) => e.type === x.id));
+  const weekEnd = iso(7);
+  const tasksSoon = s.tasks.filter((x) => x.eventId && scopedIds.has(x.eventId) && !x.parentId && !x.done && x.due && x.due <= weekEnd).length;
+  const nextIn = scoped.map((e) => daysTo(e)).filter((d) => d >= 0).sort((a, b) => a - b)[0];
+  const stats: [React.ReactNode, string, number | null, string][] = [
+    [<DI k="cal" size={20} />, "stat.events", scoped.length, "teal"], [<DI k="guest" size={20} />, "stat.guests", guestsOk, "coral"],
+    [<DI k="chk" size={20} />, "stat.tasks", tasksSoon, "butter"], [<Hourglass size={20} />, "stat.next", nextIn ?? null, "lilac"],
+  ];
 
   const list = useMemo(() => {
     const kw = q.trim().toLowerCase();
@@ -53,19 +73,24 @@ export function EventsList() {
     const tasks = s.tasks.filter((x) => x.eventId === e.id && !x.parentId);
     const doneId = e.statuses[e.statuses.length - 1].id;
     const done = tasks.filter((x) => x.statusId === doneId).length;
-    const days = Math.ceil((new Date(e.date + "T12:00").getTime() - Date.now()) / 86400000);
+    const days = daysTo(e);
     return (
-      <a key={e.id} href={`#/app/event/${e.id}/tasks`} className="card" style={{ position: "relative", textDecoration: "none", borderTop: `4px solid ${ty?.color}`, opacity: e.status === "active" ? 1 : .7 }}>
-        <EventThumb picture={e.picture} type={e.type} />
-        <Countdown date={e.date} variant="card" />
-        <div className="row between"><span className="row small" style={{ gap: 6 }}><TypeIcon type={e.type} size={15} />{tn(e.type)}</span>{e.status !== "active" && <span className="badge">{t("estatus." + e.status)}</span>}</div>
-        <h3 style={{ marginTop: 6 }}>{e.name}</h3>
-        <p className="muted small" style={{ margin: "0 0 10px" }}>
-          {new Date(e.date + "T12:00").toLocaleDateString(locale, { dateStyle: "long" })} · {days >= 0 ? t("days.left", { n: days }) : t("days.past")}
-          {place(e) && <><br />{place(e)}</>}
-        </p>
-        <Bar value={done} max={tasks.length} />
-        <p className="muted small" style={{ margin: "4px 0 0" }}>{done}/{tasks.length} {t("tasks").toLowerCase()}</p>
+      <a key={e.id} href={`#/app/event/${e.id}/tasks`} className="card evc evcover" style={{ opacity: e.status === "active" ? 1 : .7, ["--accent" as string]: ty?.color }}>
+        <div className="cover" style={{ background: `color-mix(in srgb, ${ty?.color ?? "var(--teal)"} 24%, var(--surface))`, ["--tc" as string]: ty?.color ?? "var(--teal)" }}>
+          
+          <span className="tag"><TypeIcon type={e.type} size={14} />{tn(e.type)}</span>
+          <Countdown date={e.date} time={e.time} variant="card" />
+        </div>
+        <div className="evtext">
+          {e.status !== "active" && <span className="badge" style={{ marginBottom: 6 }}>{t("estatus." + e.status)}</span>}
+          <h3>{e.name}</h3>
+          <p className="muted small" style={{ margin: "2px 0 12px" }}>
+            {new Date(e.date + "T12:00").toLocaleDateString(locale, { dateStyle: "long" })} · {days >= 0 ? t("days.left", { n: days }) : t("days.past")}
+            {place(e) && <><br />{place(e)}</>}
+          </p>
+          <div className="row between small" style={{ marginBottom: 6 }}><span className="muted">{done}/{tasks.length} {t("tasks").toLowerCase()}</span><b>{tasks.length ? Math.round((done / tasks.length) * 100) : 0}%</b></div>
+          <Bar value={done} max={tasks.length} />
+        </div>
       </a>
     );
   };
@@ -73,7 +98,7 @@ export function EventsList() {
     <tr key={e.id} style={{ cursor: "pointer", opacity: e.status === "active" ? 1 : .7 }} onClick={() => go(`/app/event/${e.id}/tasks`)}>
       <td><b>{e.name}</b>{e.status !== "active" && <> <span className="badge">{t("estatus." + e.status)}</span></>}</td>
       <td><span className="row" style={{ gap: 6 }}><TypeIcon type={e.type} size={15} />{tn(e.type)}</span></td>
-      <td>{fmt(createdDay(e.createdAt))}</td><td>{fmt(e.date)}</td><td><Countdown date={e.date} variant="inline" /></td><td>{place(e)}</td>
+      <td>{fmt(createdDay(e.createdAt))}</td><td>{fmt(e.date)}{e.time ? ` · ${e.time}` : ""}</td><td><Countdown date={e.date} time={e.time} variant="inline" /></td><td>{place(e)}</td>
     </tr>
   );
   const table = () => {
@@ -99,8 +124,17 @@ export function EventsList() {
   return (
     <>
       <div className="row between">
-        <div><h1>{t("nav.myevents")}</h1>{!s.viewAs && <p className="muted">{t("events.usage", { used, max: lim === Infinity ? "∞" : lim })}</p>}</div>
-        {!s.viewAs && <button onClick={() => setCreating(true)}>+ {t("nav.create")}</button>}
+        <div><h1>{greeting}</h1><p className="muted" style={{ margin: 0 }}>{t("events.summary", { events: scoped.length, tasks: tasksSoon })}</p></div>
+        {!s.viewAs && <button onClick={() => setCreating(true)}><Plus size={17} /> {t("nav.create")}</button>}
+      </div>
+
+      <div className="stats">
+        {stats.map(([ic, k, n, tone]) => (
+          <div className="card stat" key={k}>
+            <div className={`sq ${tone}`}>{ic}</div>
+            <div><b data-count={n ?? undefined}>{n ?? "–"}</b><span className="l">{t(k)}</span></div>
+          </div>
+        ))}
       </div>
 
       <div className="row" style={{ marginBottom: 12 }}>
@@ -130,14 +164,23 @@ export function EventsList() {
           </div>
         </div>
       )}
+      {typesInUse.length > 1 && (
+        <div className="tchips" role="group" aria-label={t("event.type")}>
+          <button className="tchip" aria-pressed={!type} onClick={() => setType("")}>{t("all")}</button>
+          {typesInUse.map((x) => <button key={x.id} className="tchip" aria-pressed={type === x.id} onClick={() => setType(type === x.id ? "" : x.id)}>{tn(x.id)}</button>)}
+        </div>
+      )}
       <p className="muted small" style={{ marginTop: 0 }}>{t(list.length === 1 ? "events.count.one" : "events.count.other", { n: list.length })} · {desc ? t("sort.desc") : t("sort.asc")}</p>
 
       {list.length === 0 && <p className="muted">{t("events.none")}</p>}
-      {vm === "cards" ? <div className="grid g3">{list.map(card)}</div> : list.length > 0 && table()}
+      {vm === "cards" ? <div className="grid g3">{list.map(card)}{!s.viewAs && <button className="evc evadd" onClick={() => setCreating(true)}><Plus size={30} />{t("events.newtile")}</button>}</div> : list.length > 0 && table()}
       {creating && <CreateEventModal onClose={() => setCreating(false)} />}
     </>
   );
 }
+
+/** Days left to an event: with a start time, whole days until that moment; otherwise until the day. */
+const daysTo = (e: { date: string; time?: string }) => (e.time ? Math.floor((new Date(`${e.date}T${e.time}`).getTime() - Date.now()) / 86400000) : Math.ceil((new Date(e.date + "T12:00").getTime() - Date.now()) / 86400000));
 
 function CreateEventModal({ onClose }: { onClose: () => void }) {
   const s = useStore();
@@ -152,6 +195,7 @@ function CreateEventModal({ onClose }: { onClose: () => void }) {
           if (blocked) { openUpsell("events"); return; }
           update((st) => { st.events.push(newEvent(v, s.defaultFields)); st.eventLog.push(Date.now()); });
           onClose(); // stay on My events
+          confetti(innerWidth / 2, innerHeight / 3); toast(t("toast.created"));
         }} />
     </Modal>
   );

@@ -8,8 +8,8 @@ import { Modal } from "./ui";
 import { money } from "./Billing";
 
 const supOf = (id: string): Supplier | undefined => SUPPLIERS.find((x) => x.id === id);
-const HUES: Record<string, number> = { venue: 340, catering: 25, photo: 210, music: 270, decor: 140, cake: 320, entertainment: 50, rentals: 180, beauty: 300, transport: 100 };
-const Avatar = ({ sup, size = 40 }: { sup?: Supplier; size?: number }) => <span className="inbav" style={{ width: size, height: size, background: `hsl(${HUES[sup?.category ?? ""] ?? 200} 45% 38%)` }}>{(sup?.name ?? "?")[0]}</span>;
+const HUES: Record<string, string> = { venue: "#FF7A59", catering: "#F0B429", photo: "#6FA8FF", music: "#9B87F5", decor: "#46C8B2", cake: "#FF9C7F", entertainment: "#FFC93C", rentals: "#B9A6FF", beauty: "#2FB09B", transport: "#B8A98A" };
+const Avatar = ({ sup, size = 40 }: { sup?: Supplier; size?: number }) => <span className="inbav" style={{ width: size, height: size, background: `${HUES[sup?.category ?? ""] ?? "#46C8B2"}` }}>{(sup?.name ?? "?")[0]}</span>;
 const NICON: Record<NotifType, React.ReactNode> = { approval: <ClipboardCheck size={16} />, supplier: <Store size={16} />, task: <ListTodo size={16} />, guest: <CalendarCheck size={16} />, collab: <Users size={16} />, billing: <Wallet size={16} /> };
 const kb = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
 
@@ -197,7 +197,7 @@ function Conversation({ th, onBack }: { th: Thread; onBack?: () => void }) {
                       <span className="muted small">{t("inb.quote")}</span>
                       <b style={{ fontSize: "1.25rem" }}>{money(m.quote.amount, locale)}</b>
                       {m.quote.status === "pending" ? <div className="row" style={{ gap: 6 }}><button className="sm" onClick={() => quote(m, true)}><ThumbsUp size={14} /> {t("inb.accept")}</button><button className="ghost sm" onClick={() => quote(m, false)}><ThumbsDown size={14} /> {t("inb.decline")}</button></div>
-                        : <span className="pill" style={{ background: m.quote.status === "accepted" ? "var(--teal)" : "var(--rose)", color: "#0c1a18", width: "fit-content" }}>{t("inb.quote." + m.quote.status)}</span>}
+                        : <span className="pill" style={{ background: m.quote.status === "accepted" ? "var(--teal)" : "var(--danger)", color: "#14203A", width: "fit-content" }}>{t("inb.quote." + m.quote.status)}</span>}
                     </div>
                   )}
                   <div className="inbmeta">

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { hashPassword, newTotpSecret, passwordIssues, randomPassword } from "../crypto";
-import { createTask, log, ROLE_LABEL, ROLES, uid, update, useStore, type ApiKey, type Config, type Role, type Staff } from "../store";
+import { createTask, log, PLAN_RULES, ROLE_LABEL, TRIAL_DAYS, ROLES, uid, update, useStore, type ApiKey, type Config, type Coupon, type Role, type Staff } from "../store";
 import { Copy, fmtDate, Tabs } from "../ui";
 
-const TABS: [string, string][] = [["/admin/users", "Staff & roles"], ["/admin/pricing", "Plans & prices"], ["/admin/apis", "API keys"], ["/admin/webmaster", "Web master"], ["/admin/webdesign", "Web design"], ["/admin/intake", "Request intake"], ["/admin/audit", "Audit log"]];
+const TABS: [string, string][] = [["/admin/users", "Staff & roles"], ["/admin/pricing", "Plans & prices"], ["/admin/apis", "API keys"], ["/admin/webmaster", "Web master"], ["/admin/webdesign", "Web design"], ["/admin/coupons", "Coupons"], ["/admin/intake", "Request intake"], ["/admin/audit", "Audit log"]];
 
-/** Super admin only: controls everything about the Event Planner platform. */
+/** Super admin only: controls everything about the 1Plan platform. */
 export default function Admin({ me, route }: { me: Staff; route: string }) {
   if (me.role !== "super_admin") return <div className="card"><h2>No access</h2></div>;
   const cur = TABS.find(([h]) => route.startsWith(h))?.[0] ?? "/admin/users";
@@ -18,6 +18,7 @@ export default function Admin({ me, route }: { me: Staff; route: string }) {
       {cur === "/admin/apis" && <Apis me={me} />}
       {cur === "/admin/webmaster" && <WebMaster me={me} />}
       {cur === "/admin/webdesign" && <WebDesign me={me} />}
+      {cur === "/admin/coupons" && <Coupons me={me} />}
       {cur === "/admin/intake" && <Intake />}
       {cur === "/admin/audit" && <AuditLog />}
     </>
@@ -112,7 +113,7 @@ function Pricing({ me }: { me: Staff }) {
   return (
     <div className="card">
       <h3>Plans & prices (USD)</h3>
-      <p className="muted small">These prices are published to the Event Planner platform and its landing page.</p>
+      <p className="muted small">Published to the bridge for the 1Plan customer app. Every plan starts with a {TRIAL_DAYS}-day free trial (card required); paying yearly saves 10%. The customer app currently uses its own price list and does not read these prices yet, so changing them here does not change what customers are charged.</p>
       <table>
         <thead><tr><th>Plan</th><th>Monthly</th><th>Yearly</th><th>Yearly saving</th></tr></thead>
         <tbody>{Object.entries(d).map(([k, p]) => (
@@ -123,6 +124,12 @@ function Pricing({ me }: { me: Staff }) {
         ))}</tbody>
       </table>
       <div className="row" style={{ marginTop: 12 }}><button disabled={!dirty} onClick={save}>Save prices</button>{ok && <span role="status" style={{ color: "var(--green)" }}>Saved</span>}</div>
+      <h3 style={{ marginTop: 22 }}>What each plan includes</h3>
+      <p className="muted small">Reference copy of the rules built into the customer app (read only). Plan names customers see: Essential, Premier, Unlimited.</p>
+      <div style={{ overflowX: "auto" }}><table>
+        <thead><tr><th>Feature</th><th>Essential</th><th>Premier</th><th>Unlimited</th></tr></thead>
+        <tbody>{PLAN_RULES.map((r) => <tr key={r.label}><td>{r.label}</td><td>{r.values.basic}</td><td>{r.values.planner}</td><td>{r.values.pro}</td></tr>)}</tbody>
+      </table></div>
     </div>
   );
 }
@@ -208,7 +215,7 @@ function WebDesign({ me }: { me: Staff }) {
 }
 
 // ───────── Intake simulator ─────────
-/** Stand-in for the connection with the Event Planner platform: customer requests arrive here as tasks. */
+/** Stand-in for the connection with the 1Plan platform: customer requests arrive here as tasks. */
 function Intake() {
   const s = useStore();
   const [last, setLast] = useState("");
@@ -217,14 +224,14 @@ function Intake() {
   const des = ["Custom invitation for my birthday", "Update names on my invitation", "Matching save-the-date", "Invitation in Portuguese"];
   const send = (kind: "support" | "design") => {
     const c = pick(s.customers);
-    const t = createTask({ kind, title: pick(kind === "support" ? sup : des), description: "Submitted from the Event Planner platform (simulated).", requester: `${c.name} <${c.email}>`, customerId: c.id, priority: pick(["low", "normal", "normal", "high"] as const) });
+    const t = createTask({ kind, title: pick(kind === "support" ? sup : des), description: "Submitted from the 1Plan platform (simulated).", requester: `${c.name} <${c.email}>`, customerId: c.id, priority: pick(["low", "normal", "normal", "high"] as const) });
     const who = s.staff.find((m) => m.id === t.assigneeId)?.name;
     setLast(`${t.id} created and ${who ? "assigned to " + who : "left in the team queue"}.`);
   };
   return (
     <div className="card">
       <h3>Request intake (prototype)</h3>
-      <p className="muted">When a customer uses the support widget or orders a custom design in the Event Planner platform, a request arrives here, gets a unique task ID and is auto-assigned by team scope. Until the two platforms are connected through an API, use these buttons to simulate that.</p>
+      <p className="muted">When a customer uses the support widget or orders a custom design in the 1Plan platform, a request arrives here, gets a unique task ID and is auto-assigned by team scope. Until the two platforms are connected through an API, use these buttons to simulate that.</p>
       <div className="row"><button onClick={() => send("support")}>Simulate support request</button><button onClick={() => send("design")}>Simulate design request</button></div>
       {last && <div className="okbox" role="status" style={{ marginTop: 10 }}>{last}</div>}
     </div>
@@ -238,6 +245,59 @@ function AuditLog() {
       <h3>Audit log (latest 500)</h3>
       <table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th></tr></thead>
         <tbody>{s.audit.map((a) => <tr key={a.id}><td className="small">{fmtDate(a.at)}</td><td>{a.by}</td><td>{a.action}</td><td className="small">{a.target}</td></tr>)}</tbody></table>
+    </div>
+  );
+}
+
+// ───────── Coupons ─────────
+const CODE_RE = /^[A-Z0-9][A-Z0-9_-]{2,23}$/;
+/** True while a coupon can be redeemed (switched on and not past its last day). */
+export const couponLive = (c: Coupon) => c.active && (!c.expires || c.expires >= new Date().toISOString().slice(0, 10));
+function Coupons({ me }: { me: Staff }) {
+  const s = useStore();
+  const list = s.config.coupons ?? [];
+  const [f, setF] = useState({ code: "", percent: "10", note: "", expires: "" });
+  const [err, setErr] = useState("");
+  const create = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (me.role !== "super_admin") return;
+    const code = f.code.trim().toUpperCase(), percent = Number(f.percent);
+    if (!CODE_RE.test(code)) return setErr("The coupon ID needs 3–24 characters: letters, numbers, - or _.");
+    if (!Number.isInteger(percent) || percent < 1 || percent > 100) return setErr("The discount must be a whole number from 1 to 100.");
+    if (list.some((c) => c.code === code)) return setErr("A coupon with that ID already exists.");
+    setErr("");
+    const c: Coupon = { id: uid(), code, percent, note: f.note.trim().slice(0, 120), active: true, expires: f.expires, createdAt: Date.now(), by: me.name };
+    saveConfig(me, `coupon ${code} (${percent}%)`, (cfg) => { cfg.coupons = [c, ...(cfg.coupons ?? [])]; });
+    setF({ code: "", percent: "10", note: "", expires: "" });
+  };
+  const toggle = (c: Coupon) => saveConfig(me, `coupon ${c.code} ${c.active ? "off" : "on"}`, (cfg) => { const x = cfg.coupons?.find((y) => y.id === c.id); if (x) x.active = !x.active; });
+  const remove = (c: Coupon) => { if (confirm(`Delete coupon ${c.code}? Customers will no longer be able to use it.`)) saveConfig(me, `deleted coupon ${c.code}`, (cfg) => { cfg.coupons = (cfg.coupons ?? []).filter((y) => y.id !== c.id); }); };
+  return (
+    <div className="grid" style={{ gap: 14 }}>
+      <form className="card grid" style={{ gap: 12 }} onSubmit={create}>
+        <h3 style={{ margin: 0 }}>New discount coupon</h3>
+        <p className="muted small" style={{ margin: 0 }}>Only super admins can create coupons. Customers type the ID in the promo code box at checkout; the percentage comes off the first payment.</p>
+        <div className="form">
+          <div><label htmlFor="cc">Coupon ID *</label><input id="cc" value={f.code} maxLength={24} placeholder="e.g. SPRING25" autoCapitalize="characters" onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} /></div>
+          <div><label htmlFor="cp">Discount (%) *</label><input id="cp" type="number" min={1} max={100} step={1} value={f.percent} onChange={(e) => setF({ ...f, percent: e.target.value })} /></div>
+          <div><label htmlFor="ce">Last valid day (optional)</label><input id="ce" type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} /></div>
+          <div><label htmlFor="cn">Internal note (optional)</label><input id="cn" maxLength={120} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} /></div>
+        </div>
+        {err && <div className="alert" role="alert">{err}</div>}
+        <div><button disabled={!f.code.trim()}>Create coupon</button></div>
+      </form>
+      <div className="card">
+        <h3>Coupons</h3>
+        <div style={{ overflowX: "auto" }}><table>
+          <thead><tr><th>ID</th><th>Discount</th><th>Valid until</th><th>Status</th><th>Note</th><th>Created</th><th /></tr></thead>
+          <tbody>{list.map((c) => (
+            <tr key={c.id}><td><b>{c.code}</b></td><td>{c.percent}%</td><td className="small">{c.expires || "No end date"}</td>
+              <td><span className="badge">{!c.active ? "Off" : couponLive(c) ? "Active" : "Expired"}</span></td>
+              <td className="small">{c.note}</td><td className="small">{fmtDate(c.createdAt)} · {c.by}</td>
+              <td><div className="row"><button className="ghost sm" onClick={() => toggle(c)}>{c.active ? "Turn off" : "Turn on"}</button><button className="danger sm" onClick={() => remove(c)}>Delete</button></div></td></tr>
+          ))}{!list.length && <tr><td colSpan={7} className="muted">No coupons yet.</td></tr>}</tbody>
+        </table></div>
+      </div>
     </div>
   );
 }

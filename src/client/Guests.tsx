@@ -4,10 +4,11 @@ import { LANGS } from "../i18n";
 import { uid, update, guestDefaults, useStore, type Channel, type EventT, type Guest, type Lang } from "../store";
 import { COUNTRIES, dialOf, flag } from "../countries";
 import { Check, Download, FileSpreadsheet, LockI, Mail, MessageCircle, Pencil, Plus, X } from "../icons";
-import { Modal } from "./ui";
+import { Bar, Modal } from "./ui";
 import { CsvImport, downloadTemplate } from "./GuestCsv";
 
-const TONE: Record<Guest["status"], string> = { draft: "var(--muted)", sent: "var(--blue)", confirmed: "var(--teal)", declined: "var(--rose)" };
+type SF = Guest["status"] | "all";
+const ORDER: Guest["status"][] = ["confirmed", "sent", "declined", "draft"];
 const LANG_NAME: Record<Lang, string> = { es: "Español", en: "English", pt: "Português" };
 const blank = (lang: Lang) => ({ name: "", invitees: 1, message: "", channel: "whatsapp" as Channel, country: "MX", number: "", email: "", lang });
 
@@ -20,7 +21,14 @@ export default function Guests({ event }: { event: EventT }) {
   const [csv, setCsv] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [added, setAdded] = useState(0);
-    const guests = s.guests.filter((g) => g.eventId === event.id);
+  const [sf, setSf] = useState<SF>("all");
+  const guests = s.guests.filter((g) => g.eventId === event.id);
+  // RSVP summary: invited = everyone who was sent an invitation, replied = confirmed + declined
+  const cnt = (st: Guest["status"]) => guests.filter((g) => g.status === st).length;
+  const invited = guests.filter((g) => g.status !== "draft").length;
+  const replied = cnt("confirmed") + cnt("declined");
+  const people = guests.filter((g) => g.status === "confirmed").reduce((n, g) => n + g.invitees, 0);
+  const rows = sf === "all" ? guests : guests.filter((g) => g.status === sf);
   const patch = (id: string, p: Partial<Guest>) => update((st) => { Object.assign(st.guests.find((g) => g.id === id)!, p); });
   const phoneOf = (x: typeof f) => (x.number.trim() ? `${dialOf(x.country)} ${x.number.trim()}` : "");
   const contactOk = f.channel === "whatsapp" ? !!f.number.trim() : !!f.email.trim();
@@ -50,7 +58,7 @@ export default function Guests({ event }: { event: EventT }) {
         <div className="card"><div className="muted small">{t("gst.total")}</div><h2 style={{ margin: 0 }}>{guests.length}</h2></div>
         <div className="card"><div className="muted small">{t("gst.people")}</div><h2 style={{ margin: 0, color: "var(--teal)" }}>{guests.reduce((n, x) => n + x.invitees, 0)}</h2></div>
         <div className="card"><div className="muted small">{t("gst.notinvited")}</div><h2 style={{ margin: 0 }}>{guests.filter((x) => x.status === "draft").length}</h2></div>
-        <div className="card"><div className="muted small">{t("gst.nocontact")}</div><h2 style={{ margin: 0, color: "var(--rose)" }}>{guests.filter((x) => (x.channel === "whatsapp" ? !x.phone : !x.email)).length}</h2></div>
+        <div className="card"><div className="muted small">{t("gst.nocontact")}</div><h2 style={{ margin: 0, color: "var(--danger)" }}>{guests.filter((x) => (x.channel === "whatsapp" ? !x.phone : !x.email)).length}</h2></div>
       </div>
 
       <div className="row between" style={{ margin: "0 0 12px" }}>
@@ -88,29 +96,44 @@ export default function Guests({ event }: { event: EventT }) {
       </form>
       </Modal>}
 
+      <div className="seg" role="group" aria-label={t("status")} style={{ marginBottom: 12 }}>
+        {(["all", ...ORDER] as SF[]).map((k) => <button key={k} aria-pressed={sf === k} onClick={() => setSf(k)}>{k === "all" ? t("all") : t("g." + k)} · {k === "all" ? guests.length : cnt(k)}</button>)}
+      </div>
+      <div className="gsplit">
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead><tr><th>{t("name")}</th><th>{t("gst.invitees")}</th><th>{t("gst.contact")}</th><th>{t("gst.lang")}</th><th>{t("status")}</th><th /></tr></thead>
           <tbody>
-            {guests.length === 0 && <tr><td colSpan={6} className="muted">{t("none")}</td></tr>}
-            {guests.map((g) => (
+            {rows.length === 0 && <tr><td colSpan={6} className="muted">{t("none")}</td></tr>}
+            {rows.map((g) => (
               <tr key={g.id}>
                 <td>{g.name}{g.message && <div className="muted small" style={{ maxWidth: 260 }}>{g.message}</div>}</td>
                 <td>{g.invitees}</td>
                 <td><span className="row" style={{ gap: 6 }}>{chan(g.channel)}{contact(g)}</span></td>
                 <td>{g.lang.toUpperCase()}</td>
-                <td><span className="pill" style={{ background: TONE[g.status], color: g.status === "draft" ? "#fff" : "#0c1a18" }}>{t("g." + g.status)}</span></td>
-                <td className="row" style={{ flexWrap: "nowrap" }}>
+                <td><span className={`pill st-${g.status}`}>{t("g." + g.status)}</span></td>
+                <td><div className="row" style={{ flexWrap: "nowrap" }}>
                   <button className="ghost icon" aria-label={t("gst.edit")} title={t("gst.edit")} onClick={() => edit(g)}><Pencil size={14} /></button>
                   {g.status !== "draft" && <span title={t("inv.locked")}><LockI /></span>}
                   {g.status === "draft" && <button className="danger sm icon" aria-label={t("delete")} onClick={() => update((st) => { st.guests = st.guests.filter((x) => x.id !== g.id); })}><X size={14} /></button>}
-                </td>
+                </div></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
+      <aside className="card rsvp" aria-label={t("gst.sum")}>
+        <h3>{t("gst.sum")}</h3>
+        {invited === 0 ? <p className="muted small">{t("gst.sum.none")}</p> : (
+          <>
+            <div className="row between small"><span className="muted">{t("gst.sum.replied", { n: replied, m: invited })}</span><b>{Math.round((replied / invited) * 100)}%</b></div>
+            <Bar value={replied} max={invited} />
+          </>
+        )}
+        <div className="rsvp-list">{ORDER.map((k) => <div className="row between" key={k}><span className={`pill st-${k}`}>{t("g." + k)}</span><b>{cnt(k)}</b></div>)}</div>
+        <p className="muted small" style={{ margin: 0 }}>{t("gst.sum.people", { n: people })}</p>
+      </aside>
+      </div>
     </>
   );
 }

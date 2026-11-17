@@ -16,7 +16,7 @@ export function Todos({ event }: { event: EventT }) {
       {list.length === 0 && <p className="muted">{t("none")}</p>}
       {list.map((x) => (
         <div className="row" key={x.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-          <input type="checkbox" checked={x.done} aria-label={x.text} onChange={() => update((st) => { const y = st.todos.find((z) => z.id === x.id)!; y.done = !y.done; })} />
+          <input type="checkbox" className="tcheck" checked={x.done} aria-label={x.text} onChange={() => update((st) => { const y = st.todos.find((z) => z.id === x.id)!; y.done = !y.done; })} />
           <span className="grow" style={{ textDecoration: x.done ? "line-through" : undefined, color: x.done ? "var(--muted)" : undefined }}>{x.text}</span>
           <button className="danger sm icon" aria-label={t("delete")} onClick={() => update((st) => { st.todos = st.todos.filter((z) => z.id !== x.id); })}><X size={14} /></button>
         </div>

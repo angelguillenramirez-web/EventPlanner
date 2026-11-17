@@ -6,11 +6,12 @@ import { Modal } from "./ui";
 import DocViewer from "./DocViewer";
 import DocThumb from "./DocThumb";
 import { delBlob, getBlob, putBlob } from "../blobstore";
+import { ask } from "./Ask";
 
 const MAX = 1.5 * 1024 * 1024; // prototype keeps files in the browser (localStorage)
-const KINDS: Record<string, { label: string; color: string }> = { pdf: { label: "PDF", color: COLORS.rose }, doc: { label: "DOC", color: COLORS.blue }, docx: { label: "DOC", color: COLORS.blue }, ppt: { label: "PPT", color: "#e98a3c" }, pptx: { label: "PPT", color: "#e98a3c" } };
+const KINDS: Record<string, { label: string; color: string }> = { pdf: { label: "PDF", color: COLORS.rose }, doc: { label: "DOC", color: COLORS.blue }, docx: { label: "DOC", color: COLORS.blue }, ppt: { label: "PPT", color: "#FF9C7F" }, pptx: { label: "PPT", color: "#FF9C7F" } };
 const ext = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase() : "");
-const kind = (name: string) => KINDS[ext(name)] ?? { label: (ext(name) || "FILE").slice(0, 4).toUpperCase(), color: "#6b7b78" }; // any document type is accepted
+const kind = (name: string) => KINDS[ext(name)] ?? { label: (ext(name) || "FILE").slice(0, 4).toUpperCase(), color: "#6B6458" }; // any document type is accepted
 const IMG = ["png", "jpg", "jpeg", "gif", "webp"];
 const fmtSize = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
 
@@ -79,7 +80,7 @@ export default function Documents({ event }: { event: EventT }) {
     onDragLeave: () => setOver(null),
     onDrop: (e: React.DragEvent) => { e.preventDefault(); setOver(null); addFiles(e.dataTransfer.files, folderId); },
   });
-  const delDoc = (d: Doc) => { if (!confirm(`${t("confirm.delete")}\n${d.name}`)) return; if (d.data.startsWith("idb:")) delBlob(d.id); update((st) => { st.documents = st.documents.filter((x) => x.id !== d.id); const fo = st.folders.find((x) => x.id === d.folderId); if (fo) fo.modifiedAt = Date.now(); }); };
+  const delDoc = (d: Doc) => ask(`${t("confirm.delete")}\n${d.name}`, () => { if (d.data.startsWith("idb:")) delBlob(d.id); update((st) => { st.documents = st.documents.filter((x) => x.id !== d.id); const fo = st.folders.find((x) => x.id === d.folderId); if (fo) fo.modifiedAt = Date.now(); }); }, { danger: true });
   const when = (ms: number) => new Date(ms).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
   const toggle = (
     <div className="seg" role="group" aria-label={t("docs.view")}>
@@ -104,7 +105,7 @@ export default function Documents({ event }: { event: EventT }) {
           <h2 style={{ margin: 0 }}>{cur.name}</h2><span className="muted" style={{ flex: 1 }}>{list.length}</span>{toggle}
         </div>
         {list.length === 0 && <div className={`dropzone${over === cur.id ? " over" : ""}`} {...dropProps(cur.id, cur.id)}>{t("docs.drop")}</div>}
-        {msg && <p role="alert" style={{ color: "var(--rose)" }}>{msg}</p>}
+        {msg && <p role="alert" style={{ color: "var(--danger)" }}>{msg}</p>}
         {list.length === 0 ? <p className="muted">{t("none")}</p> : view === "grid" ? (
           <div className="minis">{list.map((d) => <Mini key={d.id} d={d} label={t("delete")} onOpen={() => setPreview(d)} onDelete={() => delDoc(d)} />)}</div>
         ) : (
@@ -137,7 +138,7 @@ export default function Documents({ event }: { event: EventT }) {
           {toggle}
         </div>
       </div>
-      {msg && <p role="alert" style={{ color: "var(--rose)" }}>{msg}</p>}
+      {msg && <p role="alert" style={{ color: "var(--danger)" }}>{msg}</p>}
       {view === "grid" ? (
         <div className="folders">
           {folders.map((f) => (

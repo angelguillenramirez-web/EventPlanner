@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { go, update, useStore, type EventT } from "../store";
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown, EyeOff, MapPin, Pencil, Plus, TypeIcon, Video } from "../icons";
+import { PLANS, go, me, uid, update, useStore, type EventChange, type EventT } from "../store";
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronDown, EyeOff, MapPin, Pencil, Plus, TypeIcon, Users, Video } from "../icons";
 import TaskTracker from "./Tasks";
-import { Todos } from "./EventTabs";
+import { LockedCard, Todos } from "./EventTabs";
+import { PlannerBudgets } from "./Budget";
 import Documents from "./Documents";
 import Tables from "./Tables";
 import MenuTab from "./MenuTab";
@@ -16,14 +17,17 @@ import Timeline from "./Timeline";
 import Invitations from "./Invitations";
 import Guests from "./Guests";
 import DesignTab from "./Design";
-import EventForm, { EventThumb, mapsDirections } from "./EventForm";
+import EventForm, { mapsDirections } from "./EventForm";
 import { Modal } from "./ui";
 
 function EditEventModal({ ev, onClose }: { ev: EventT; onClose: () => void }) {
-  const { t } = useT();
+  const { t, tn, locale } = useT();
   const [confirm, setConfirm] = useState(false);
   const [typed, setTyped] = useState("");
-  const setStatus = (status: EventT["status"]) => { update((st) => { st.events.find((e) => e.id === ev.id)!.status = status; }); onClose(); };
+  const [histOpen, setHistOpen] = useState(false); // history stays grouped and closed until the chevron is clicked
+  const label = (f: string) => (f === "status" ? t("status") : f === "name" ? t("event.name") : f === "type" ? t("event.type") : f === "date" ? t("event.date") : f === "time" ? t("event.time") : f === "location" ? t("location") : f === "venue" ? t("venue") : t("description"));
+  const val = (c: EventChange, to = false) => { const x = to ? c.to : c.from; return (c.field === "type" ? tn(x) : c.field === "status" ? t("estatus." + x) : x) || "—"; };
+  const setStatus = (status: EventT["status"]) => { update((st) => { const e = st.events.find((x) => x.id === ev.id)!; if (e.status !== status) (e.log ??= []).unshift({ id: uid(), at: Date.now(), by: me(st).name, field: "status", from: e.status, to: status }); e.status = status; }); onClose(); };
   const remove = () => {
     update((st) => {
       st.events = st.events.filter((e) => e.id !== ev.id);
@@ -35,8 +39,8 @@ function EditEventModal({ ev, onClose }: { ev: EventT; onClose: () => void }) {
   };
   return (
     <Modal title={t("event.edit")} onClose={onClose} wide>
-      <EventForm submitLabel={t("save")} initial={{ name: ev.name, type: ev.type, picture: ev.picture, description: ev.description, date: ev.date, location: ev.location, venue: ev.venue }}
-        onSubmit={(v) => { update((st) => { Object.assign(st.events.find((e) => e.id === ev.id)!, v); }); onClose(); }} />
+      <EventForm submitLabel={t("save")} initial={{ name: ev.name, type: ev.type, picture: ev.picture, description: ev.description, date: ev.date, time: ev.time ?? "", location: ev.location, venue: ev.venue }}
+        onSubmit={(v) => { update((st) => { const e = st.events.find((x) => x.id === ev.id)!; const who = me(st).name, at = Date.now(); (["name", "type", "date", "time", "location", "venue", "description"] as const).forEach((f) => { const a = String(e[f] ?? ""), b = String(v[f] ?? ""); if (a !== b) (e.log ??= []).unshift({ id: uid(), at, by: who, field: f, from: a, to: b }); }); Object.assign(e, v); }); onClose(); }} />
       <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "20px 0" }} />
       <h3>{t("event.manage")}</h3>
       <div className="row">
@@ -45,13 +49,30 @@ function EditEventModal({ ev, onClose }: { ev: EventT; onClose: () => void }) {
         <button className="danger" onClick={() => setConfirm(!confirm)} aria-expanded={confirm}>{t("event.delete")}</button>
       </div>
       {confirm && (
-        <div className="card" style={{ marginTop: 12, borderColor: "var(--rose)", boxShadow: "none" }}>
+        <div className="card" style={{ marginTop: 12, borderColor: "var(--danger)", boxShadow: "none" }}>
           <p style={{ marginTop: 0 }}>{t("event.delete.warn")}</p>
           <label htmlFor="dn">{t("event.delete.type", { name: ev.name })}</label>
           <input id="dn" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
           <button className="danger" style={{ marginTop: 10 }} disabled={typed !== ev.name} onClick={remove}>{t("event.delete.confirm")}</button>
         </div>
       )}
+      <hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "20px 0 8px" }} />
+      <div className="evhist">
+        <button type="button" className="evhead-btn" aria-expanded={histOpen} onClick={() => setHistOpen(!histOpen)}>
+          <ChevronDown size={13} style={{ transform: histOpen ? undefined : "rotate(-90deg)", transition: "transform .15s" }} /> <b>{t("event.history")}</b>
+          <span className="muted">{(ev.log ?? []).length ? ` · ${t("event.history.n", { n: (ev.log ?? []).length })}` : ""}</span>
+        </button>
+        {histOpen && (
+          <ul>
+            {(ev.log ?? []).map((c) => (
+              <li key={c.id} className="nowrap-row" title={`${label(c.field)}: ${val(c)} → ${val(c, true)}`}>
+                <span className="muted">{new Date(c.at).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}</span> · <b>{c.by || "—"}</b> · {label(c.field)}: {c.field === "description" ? t("event.history.edited") : <>{val(c)} → {val(c, true)}</>}
+              </li>
+            ))}
+            <li className="nowrap-row"><span className="muted">{new Date(ev.createdAt).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}</span> · {t("event.history.created")}</li>
+          </ul>
+        )}
+      </div>
     </Modal>
   );
 }
@@ -91,10 +112,12 @@ export default function EventPage({ id, tab }: { id: string; tab: string }) {
   if (!ev) return <><p>{t("events.none")}</p><button onClick={() => go("/app")}>{t("back")}</button></>;
   const ty = s.eventTypes.find((x) => x.id === ev.type);
   const mem = s.viewAs ? s.team.find((m) => m.id === s.viewAs) : undefined; // collaborators only get the tabs their access allows
-  const ALL = ["tasks", "todos", "documents", "itinerary", "design", "guests", "invitations", "tables", "menu", "talent", "agreement", ...ev.sections].filter((k) => !mem || mem.access.includes(k) || (k === "talent" && mem.access.length >= 10));
+  const ALL = ["tasks", "todos", "documents", "itinerary", "design", "guests", "invitations", "tables", "menu", "talent", "agreement", ...(s.viewAs ? [] : ["budget"]), ...ev.sections].filter((k) => !mem || mem.access.includes(k) || (k === "talent" && mem.access.length >= 10));
   const order = [...ev.tabOrder.filter((k) => ALL.includes(k)), ...ALL.filter((k) => !ev.tabOrder.includes(k))];
-  const visible = order.filter((k) => !ev.hiddenTabs.includes(k));
-  const hiddenList = order.filter((k) => ev.hiddenTabs.includes(k));
+  const rules = PLANS[s.plan];
+  const noAccess = (k: string) => (k === "documents" && !rules.documents) || (k === "agreement" && !rules.agreements) || (k === "meetings" && !rules.meetings); // not in this plan: kept under "+" and locked
+  const visible = order.filter((k) => !ev.hiddenTabs.includes(k) && !noAccess(k));
+  const hiddenList = order.filter((k) => ev.hiddenTabs.includes(k) || noAccess(k));
   const patch = (fn: (e: EventT) => void) => update((st) => { fn(st.events.find((e) => e.id === id)!); });
   const addTab = (k: string) => patch((e) => { e.hiddenTabs = e.hiddenTabs.filter((x) => x !== k); }); // shows a tab that is not on the bar yet
   const dropTab = (target: string) => {
@@ -119,8 +142,7 @@ export default function EventPage({ id, tab }: { id: string; tab: string }) {
   return (
     <div ref={wrapRef} style={{ ["--accent" as string]: ty?.color, minHeight: "calc(100vh + 110px)" }}>
       <div ref={headRef} className={`evhead${compact ? " compact" : ""}`}>
-        <div className="row" style={{ alignItems: "center", gap: 16, flexWrap: "nowrap" }}>
-          <div style={{ flexShrink: 0 }}><EventThumb picture={ev.picture} type={ev.type} size={compact ? 40 : 112} /></div>
+        <div className="row evtop" style={{ alignItems: "center", gap: 16, flexWrap: "nowrap" }}>
           <div className="grow" style={{ minHeight: compact ? 0 : 112, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div className="ev-title">
               <h1 style={{ margin: 0, fontSize: compact ? "1.15rem" : undefined }}>{ev.name}</h1>
@@ -128,14 +150,15 @@ export default function EventPage({ id, tab }: { id: string; tab: string }) {
               {ev.status !== "active" && <span className="badge">{t("estatus." + ev.status)}</span>}
             </div>
             {!compact && (
-              <div className="row muted" style={{ marginTop: 6, gap: 18 }}>
+              <div className="row muted evmeta" style={{ marginTop: 8, gap: 18 }}>
                 <span className="row" style={{ gap: 6 }}><TypeIcon type={ev.type} size={16} />{tn(ev.type)}</span>
-                <span className="row" style={{ gap: 6 }}><CalendarDays size={16} />{new Date(ev.date + "T12:00").toLocaleDateString(locale, { dateStyle: "full" })}</span>
+                <span className="row" style={{ gap: 6 }}><CalendarDays size={16} />{new Date(ev.date + "T12:00").toLocaleDateString(locale, { dateStyle: "full" })}{ev.time ? ` · ${ev.time}` : ""}</span>
+                <span className="row" style={{ gap: 6 }}><Users size={16} />{t("ev.guestsn", { n: s.guests.filter((g) => g.eventId === ev.id).reduce((n, g) => n + g.invitees, 0) })}</span>
                 {place && <a className="row" style={{ gap: 6, color: "inherit" }} href={mapsDirections([ev.venue, ev.location].filter(Boolean).join(", "))} target="_blank" rel="noopener noreferrer" title={t("map.directions")}><MapPin size={16} />{place}</a>}
               </div>
             )}
           </div>
-          <Countdown date={ev.date} variant={compact ? "compact" : "lg"} />
+          <Countdown date={ev.date} time={ev.time} variant={compact ? "compact" : "lg"} />
         </div>
         <nav className="tabs" aria-label="Event sections" style={{ marginBottom: 0 }}>
           {visible.map((k) => (
@@ -180,7 +203,7 @@ export default function EventPage({ id, tab }: { id: string; tab: string }) {
       <div className="evbody">
         {tab === "tasks" && <TaskTracker key={ev.id} event={ev} />}
         {tab === "todos" && <Todos event={ev} />}
-        {tab === "documents" && <Documents event={ev} />}
+        {tab === "documents" && (rules.documents ? <Documents event={ev} /> : <LockedCard k="documents" />)}
         {tab === "itinerary" && <Timeline event={ev} />}
         {tab === "design" && <DesignTab event={ev} />}
         {tab === "guests" && <Guests event={ev} />}
@@ -188,8 +211,9 @@ export default function EventPage({ id, tab }: { id: string; tab: string }) {
         {tab === "tables" && <Tables event={ev} />}
         {tab === "menu" && <MenuTab event={ev} />}
         {tab === "talent" && <TalentTab event={ev} />}
-        {tab === "agreement" && <AgreementTab event={ev} />}
-        {tab === "meetings" && ev.sections.includes("meetings") && <Meetings event={ev} />}
+        {tab === "agreement" && (rules.agreements ? <AgreementTab event={ev} /> : <LockedCard k="agreements" />)}
+        {tab === "budget" && !s.viewAs && <PlannerBudgets eventId={ev.id} />}
+        {tab === "meetings" && ev.sections.includes("meetings") && (rules.meetings ? <Meetings event={ev} /> : <LockedCard k="meetings" />)}
       </div>
       {editing && <EditEventModal ev={ev} onClose={() => setEditing(false)} />}
     </div>

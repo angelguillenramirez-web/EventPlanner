@@ -6,6 +6,8 @@ const BASE = "http://localhost:5175";
 
 export interface RemoteStatus { taskId: string; status: string; label?: string; replies?: { at: number; text: string }[] }
 export interface PublicData {
+  /** Discount coupons created by staff: code → percent off. */
+  coupons?: Record<string, number>;
   plans: Record<string, { name: string; monthly: number; yearly: number }> | null;
   web: { maintenance: boolean; banner: string; seoTitle: string; seoDescription: string } | null;
   design: { primary: string; accent: string; heroTitle: string; heroSubtitle: string; ctaLabel: string } | null;

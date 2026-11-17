@@ -80,7 +80,7 @@ export default function MyTasks() {
       const ev = evOf(x.eventId);
       if (group === "eventdate" || group === "event") add(ev?.id ?? "none", ev ? (group === "eventdate" ? `${ev.name} · ${new Date(ev.date + "T12:00").toLocaleDateString(locale, { dateStyle: "medium" })}` : ev.name) : t("mt.noevent"), x, s.eventTypes.find((e) => e.id === ev?.type)?.color);
       else if (group === "priority") add(x.priority || "none", x.priority ? t("pri." + x.priority) : t("mt.nopri"), x);
-      else if (group === "due") { const k = !x.due ? "z" : x.due < today ? "a" : x.due === today ? "b" : x.due <= iso(7) ? "c" : "d"; add(k, t("mt.due." + k), x, k === "a" ? "var(--rose)" : undefined); }
+      else if (group === "due") { const k = !x.due ? "z" : x.due < today ? "a" : x.due === today ? "b" : x.due <= iso(7) ? "c" : "d"; add(k, t("mt.due." + k), x, k === "a" ? "var(--danger)" : undefined); }
       else if (group === "status") { const st = statusOf(x); add(st?.name ?? "-", st?.name ?? "—", x, st?.color); }
       else if (x.assignees.length) x.assignees.forEach((n) => add(n, "@" + n, x)); else add("none", t("mt.unassigned"), x);
     });
@@ -90,7 +90,7 @@ export default function MyTasks() {
 
   const stats = [
     [t("mt.open"), tasks.filter((x) => !x.done).length, undefined],
-    [t("mt.overdue"), tasks.filter((x) => !x.done && x.due && x.due < today).length, "var(--rose)"],
+    [t("mt.overdue"), tasks.filter((x) => !x.done && x.due && x.due < today).length, "var(--danger)"],
     [t("mt.week"), tasks.filter((x) => !x.done && x.due && x.due >= today && x.due <= iso(7)).length, "var(--gold)"],
     [t("mt.done"), tasks.filter((x) => x.done).length, "var(--teal)"],
   ] as const;
@@ -99,8 +99,8 @@ export default function MyTasks() {
     <>
       {ev && <span className="badge row" style={{ gap: 4, display: "inline-flex" }}><CalendarDays size={11} />{ev.name}</span>}
       <PriBadge p={x.priority} />
-      {x.due && <span className="small" style={{ color: !x.done && x.due < today ? "var(--rose)" : "var(--muted)" }}>{d(x.due)}</span>}
-      {st && <span className="pill" style={{ background: st.color, color: "#0c1a18" }}>{st.name}</span>}
+      {x.due && <span className="small" style={{ color: !x.done && x.due < today ? "var(--danger)" : "var(--muted)" }}>{d(x.due)}</span>}
+      {st && <span className="pill" style={{ background: st.color, color: "#14203A" }}>{st.name}</span>}
     </>
   ); };
   const list = () => groups.length === 0 ? <p className="muted">{t("mt.none")}</p> : (

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { FIGURE_KINDS, getState, go, guestDefaults, uid, update, useStore, type EventT, type Figure, type Guest, type Seat, type SeatShape, type SeatTable, type Seating } from "../store";
+import { FIGURE_KINDS, PLANS, getState, go, guestDefaults, openUpsell, uid, update, useStore, type EventT, type Figure, type Guest, type Seat, type SeatShape, type SeatTable, type Seating } from "../store";
 import { Archive, ArchiveRestore, ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ClipboardPaste, Copy, Lock, LockOpen, LockI, Maximize2, Minus, Palette, PanelLeft, PanelRight, Pencil, Plus, Printer, Redo2, RotateCcw, RotateCw, Save, Search, Trash2, Undo2, X, ZoomIn, ZoomOut } from "../icons";
 import ApprovalButton from "./Approval";
 import { useMedia } from "../shared";
 import { Modal } from "./ui";
+import { ask } from "./Ask";
 
 const SHAPES: SeatShape[] = ["round", "square", "rect", "oval", "serpent", "head", "rows"];
 const FIGURES: Figure["kind"][] = [...FIGURE_KINDS];
@@ -17,7 +18,7 @@ const POLY: Record<string, [number, number][]> = {
 const clipOf = (k: string) => (POLY[k] ? `polygon(${POLY[k].map(([x, y]) => `${x}% ${y}%`).join(",")})` : undefined);
 const figCls = (f: Figure) => `seatfig ${f.kind}${POLY[f.kind] ? " clip" : ""}${f.color ? "" : " nocolor"}`;
 const figSize = (k: string) => (k === "circle" ? { w: 100, h: 100 } : k === "line" ? { w: 180, h: 30 } : k === "arrow" || k === "arrowdouble" ? { w: 150, h: 70 } : { w: 120, h: 90 });
-const PALETTE = ["#46C8B2", "#C7B146", "#4EB1E8", "#C7465C", "#e98a3c", "#8b6fd6", "#5cb85c", "#8a96a3"];
+const PALETTE = ["#46C8B2", "#F0B429", "#6FA8FF", "#FF7A59", "#FF9C7F", "#9B87F5", "#2E9E5B", "#B8A98A"];
 const SEAT = 24;
 /** Arrangement types; the ones suggested for the event type come first. */
 const KINDS = ["ceremony", "dinner", "cocktail", "bar", "panel", "conference", "classroom", "other"];
@@ -81,14 +82,14 @@ function geom(shape: SeatShape, n: number, colsIn?: number) {
 function TableBody({ body, color, w, h }: { body: string; color: string; w: number; h: number }) {
   const [k, ...a] = body.split(":");
   const n = a.map(Number);
-  const col = color || "#b9c2c1"; // no colour chosen yet: white with a light outline
+  const col = color || "#EDE6D8"; // no colour chosen yet: white with a light outline
   const fill = color ? `color-mix(in srgb, ${col} 55%, transparent)` : "#ffffff";
   return (
     <svg width={w} height={h} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {k === "circle" && <circle cx={n[0]} cy={n[1]} r={n[2]} fill={fill} stroke={col} strokeWidth={2} />}
       {k === "ellipse" && <ellipse cx={n[0]} cy={n[1]} rx={n[2]} ry={n[3]} fill={fill} stroke={col} strokeWidth={2} />}
       {k === "rect" && <rect x={n[0]} y={n[1]} width={n[2]} height={n[3]} rx={8} fill={fill} stroke={col} strokeWidth={2} />}
-      {k === "wave" && !color && <polyline points={a.join(":")} fill="none" stroke="#b9c2c1" strokeWidth={33} strokeLinecap="round" strokeLinejoin="round" />}
+      {k === "wave" && !color && <polyline points={a.join(":")} fill="none" stroke="#EDE6D8" strokeWidth={33} strokeLinecap="round" strokeLinejoin="round" />}
       {k === "wave" && <polyline points={a.join(":")} fill="none" stroke={color ? col : "#ffffff"} strokeWidth={30} strokeLinecap="round" strokeLinejoin="round" opacity={color ? 0.6 : 1} />}
     </svg>
   );
@@ -167,7 +168,7 @@ export function SeatStatic({ rec, guests }: { rec: Seating; guests: Guest[] }) {
                     const gu = guests.find((x) => x.id === seat.guestId);
                     const text = seat.label || (gu ? (seat.party === 0 ? gu.name : `${gu.name} +${seat.party}`) : "");
                     const p = g.pts[i];
-                    return <span key={seat.id} className="seatdot" style={{ ["--inv" as string]: 1 / tb.scale, left: p.x - SEAT / 2, top: p.y - SEAT / 2, background: seat.color || (gu ? "var(--ink)" : "var(--surface)"), color: seat.color || gu ? "#0c1a18" : "var(--muted)" }}><span style={{ transform: `rotate(${-tb.rot}deg)`, display: "block" }}>{(text || String(i + 1)).slice(0, 2).toUpperCase()}{text && <i className="stip">{text}</i>}</span></span>;
+                    return <span key={seat.id} className="seatdot" style={{ ["--inv" as string]: 1 / tb.scale, left: p.x - SEAT / 2, top: p.y - SEAT / 2, background: seat.color || (gu ? "var(--ink)" : "var(--surface)"), color: seat.color || gu ? "#14203A" : "var(--muted)" }}><span style={{ transform: `rotate(${-tb.rot}deg)`, display: "block" }}>{(text || String(i + 1)).slice(0, 2).toUpperCase()}{text && <i className="stip">{text}</i>}</span></span>;
                   })}
                 </div>
               </div>
@@ -195,6 +196,7 @@ type Snap = Pick<Seating, "tables" | "figures" | "w" | "h" | "legend">;
 /** Full-page editor of one arrangement: every tool, undo/redo, versions, lock, approvals, legend and print. */
 function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId: string; startVer: string; onClose: () => void }) {
   const s = useStore();
+  const doPrint = () => { if (!PLANS[s.plan].printTables) { openUpsell("print"); return; } window.print(); };
   const { t } = useT();
   const [verId, setVerId] = useState(startVer);
   const [leave, setLeave] = useState(false);
@@ -423,7 +425,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
             const p = g.pts[i];
             const bg = seat.color || (gu ? "var(--ink)" : "var(--surface)");
             return (
-              <button key={seat.id} className={`seatdot${sel?.seat === seat.id ? " sel" : ""}`} style={{ ["--inv" as string]: 1 / tb.scale, left: p.x - SEAT / 2, top: p.y - SEAT / 2, background: bg, color: seat.color || gu ? "#0c1a18" : "var(--muted)" }}
+              <button key={seat.id} className={`seatdot${sel?.seat === seat.id ? " sel" : ""}`} style={{ ["--inv" as string]: 1 / tb.scale, left: p.x - SEAT / 2, top: p.y - SEAT / 2, background: bg, color: seat.color || gu ? "#14203A" : "var(--muted)" }}
                 aria-label={text || `${t("seat.seat")} ${i + 1}`}
                 onPointerDown={(e) => { if (edit) e.stopPropagation(); }} onClick={(e) => { if (!edit) return; e.stopPropagation(); setSel({ kind: "table", id: tb.id, seat: tb.chair ? undefined : seat.id }); }}
                 onDragOver={(e) => { if (edit) { e.preventDefault(); e.stopPropagation(); } }} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); assign(e.dataTransfer.getData("text/plain"), tb.id, i); }}>
@@ -476,13 +478,12 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
     if (k === "table" && val === "chair") addChair({ x: p.x - 22, y: p.y - 22 }); else if (k === "table") addTable(val as SeatShape, { x: p.x - 60, y: p.y - 60 }); else addFigure(val as Figure["kind"], { x: p.x - 60, y: p.y - 40 });
   };
   const toggleLock = () => { setSel(null); update((st) => { const x = st.seatings.find((y) => y.id === v.id)!; x.locked = !x.locked; st.seatDirty = true; }); };
-  const delVersion = () => { // go to another existing version; if this was the only one, start a new blank one (the editor stays open)
-    if (!confirm(t("confirm.delete"))) return;
+  const delVersion = () => ask(t("confirm.delete"), () => { // go to another existing version; if this was the only one, start a new blank one (the editor stays open)
     const others = recs.filter((x) => x.id !== v.id), next = others[Math.max(0, idx - 1)];
     const blank: Seating = { id: uid(), eventId: v.eventId, arrId: v.arrId, arrName: v.arrName, kind: v.kind, name: `${t("seat.version")} 1`, createdAt: Date.now(), locked: false, tables: [], figures: [], w: v.w, h: v.h, legend: [], approvals: [], pos: v.pos, archived: v.archived };
     update((st) => { st.seatings = st.seatings.filter((x) => x.id !== v.id); if (!next) st.seatings.push(blank); st.seatDirty = true; });
     setVerId((next ?? blank).id); setSel(null);
-  };
+  }, { danger: true });
   const deleteSel = () => {
     if (!sel) return;
     if (sel.seat) unseat(sel.id, sel.seat);
@@ -513,7 +514,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
   const menus: Record<string, { label: string; items: MI[] }> = {
     file: { label: t("dio.file"), items: [
       { label: t("dio.savechanges"), hint: "Ctrl+S", disabled: !s.seatDirty, run: saveChanges }, { label: t("seat.save"), hint: "Ctrl+Shift+S", run: saveVersion }, { label: v.locked ? t("seat.unlock") : t("seat.lock"), run: toggleLock }, "sep",
-      { label: t("seat.print"), run: () => window.print() }, { label: t("seat.deleteversion"), disabled: !edit, run: delVersion }, "sep",
+      { label: t("seat.print"), run: () => doPrint() }, { label: t("seat.deleteversion"), disabled: !edit, run: delVersion }, "sep",
       { label: t("back"), run: requestClose }] },
     edit: { label: t("dio.edit"), items: [
       { label: t("seat.undo"), hint: "Ctrl+Z", disabled: !edit || h.past.length === 0, run: undo }, { label: t("seat.redo"), hint: "Ctrl+Shift+Z", disabled: !edit || h.future.length === 0, run: redo }, "sep",
@@ -591,7 +592,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
         <button className="ghost icon" aria-label={t("seat.rotr")} title={t("seat.rotr")} disabled={!edit || !canRot} onClick={() => rotateSel(15)}><RotateCw size={17} /></button>
         <span className="dio-sep" />
         <button className="ghost icon" aria-label={v.locked ? t("seat.unlock") : t("seat.lock")} title={v.locked ? t("seat.unlock") : t("seat.lock")} onClick={toggleLock}>{v.locked ? <LockOpen size={17} /> : <Lock size={17} />}</button>
-        <button className="ghost icon" aria-label={t("seat.print")} title={t("seat.print")} onClick={() => window.print()}><Printer size={17} /></button>
+        <button className="ghost icon" aria-label={t("seat.print")} title={t("seat.print")} onClick={() => doPrint()}><Printer size={17} /></button>
         <span className="dio-count" title={`$${v.tables.filter((x) => !x.chair).length} ${t("seat.count.tables")} · ${v.tables.reduce((n, x) => n + x.seats.length, 0)} ${t("seat.count.seats")}`}><span><b>{v.tables.filter((x) => !x.chair).length}</b> {t("seat.count.tables")}</span><span><b>{v.tables.reduce((n, x) => n + x.seats.length, 0)}</b> {t("seat.count.seats")}</span></span>
         <span className="grow" />
         <button className="ghost icon" aria-label={t("dio.rightpanel")} title={t("dio.rightpanel")} onClick={() => setShowRight(!showRight)}><PanelRight size={17} /></button>
@@ -660,7 +661,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
               <b>{t("seat.legend")}</b>
               {v.legend.map((l) => (
                 <div key={l.id} className="row" style={{ gap: 6, flexWrap: "nowrap", marginTop: 6 }}>
-                  <select aria-label={t("seat.legend.color")} value={l.color} disabled={!edit} style={{ width: 62, background: l.color, color: "#0c1a18" }} onChange={(e) => patch((x) => { x.legend.find((y) => y.id === l.id)!.color = e.target.value; })}>{[...new Set([...PALETTE, l.color])].map((c) => <option key={c} value={c} style={{ background: c }}>■</option>)}</select>
+                  <select aria-label={t("seat.legend.color")} value={l.color} disabled={!edit} style={{ width: 62, background: l.color, color: "#14203A" }} onChange={(e) => patch((x) => { x.legend.find((y) => y.id === l.id)!.color = e.target.value; })}>{[...new Set([...PALETTE, l.color])].map((c) => <option key={c} value={c} style={{ background: c }}>■</option>)}</select>
                   <input value={l.meaning} disabled={!edit} placeholder={t("seat.legend.ph")} aria-label={t("seat.legend.meaning")} onChange={(e) => patch((x) => { x.legend.find((y) => y.id === l.id)!.meaning = e.target.value; })} />
                   <button className="ghost icon" aria-label={t("delete")} title={t("delete")} disabled={!edit} onClick={() => patch((x) => { x.legend = x.legend.filter((y) => y.id !== l.id); })}><Trash2 size={14} /></button>
                 </div>
@@ -751,7 +752,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
                       <button role="menuitem" onClick={() => { setPageMenu(null); setRenaming(r.id); }}><Pencil size={14} /> {t("dio.rename")}</button>
                       <button role="menuitem" onClick={() => { setPageMenu(null); saveVersion(); }}><Copy size={14} /> {t("seat.save")}</button>
                       <button role="menuitem" onClick={() => { setPageMenu(null); toggleLock(); }}>{v.locked ? <><LockOpen size={14} /> {t("seat.unlock")}</> : <><Lock size={14} /> {t("seat.lock")}</>}</button>
-                      <button role="menuitem" style={{ color: "var(--rose)" }} disabled={!edit} onClick={() => { setPageMenu(null); delVersion(); }}><Trash2 size={14} /> {t("seat.deleteversion")}</button>
+                      <button role="menuitem" style={{ color: "var(--danger)" }} disabled={!edit} onClick={() => { setPageMenu(null); delVersion(); }}><Trash2 size={14} /> {t("seat.deleteversion")}</button>
                     </div>
                   </>
                 )}
@@ -782,6 +783,7 @@ function SeatEditor({ event, arrId, startVer, onClose }: { event: EventT; arrId:
 /** Table arrangement (Pro): arrangement tabs on the left, a preview of the selected one, and a full-page editor (double-click a tab or press Edit). */
 export default function Tables({ event }: { event: EventT }) {
   const s = useStore();
+  const doPrint = () => { if (!PLANS[s.plan].printTables) { openUpsell("print"); return; } window.print(); };
   const { t } = useT();
   const [arrId, setArrId] = useState("");
   const [verByArr, setVerByArr] = useState<Record<string, string>>({});
@@ -802,6 +804,7 @@ export default function Tables({ event }: { event: EventT }) {
 
   const maxPos = Math.max(0, ...all.map((a) => a.pos));
   const create = (kind: string) => {
+    if (all.length >= PLANS[s.plan].tables) { setMenu(false); openUpsell("tables"); return; }
     const same = all.filter((a) => a.kind === kind).length;
     const rec: Seating = { id: uid(), eventId: event.id, arrId: uid(), arrName: same ? `${t("arrn." + kind)} ${same + 1}` : t("arrn." + kind), kind, name: `${t("seat.version")} 1`, createdAt: Date.now(), locked: false, tables: [], figures: [], w: 1000, h: 640, legend: [], approvals: [], pos: maxPos + 1 };
     update((st) => { st.seatings.push(rec); }); setArrId(rec.arrId); setMenu(false);
@@ -816,11 +819,12 @@ export default function Tables({ event }: { event: EventT }) {
   };
   const copy = () => {
     if (!arr || !ver) return;
+    if (all.length >= PLANS[s.plan].tables) { openUpsell("tables"); return; }
     const c: Seating = { ...structuredClone(ver), id: uid(), arrId: uid(), arrName: t("seat.copyname", { name: arr.name }), name: `${t("seat.version")} 1`, createdAt: Date.now(), locked: false, approvals: [], pos: maxPos + 1, archived: false };
     c.tables = c.tables.map((tb) => ({ ...tb, id: uid(), seats: tb.seats.map((z) => ({ ...z, id: uid() })) })); c.figures = c.figures.map((f) => ({ ...f, id: uid() }));
     update((st) => { st.seatings.push(c); }); setArrId(c.arrId);
   };
-  const remove = (id: string, name: string) => { if (confirm(`${t("arr.delete")}: ${name}?`)) { update((st) => { st.seatings = st.seatings.filter((x) => x.arrId !== id); }); setArrId(""); } };
+  const remove = (id: string, name: string) => ask(`${t("arr.delete")}: ${name}?`, () => { update((st) => { st.seatings = st.seatings.filter((x) => x.arrId !== id); }); setArrId(""); }, { danger: true });
   const createMenu = (
     <span style={{ position: "relative", display: "block", marginBottom: 8 }}>
       <button aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}><Plus size={16} /> {t("seat.createnew")}</button>
@@ -855,10 +859,10 @@ export default function Tables({ event }: { event: EventT }) {
                         <button role="menuitem" disabled={!desktop} onClick={() => { setTabMenu(false); openEdit(a.id); }}><Pencil size={14} /> {t("seat.edit")}</button>
                         <button role="menuitem" disabled={pos <= 0} onClick={() => { setTabMenu(false); move(-1); }}><ChevronUp size={14} /> {t("tl.moveup")}</button>
                         <button role="menuitem" disabled={pos >= arrs.length - 1} onClick={() => { setTabMenu(false); move(1); }}><ChevronDown size={14} /> {t("tl.movedown")}</button>
-                        <button role="menuitem" onClick={() => { setTabMenu(false); setTimeout(() => window.print(), 50); }}><Printer size={14} /> {t("seat.print")}</button>
+                        <button role="menuitem" onClick={() => { setTabMenu(false); setTimeout(() => doPrint(), 50); }}><Printer size={14} /> {t("seat.print")}</button>
                         <button role="menuitem" onClick={() => { setTabMenu(false); copy(); }}><Copy size={14} /> {t("seat.copysel")}</button>
                         <button role="menuitem" onClick={() => { setTabMenu(false); setArr(a.id, (x) => { x.archived = true; }); setArrId(""); }}><Archive size={14} /> {t("arr.archive")}</button>
-                        <button role="menuitem" style={{ color: "var(--rose)" }} onClick={() => { setTabMenu(false); remove(a.id, a.name); }}><Trash2 size={14} /> {t("delete")}</button>
+                        <button role="menuitem" style={{ color: "var(--danger)" }} onClick={() => { setTabMenu(false); remove(a.id, a.name); }}><Trash2 size={14} /> {t("delete")}</button>
                       </div>
                     </>
                   )}

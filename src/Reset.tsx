@@ -91,7 +91,7 @@ export function ResetPage({ token }: { token: string }) {
         <div><h2 style={{ margin: 0 }}>{t("reset.title")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{mail.to}</p></div>
         <div><label htmlFor="r1">{t("pw.new")}</label><input id="r1" type="password" autoComplete="new-password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
         <div><label htmlFor="r2">{t("pw.confirm")}</label><input id="r2" type="password" autoComplete="new-password" value={f.pw2} onChange={(e) => setF({ ...f, pw2: e.target.value })} /></div>
-        {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+        {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
         <button type="submit">{t("reset.go")}</button>
       </form>
     </Shell>
@@ -124,7 +124,7 @@ export function SetPassword() {
         <div><h2 style={{ margin: 0 }}>{t("reset.title")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{s.userEmail}</p></div>
         <div><label htmlFor="s1">{t("pw.new")}</label><input id="s1" type="password" autoFocus autoComplete="new-password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
         <div><label htmlFor="s2">{t("pw.confirm")}</label><input id="s2" type="password" autoComplete="new-password" value={f.pw2} onChange={(e) => setF({ ...f, pw2: e.target.value })} /></div>
-        {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+        {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
         <button type="submit" disabled={busy}>{busy ? "…" : t("reset.go")}</button>
       </form>
     </Shell>

@@ -4,3 +4,4 @@ dist
 .next
 *.local
 a-plan-site.zip
+supabase/.temp

@@ -4,6 +4,7 @@ import { TALENT_KINDS, uid, update, useStore, type EventT, type Talent } from ".
 import { Clock, Disc3, Mail, Mic, Music, Pencil, Phone, Plus, Sparkles, Trash2, Users } from "../icons";
 import { Modal } from "./ui";
 import ApprovalButton from "./Approval";
+import { ask } from "./Ask";
 
 const ICON: Record<string, React.ComponentType<{ size?: number }>> = { host: Mic, mc: Mic, dj: Disc3, musician: Music, band: Music, singer: Music, dancer: Sparkles, performer: Sparkles, other: Users };
 const money = (n: number, locale: string) => "$" + n.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -67,7 +68,7 @@ export default function TalentTab({ event }: { event: EventT }) {
                   </div>
                   <span className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
                     <button className="ghost icon" aria-label={t("seat.edit")} title={t("seat.edit")} onClick={() => setModal({ item: x })}><Pencil size={15} /></button>
-                    <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => { if (confirm(`${t("confirm.delete")}\n${x.name}`)) update((st) => { st.talents = st.talents.filter((y) => y.id !== x.id); }); }}><Trash2 size={15} /></button>
+                    <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => ask(`${t("confirm.delete")}\n${x.name}`, () => update((st) => { st.talents = st.talents.filter((y) => y.id !== x.id); }), { danger: true })}><Trash2 size={15} /></button>
                   </span>
                 </div>
                 <div className="small" style={{ marginTop: 8, display: "grid", gap: 4 }}>

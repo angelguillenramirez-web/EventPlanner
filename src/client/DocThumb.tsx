@@ -6,7 +6,7 @@ const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"];
 const TEXT = ["txt", "md", "log", "json", "xml", "csv", "tsv", "html", "htm", "yml", "yaml", "ini"];
 const BASE_W = 420, BASE_H = 525; // the page is rendered at this size and scaled down to the tile
 const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-const CSS = "body{font-family:system-ui,Arial,sans-serif;font-size:15px;line-height:1.5;color:#222;margin:0;padding:20px;overflow:hidden}img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:3px 8px;white-space:nowrap}pre{white-space:pre-wrap;font-size:13px;margin:0}";
+const CSS = "body{font-family:system-ui,Arial,sans-serif;font-size:15px;line-height:1.5;color:#14203A;margin:0;padding:20px;overflow:hidden}img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #EDE6D8;padding:3px 8px;white-space:nowrap}pre{white-space:pre-wrap;font-size:13px;margin:0}";
 const frame = (body: string) => `<!doctype html><meta charset="utf-8"><style>${CSS}</style>${body}`;
 
 /** A small first-page preview of a document (PDF, image, Word, Excel/CSV, PowerPoint, text). Rendered lazily, only when the tile is on screen. */

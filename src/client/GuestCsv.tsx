@@ -73,12 +73,12 @@ export function CsvImport({ event, existing, onClose }: { event: EventT; existin
         <button className="ghost" onClick={downloadTemplate}><Download size={15} /> {t("csv.template")}</button>
         <label className="ghost btnlike"><Upload size={15} /> {file || t("csv.choose")}<input type="file" accept=".csv,text/csv" hidden onChange={(e) => { read(e.target.files?.[0]); e.target.value = ""; }} /></label>
       </div>
-      {err && <p role="alert" style={{ color: "var(--rose)" }}>{err}</p>}
+      {err && <p role="alert" style={{ color: "var(--danger)" }}>{err}</p>}
       {rows && (
         <>
-          <p className="row" style={{ gap: 12, margin: "14px 0 6px" }}><span style={{ color: "var(--teal)" }}><Check size={14} style={{ verticalAlign: -2 }} /> {t("csv.ready", { n: ok.length })}</span>{bad.length > 0 && <span style={{ color: "var(--rose)" }}><AlertCircle size={14} style={{ verticalAlign: -2 }} /> {t("csv.skipped", { n: bad.length })}</span>}</p>
+          <p className="row" style={{ gap: 12, margin: "14px 0 6px" }}><span style={{ color: "var(--teal)" }}><Check size={14} style={{ verticalAlign: -2 }} /> {t("csv.ready", { n: ok.length })}</span>{bad.length > 0 && <span style={{ color: "var(--danger)" }}><AlertCircle size={14} style={{ verticalAlign: -2 }} /> {t("csv.skipped", { n: bad.length })}</span>}</p>
           {bad.length > 0 && <ul className="small" style={{ maxHeight: 120, overflow: "auto", margin: "0 0 8px", paddingLeft: 18 }}>{bad.slice(0, 50).map((r) => <li key={r.n}>{t("csv.row", { n: r.n })}: {r.err}</li>)}</ul>}
-          {ok.length > 0 && <div style={{ maxHeight: 200, overflow: "auto", border: "1px solid var(--line)", borderRadius: 4 }}><table><thead><tr><th>{t("name")}</th><th>{t("gst.invitees")}</th><th>{t("gst.contact")}</th></tr></thead><tbody>{ok.slice(0, 100).map((r) => <tr key={r.n}><td>{r.guest!.name}</td><td>{r.guest!.invitees}</td><td className="small">{r.guest!.channel === "email" ? r.guest!.email : r.guest!.phone}</td></tr>)}</tbody></table></div>}
+          {ok.length > 0 && <div style={{ maxHeight: 200, overflow: "auto", border: "1px solid var(--line)", borderRadius: 12 }}><table><thead><tr><th>{t("name")}</th><th>{t("gst.invitees")}</th><th>{t("gst.contact")}</th></tr></thead><tbody>{ok.slice(0, 100).map((r) => <tr key={r.n}><td>{r.guest!.name}</td><td>{r.guest!.invitees}</td><td className="small">{r.guest!.channel === "email" ? r.guest!.email : r.guest!.phone}</td></tr>)}</tbody></table></div>}
         </>
       )}
       <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}><button className="ghost" onClick={onClose}>{t("cancel")}</button><button disabled={!ok.length} onClick={run}>{t("csv.import", { n: ok.length })}</button></div>

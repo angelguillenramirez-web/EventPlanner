@@ -61,7 +61,7 @@ export async function verifyTotp(secret: string, code: string, lastStep = 0): Pr
   return null;
 }
 export const otpauthUri = (email: string, secret: string) =>
-  `otpauth://totp/${encodeURIComponent("Event Planner Staff")}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent("Event Planner Staff")}&algorithm=SHA1&digits=6&period=30`;
+  `otpauth://totp/${encodeURIComponent("643 Staff")}:${encodeURIComponent(email)}?secret=${secret}&issuer=${encodeURIComponent("643 Staff")}&algorithm=SHA1&digits=6&period=30`;
 
 export function passwordIssues(pw: string): string[] {
   const out: string[] = [];

@@ -11,7 +11,7 @@
         "dev"
       ],
       "port": 5174,
-      "url": "http://staff.eventplanner.localhost:5174"
+      "url": "http://643.localhost:5174"
     },
     {
       "name": "event-planner",

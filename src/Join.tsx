@@ -51,7 +51,7 @@ export function Join() {
           <div><label htmlFor="jc">{t("join.company")}</label><input id="jc" value={f.company} autoComplete="organization" onChange={(e) => setF({ ...f, company: e.target.value })} /></div>
           <div><label htmlFor="jp">{t("password")} *</label><input id="jp" type="password" value={f.pw} autoComplete="new-password" onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
           <div><label htmlFor="jr">{t("join.promo")}</label><input id="jr" value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value.toUpperCase() })} />{f.promo.trim() && <span className="small" style={{ color: "var(--teal)" }}>{t("join.promo.ok", { code: f.promo.trim() })}</span>}</div>
-          {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err} {err === t("join.err.exists") && <a href="#/login">{t("login")}</a>}</p>}
+          {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err} {err === t("join.err.exists") && <a href="#/login">{t("login")}</a>}</p>}
           <button type="submit" disabled={busy}>{busy ? "…" : t("join.submit")}</button>
           <p className="muted small" style={{ margin: 0 }}>{t("join.terms")}</p>
           <p style={{ margin: 0, textAlign: "center" }}><span className="muted">{t("join.have")}</span> <a href="#/login">{t("login")}</a></p>
@@ -120,7 +120,7 @@ export function CloudSent() {
         <p>{t("sent.desc", { email })}</p>
         <button className="ghost" onClick={again}>{t("sent.resend")}</button>
         {state === "ok" && <p className="small" role="status" style={{ color: "var(--teal)", marginBottom: 0 }}>{t("sent.resent")}</p>}
-        {state === "err" && <p className="small" role="alert" style={{ color: "var(--rose)", marginBottom: 0 }}>{t("auth.err.rate")}</p>}
+        {state === "err" && <p className="small" role="alert" style={{ color: "var(--danger)", marginBottom: 0 }}>{t("auth.err.rate")}</p>}
         <p className="muted small" style={{ marginBottom: 0 }}><a href="#/login">{t("login")}</a></p>
       </div>
     </Shell>

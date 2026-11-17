@@ -10,12 +10,12 @@ export function templateHtml(id: string, ev: EventT, x: TplText): string {
   const c = ev.design.color, font = FONTS[ev.design.font] ?? FONTS.serif;
   const base = `font-family:${font};text-align:center;padding:40px 28px;max-width:560px;margin:24px auto;border-radius:16px;`;
   const sty: Record<string, string> = {
-    classic: `background:#fffdf8;color:#2a2326;border:6px double ${c};`,
-    party: `background:${c};color:#14110a;`,
-    minimal: `background:#fff;color:#222;border:1px solid #ddd;border-top:6px solid ${c};`,
-    floral: `background:color-mix(in srgb, ${c} 18%, #fff);color:#2a2326;border:2px solid ${c};`,
-    modern: `background:#fff;color:#222;border-left:20px solid ${c};text-align:left;`,
-    gold: `background:#17130a;color:${COLORS.gold};border:2px solid ${COLORS.gold};`,
+    classic: `background:#FFFBF5;color:#1F2937;border:6px double ${c};`,
+    party: `background:${c};color:#14203A;`,
+    minimal: `background:#fff;color:#14203A;border:1px solid #EDE6D8;border-top:6px solid ${c};`,
+    floral: `background:color-mix(in srgb, ${c} 18%, #fff);color:#1F2937;border:2px solid ${c};`,
+    modern: `background:#fff;color:#14203A;border-left:20px solid ${c};text-align:left;`,
+    gold: `background:#14203A;color:${COLORS.gold};border:2px solid ${COLORS.gold};`,
   };
   const deco = id === "party" ? "🎉 🎈 🎊" : id === "floral" ? "🌸 🌿 🌸" : id === "gold" ? "✦ ✦ ✦" : "";
   return `<div style="${base}${sty[id] ?? sty.classic}">
@@ -28,4 +28,4 @@ ${deco ? `<div style="font-size:28px;margin-bottom:8px;">${deco}</div>` : ""}<di
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 /** Full document, used for thumbnails and the HTML export. */
-export const invitationDoc = (html: string, css: string) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;500;700&family=Dancing+Script:wght@500;700&family=Cormorant+Garamond:wght@400;600&family=Lobster&family=Pacifico&family=Lora:wght@400;600&display=swap"><style>body{margin:0;background:#f4f1ea;}${css}</style></head><body>${html}</body></html>`;
+export const invitationDoc = (html: string, css: string) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;500;700&family=Dancing+Script:wght@500;700&family=Cormorant+Garamond:wght@400;600&family=Lobster&family=Pacifico&family=Lora:wght@400;600&display=swap"><style>body{margin:0;background:#F5EFE4;}${css}</style></head><body>${html}</body></html>`;

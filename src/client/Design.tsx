@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "../i18n";
-import { COLORS, openUpsell, uid, update, useStore, me, type Comment, type EventT, type Invitation } from "../store";
+import { COLORS, PLANS, openUpsell, uid, update, useStore, me, type Comment, type EventT, type Invitation } from "../store";
 import { ChevronDown, Heart, LayoutTemplate, LockI, MessageCircle, Plus, Send, Sparkles, X } from "../icons";
 import { TEMPLATE_IDS, invitationDoc, templateHtml, type TplText } from "../invitationTemplates";
 import { sendRequest } from "../bridge";
@@ -17,13 +17,13 @@ const IDEAS: Record<string, { title: string; message: string; template: string; 
   default: [{ title: "Estás invitado", message: "Queremos compartir este momento contigo.", template: "modern", color: COLORS.teal, font: "sans" }],
 };
 
-const PALETTE = ["#C7465C", "#C7B146", "#46C8B2", "#4EB1E8", "#1f2a37", "#f4f1ea", "#8a5cf5", "#e98a3c"];
+const PALETTE = ["#FF7A59", "#F0B429", "#46C8B2", "#6FA8FF", "#1F2937", "#F5EFE4", "#7C5CFF", "#FF9C7F"];
 
-/** Read-only view of an invitation. Nobody except A plan staff can edit the HTML. */
+/** Read-only view of an invitation. Nobody except 1Plan staff can edit the HTML. */
 function PreviewModal({ inv, onClose }: { inv: Invitation; onClose: () => void }) {
   return (
     <Modal title={inv.name} onClose={onClose} wide>
-      <iframe title={inv.name} sandbox="" srcDoc={invitationDoc(inv.html, inv.css)} style={{ width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 5, marginTop: 10, background: "#fff" }} />
+      <iframe title={inv.name} sandbox="" srcDoc={invitationDoc(inv.html, inv.css)} style={{ width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 12, marginTop: 10, background: "#fff" }} />
     </Modal>
   );
 }
@@ -93,7 +93,7 @@ function CreateModal({ event, mode, onClose, onCreated }: { event: EventT; mode:
   );
 }
 
-/** "Request design": tell the A plan design team what you want; they deliver up to 3 designs. */
+/** "Request design": tell the 1Plan design team what you want; they deliver up to 3 designs. */
 function RequestModal({ event, onClose }: { event: EventT; onClose: () => void }) {
   const { t, locale } = useT();
   const s = useStore();
@@ -131,10 +131,10 @@ function RequestModal({ event, onClose }: { event: EventT; onClose: () => void }
           <button type="button" className="ghost sm" onClick={() => setLinks([...links, ""])}><Plus size={13} /> {t("ins.req.addlink")}</button></div>
         <div className="full"><label>{t("ins.req.images")}</label>
           <div className="row" style={{ gap: 8 }}>
-            {images.map((src, i) => <span key={i} style={{ position: "relative" }}><img src={src} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4 }} /><button type="button" className="ghost icon" style={{ position: "absolute", top: -6, right: -6 }} aria-label={t("delete")} onClick={() => setImages(images.filter((_, j) => j !== i))}><X size={12} /></button></span>)}
+            {images.map((src, i) => <span key={i} style={{ position: "relative" }}><img src={src} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 12 }} /><button type="button" className="ghost icon" style={{ position: "absolute", top: -6, right: -6 }} aria-label={t("delete")} onClick={() => setImages(images.filter((_, j) => j !== i))}><X size={12} /></button></span>)}
             {images.length < 10 && <label className="addimg">+<input type="file" accept="image/*" multiple hidden onChange={(e) => { addImgs(e.target.files); e.target.value = ""; }} /></label>}
           </div>
-          {err && <p role="alert" style={{ color: "var(--rose)", margin: "6px 0 0" }}>{err}</p>}</div>
+          {err && <p role="alert" style={{ color: "var(--danger)", margin: "6px 0 0" }}>{err}</p>}</div>
         <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button><Send size={15} /> {t("ins.req.send")}</button></div>
       </form>
     </Modal>
@@ -179,7 +179,7 @@ function InvCard({ inv, event, blocked, onOpen }: { inv: Invitation; event: Even
   );
 }
 
-/** Invitation tab: A plan designs, invitations made from templates / AI, and the three ways to ask for a new one. */
+/** Invitation tab: 1Plan designs, invitations made from templates / AI, and the three ways to ask for a new one. */
 export default function DesignTab({ event }: { event: EventT }) {
   const s = useStore();
   const { t } = useT();
@@ -192,7 +192,7 @@ export default function DesignTab({ event }: { event: EventT }) {
   // only one invitation at a time can go through approval: while one is waiting or approved, the others are blocked
   const busy = s.signoffs.find((x) => x.eventId === event.id && x.scope === "invitations");
   const blockedFor = (i: Invitation) => (busy && busy.subject !== i.name ? t("ins.oneapproval", { name: busy.subject }) : "");
-  const deliver = (rid: string) => { // demo: stands in for the A plan designer delivering the designs
+  const deliver = (rid: string) => { // demo: stands in for the 1Plan designer delivering the designs
     update((st) => {
       const r = st.designRequests.find((x) => x.id === rid); if (!r) return;
       r.delivered = true;
@@ -215,9 +215,8 @@ export default function DesignTab({ event }: { event: EventT }) {
             <>
               <div className="menu-bg" onClick={() => setMenu(false)} />
               <div className="menu" role="menu" style={{ zIndex: 25, minWidth: 260 }}>
-                <button role="menuitem" onClick={() => { setMenu(false); setModal("request"); }}><Send size={15} /> {t("ins.request")}</button>
+                <button role="menuitem" onClick={() => { setMenu(false); if (!PLANS[s.plan].designRequest) { openUpsell("design"); return; } if (s.designRequests.filter((r) => r.eventId === event.id).length >= PLANS[s.plan].designEdits) { openUpsell("edits"); return; } setModal("request"); }}><Send size={15} /> {t("ins.request")}</button>
                 <button role="menuitem" onClick={() => { setMenu(false); setModal("template"); }}><LayoutTemplate size={15} /> {t("ins.fromtpl")}</button>
-                <button role="menuitem" onClick={() => { setMenu(false); setModal("ai"); }}><Sparkles size={15} /> {t("ins.ai")}</button>
               </div>
             </>
           )}

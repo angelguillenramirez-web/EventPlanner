@@ -47,7 +47,7 @@ export default function Login() {
         <form onSubmit={submit} className="grid" style={{ gap: 12 }}>
           <div><label htmlFor="li">{t("login.id")}</label><input id="li" autoFocus value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="username" autoCapitalize="none" /></div>
           <div><label htmlFor="lp">{t("password")}</label><input id="lp" type="password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} autoComplete="current-password" /></div>
-          {err && <p role="alert" style={{ color: "var(--rose)", margin: 0 }}>{err}</p>}
+          {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
           <button type="submit" disabled={busy}>{busy ? "…" : t("login")}</button>
         </form>
         <p style={{ textAlign: "center", margin: "0 0 8px" }}><a href="#/forgot">{t("forgot.link")}</a></p>

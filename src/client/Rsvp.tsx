@@ -26,7 +26,7 @@ export default function Rsvp({ parts }: { parts: string[] }) {
             {ev.description && <p>{ev.description}</p>}
             <p className="small muted">{t("rsvp.pg.party", { n: g.invitees })}</p>
             {done || g.status === "confirmed" || g.status === "declined" ? (
-              <p role="status" style={{ color: (done || g.status) === "confirmed" ? "var(--teal)" : "var(--rose)", fontWeight: 700 }}>{t((done || g.status) === "confirmed" ? "rsvp.pg.yes" : "rsvp.pg.no")}</p>
+              <p role="status" style={{ color: (done || g.status) === "confirmed" ? "var(--teal)" : "var(--danger)", fontWeight: 700 }}>{t((done || g.status) === "confirmed" ? "rsvp.pg.yes" : "rsvp.pg.no")}</p>
             ) : null}
             <div className="row" style={{ justifyContent: "center", marginTop: 10 }}>
               <button onClick={() => answer("confirmed")}><Check size={16} /> {t("rsvp.pg.attend")}</button>

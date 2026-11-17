@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { randomPassword } from "../crypto";
-import { createTask, log, update, useStore, type Customer, type Staff } from "../store";
+import { createTask, log, PLAN_LABEL, update, useStore, type Customer, type Staff } from "../store";
 import { Copy, fmtDate, go, money } from "../ui";
 
 /** Support tools: account lookup, reset, unblock, payment history and payment issues, usage guides. */
@@ -26,7 +26,7 @@ function List() {
           <tbody>
             {rows.map((c) => {
               const bad = c.payments.filter((p) => p.status === "failed" || p.status === "pending").length;
-              return <tr key={c.id} className="click" onClick={() => go("/customers/" + c.id)}><td><a href={"#/customers/" + c.id}><b>{c.name}</b></a><div className="muted small">{c.email}</div></td><td>{c.plan}</td><td>{stBadge(c.status)}</td><td>{c.payments.length}{bad > 0 && <span className="badge b-late" style={{ marginLeft: 6 }}>{bad} issue{bad > 1 ? "s" : ""}</span>}</td><td className="small">{fmtDate(c.lastLogin)}</td></tr>;
+              return <tr key={c.id} className="click" onClick={() => go("/customers/" + c.id)}><td><a href={"#/customers/" + c.id}><b>{c.name}</b></a><div className="muted small">{c.email}</div></td><td>{PLAN_LABEL[c.plan]}</td><td>{stBadge(c.status)}</td><td>{c.payments.length}{bad > 0 && <span className="badge b-late" style={{ marginLeft: 6 }}>{bad} issue{bad > 1 ? "s" : ""}</span>}</td><td className="small">{fmtDate(c.lastLogin)}</td></tr>;
             })}
           </tbody>
         </table>
@@ -37,10 +37,10 @@ function List() {
 }
 
 const GUIDES: [string, string][] = [
-  ["Send invitations by WhatsApp", "Open the event → Guests & RSVP → choose the guests → pick WhatsApp as the channel → Send. Each guest gets a personal RSVP link."],
-  ["Seat guests at tables", "Open the event → Invitations → Tables. Add tables, then drag each guest onto a seat. Save a new version before making big changes."],
-  ["Design an invitation", "Open the event → Invitation Studio. Pick a template, edit text and colours, then Save. Use Export to download the HTML."],
-  ["Upgrade or change plan", "Account → Plan. Choose the new plan and confirm. The change applies right away; the next invoice is prorated."],
+  ["Send invitations by WhatsApp", "Open the event → RSVP → choose the guests → pick WhatsApp as the channel → Send (Essential allows 25 invitations per event, Premier 50). Each guest gets a personal RSVP link."],
+  ["Seat guests at tables", "Open the event → Table arrangement. Create an arrangement, add tables, then drag each guest onto a seat. Save a new version before big changes (Essential 1 arrangement per event, Premier 2)."],
+  ["Design an invitation", "Open the event → Invitation. Pick a template, edit text and colours, then Save. Custom designs by the team start at Premier."],
+  ["Upgrade or change plan", "Account → My subscription. Choose Essential, Premier or Unlimited and confirm. Features outside the new plan lock; the customer's data is kept."],
   ["Reset my password", "On the sign-in page choose 'Forgot password'. If you no longer have access to your email, contact support so we can verify you and issue a temporary password."],
 ];
 
@@ -71,7 +71,7 @@ function Account({ me, id }: { me: Staff; id: string }) {
   return (
     <>
       <p><a href="#/customers">← Customers</a></p>
-      <div className="row between"><h1 style={{ margin: 0 }}>{c.name}</h1><div className="row">{stBadge(c.status)}<span className="badge">{c.plan}</span></div></div>
+      <div className="row between"><h1 style={{ margin: 0 }}>{c.name}</h1><div className="row">{stBadge(c.status)}<span className="badge">{PLAN_LABEL[c.plan]}</span></div></div>
       <p className="muted">{c.email} · member since {fmtDate(c.createdAt)} · last login {fmtDate(c.lastLogin)}</p>
       {msg && <div className="okbox" role="status" style={{ marginBottom: 14 }}>{msg}</div>}
       <div className="grid g2" style={{ alignItems: "start" }}>
@@ -98,7 +98,7 @@ function Account({ me, id }: { me: Staff; id: string }) {
       </div>
       <div className="card" style={{ marginTop: 14 }}>
         <h3>Payment history</h3>
-        {c.payments.length === 0 ? <p className="muted">No payments (free plan).</p> : (
+        {c.payments.length === 0 ? <p className="muted">No payments yet (no plan or trial in progress).</p> : (
           <table>
             <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th><th>Note</th><th /></tr></thead>
             <tbody>

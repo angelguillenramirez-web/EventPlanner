@@ -1,4 +1,4 @@
-# A plan — prototype (formerly "Event Planner")
+# 1Plan — prototype (formerly "A plan" and "Event Planner"; domain: 1plan.com.mx)
 
 Clickable front-end prototype (Vite + React + TypeScript). Scope: **public landing page + Client (event planner) account**.
 Data is seeded and saved in the browser (localStorage); there is no backend yet. The first version (Next.js + database) is archived in `old-version/`.

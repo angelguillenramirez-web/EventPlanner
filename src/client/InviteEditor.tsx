@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { invitationDoc } from "../invitationTemplates";
 import { getState, uid, update, useStore, type EventT, type Invitation } from "../store";
 import { Download, Save, X } from "../icons";
+import { ask } from "./Ask";
 
 type Prop = { addOption?: (o: Record<string, string>) => void };
 type Editor = {
@@ -15,7 +16,7 @@ type Editor = {
 /** Free Google Fonts offered in the editor (also loaded in the preview and the exported HTML). */
 const FONTS = ["Great Vibes", "Playfair Display", "Montserrat", "Dancing Script", "Cormorant Garamond", "Lobster", "Pacifico", "Lora"];
 const FONT_URL = "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;500;700&family=Dancing+Script:wght@500;700&family=Cormorant+Garamond:wght@400;600&family=Lobster&family=Pacifico&family=Lora:wght@400;600&display=swap";
-const PHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#e8e4dc"/><text x="200" y="160" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#8a8478">Double-click to add a photo</text></svg>');
+const PHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#EDE6D8"/><text x="200" y="160" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#6B6458">Double-click to add a photo</text></svg>');
 
 /** Full-screen visual HTML editor (GrapesJS + its free web-page preset: drag & drop blocks, forms, navbar, countdown, gradients, code import/export, responsive preview, undo/redo). */
 export default function InviteEditor({ event, invitation, onClose }: { event: EventT; invitation: Invitation; onClose: () => void }) {
@@ -55,9 +56,9 @@ export default function InviteEditor({ event, invitation, onClose }: { event: Ev
       B("inv-details", t("ins.b.details"), `<div style="text-align:center;font-family:'Lora',serif;line-height:1.7"><div style="letter-spacing:.2em;text-transform:uppercase;font-size:13px;opacity:.7">${t("ins.b.when")}</div><div style="font-size:20px;font-weight:600">${when}</div>${place ? `<div style="margin-top:10px">${place}</div>` : ""}</div>`);
       B("inv-ornament", t("ins.b.ornament"), `<div style="text-align:center;font-size:24px;letter-spacing:.6em;margin:18px 0;opacity:.7">✦ ✦ ✦</div>`);
       B("inv-photo", t("ins.b.photo"), `<div style="text-align:center;margin:16px 0"><img src="${PHOTO}" style="max-width:80%;border-radius:16px;border:6px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.18)"/></div>`);
-      B("inv-rsvp", t("ins.b.rsvp"), `<div style="text-align:center;margin:24px 0"><a href="#rsvp" style="display:inline-block;padding:14px 34px;border-radius:999px;background:#46C8B2;color:#0c1a18;font-family:'Montserrat',sans-serif;font-weight:700;text-decoration:none">${t("ins.b.rsvp.label")}</a></div>`);
-      B("inv-notes", t("ins.b.notes"), `<div style="max-width:420px;margin:16px auto;padding:18px 22px;border:1px dashed #b9b2a3;border-radius:12px;font-family:'Lora',serif;text-align:center"><b>${t("ins.b.dress")}</b><div>—</div></div>`);
-      if (acts.length) B("inv-schedule", t("ins.b.schedule"), `<div style="max-width:420px;margin:16px auto;font-family:'Montserrat',sans-serif"><h3 style="text-align:center;letter-spacing:.15em;text-transform:uppercase;font-weight:500">${t("ins.b.schedule")}</h3>${acts.map((a) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd"><span>${a.time}</span><span>${a.name}</span></div>`).join("")}</div>`);
+      B("inv-rsvp", t("ins.b.rsvp"), `<div style="text-align:center;margin:24px 0"><a href="#rsvp" style="display:inline-block;padding:14px 34px;border-radius:999px;background:#46C8B2;color:#14203A;font-family:'Montserrat',sans-serif;font-weight:700;text-decoration:none">${t("ins.b.rsvp.label")}</a></div>`);
+      B("inv-notes", t("ins.b.notes"), `<div style="max-width:420px;margin:16px auto;padding:18px 22px;border:1px dashed #B8A98A;border-radius:12px;font-family:'Lora',serif;text-align:center"><b>${t("ins.b.dress")}</b><div>—</div></div>`);
+      if (acts.length) B("inv-schedule", t("ins.b.schedule"), `<div style="max-width:420px;margin:16px auto;font-family:'Montserrat',sans-serif"><h3 style="text-align:center;letter-spacing:.15em;text-transform:uppercase;font-weight:500">${t("ins.b.schedule")}</h3>${acts.map((a) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EDE6D8"><span>${a.time}</span><span>${a.name}</span></div>`).join("")}</div>`);
       e.on("update", () => setDirty(true));
       e.Panels.getButton("views", "open-blocks")?.set("active", true);
       ed.current = e; setReady(true);
@@ -65,7 +66,7 @@ export default function InviteEditor({ event, invitation, onClose }: { event: Ev
     return () => { dead = true; ed.current?.destroy(); ed.current = null; };
   }, []); // eslint-disable-line
 
-  const close = () => { if (!dirty || confirm(t("ins.discard"))) onClose(); };
+  const close = () => { if (!dirty) onClose(); else ask(t("ins.discard"), onClose, { danger: true }); };
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !document.querySelector(".gjs-mdl-container, .gjs-pn-views-container .gjs-pn-active")) close(); };
     window.addEventListener("keydown", k);
@@ -95,8 +96,8 @@ export default function InviteEditor({ event, invitation, onClose }: { event: Ev
   const restore = (id: string) => {
     const v = versions.find((x) => x.id === id);
     if (!v || !ed.current) return;
-    if (dirty && !confirm(t("ins.discard"))) return;
-    ed.current.setComponents(v.html); ed.current.setStyle(v.css); setDirty(true);
+    const apply = () => { if (!ed.current) return; ed.current.setComponents(v.html); ed.current.setStyle(v.css); setDirty(true); };
+    if (dirty) ask(t("ins.discard"), apply, { danger: true }); else apply();
   };
   const exportHtml = () => {
     const { html, css } = snapshot();

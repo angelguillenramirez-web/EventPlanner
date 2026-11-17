@@ -4,7 +4,7 @@ import { signOut } from "./auth";
 import { BarChart3, BookOpen, Brush, ClipboardCheck, Gauge, KeyRound, LifeBuoy, ListChecks, LogOut, MessageCircle, Moon, Palette, ScrollText, Sun, UserCircle, Users, Globe, DollarSign, Inbox } from "./icons";
 import Login from "./Login";
 import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, unreadTotal, update, useStore, type Presence, type Role } from "./store";
-import { Avatar, go, Modal, useRoute } from "./ui";
+import { Avatar, go, Logo, Modal, useRoute } from "./ui";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Customers from "./pages/Customers";
@@ -38,6 +38,7 @@ const NAV: Item[] = [
   { href: "/admin/apis", area: "admin", label: "API keys", icon: <KeyRound size={16} /> },
   { href: "/admin/webmaster", area: "admin", label: "Web master", icon: <Globe size={16} /> },
   { href: "/admin/webdesign", area: "admin", label: "Web design", icon: <Palette size={16} /> },
+  { href: "/admin/coupons", area: "admin", label: "Coupons", icon: <DollarSign size={16} /> },
   { href: "/admin/intake", area: "admin", label: "Request intake", icon: <Inbox size={16} /> },
   { href: "/admin/audit", area: "admin", label: "Audit log", icon: <ScrollText size={16} /> },
 ];
@@ -62,7 +63,7 @@ export default function App() {
     const i = setInterval(() => { if (!getSession()) { if (me) setPresence(me.id, "offline"); setSess(null); } }, 5000);
     return () => { evs.forEach((e) => removeEventListener(e, bump)); clearInterval(i); };
   }, [me]);
-  // keep prices / templates / request statuses in sync with the Event Planner app, and receive its requests
+  // keep prices / templates / request statuses in sync with the 1Plan app, and receive its requests
   useEffect(() => (me ? startSync() : undefined), [me?.id]);
   // deactivated or removed while signed in → out
   useEffect(() => { if (sess && !me) { setSession(null); setSess(null); } }, [sess, me]);
@@ -94,7 +95,7 @@ export default function App() {
   return (
     <div className="shell">
       <aside className={`side${menu ? " open" : ""}`} aria-label="Main">
-        <div className="row between" style={{ flexWrap: "nowrap" }}><div><div className="brand">Event<b>Planner</b></div><div className="sub">Staff console</div></div><button className="ghost menubtn" aria-expanded={menu} aria-controls="navlinks" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div>
+        <div className="row between" style={{ flexWrap: "nowrap" }}><div><div className="brand"><Logo height={56} /></div></div><button className="ghost menubtn" aria-expanded={menu} aria-controls="navlinks" onClick={() => setMenu(!menu)}>{menu ? "Close" : "Menu"}</button></div>
         <div id="navlinks" className="navlinks">
         {NAV.filter((n) => allowed.includes(n.area)).map((n) => {
           const sec = n.sec && n.sec !== lastSec ? (lastSec = n.sec) : "";
@@ -103,7 +104,7 @@ export default function App() {
         <span className="grow" />
         <div style={{ padding: "8px 10px", fontSize: ".78rem" }}>
           <div className="row" style={{ flexWrap: "nowrap", gap: 8, marginBottom: 6 }}><Avatar m={me} size={34} dot /><div><b style={{ color: "#fff" }}>{me.name}</b><br />{ROLE_LABEL[me.role]}</div></div>
-          <select aria-label="My status" value={me.presence} onChange={(e) => setPresence(me.id, e.target.value as Presence)} style={{ marginBottom: 6, padding: "4px 6px" }}>{PRESENCE_LIST.map((p) => <option key={p} value={p}>{PRESENCE[p].label}</option>)}</select><span style={{ color: link === "online" ? "var(--teal)" : "#e6a6b2" }}>● {link === "online" ? "Connected to Event Planner" : link === "offline" ? "Event Planner link offline" : "Connecting…"}</span><br /><span style={{ opacity: .6 }}>Auto sign-out after {IDLE_MS / 60000} min idle</span></div>
+          <select aria-label="My status" value={me.presence} onChange={(e) => setPresence(me.id, e.target.value as Presence)} style={{ marginBottom: 6, padding: "4px 6px" }}>{PRESENCE_LIST.map((p) => <option key={p} value={p}>{PRESENCE[p].label}</option>)}</select><span style={{ color: link === "online" ? "var(--teal)" : "#e6a6b2" }}>● {link === "online" ? "Connected to 643" : link === "offline" ? "643 link offline" : "Connecting…"}</span><br /><span style={{ opacity: .6 }}>Auto sign-out after {IDLE_MS / 60000} min idle</span></div>
         <a href="#/" onClick={(e) => { e.preventDefault(); update((st) => { st.theme = st.theme === "dark" ? "light" : "dark"; }); }}>{s.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}{s.theme === "dark" ? "Light mode" : "Dark mode"}</a>
         <a href="#/" onClick={(e) => { e.preventDefault(); setConfirmOut(true); }}><LogOut size={16} />Sign out</a>
         </div>

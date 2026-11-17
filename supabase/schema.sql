@@ -58,3 +58,23 @@ create trigger on_auth_user_created after insert on auth.users for each row exec
 
 -- The sign-up trigger is internal: block it from being called through the API.
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+-- 6) Subscriptions (Stripe). Written ONLY by the stripe-webhook / create-checkout functions (service role); users can only read their own row.
+create table if not exists public.subscriptions (
+  user_id                uuid primary key references auth.users (id) on delete cascade,
+  stripe_customer_id     text unique,
+  stripe_subscription_id text unique,
+  plan                   text check (plan in ('basic', 'planner', 'pro')),
+  cycle                  text check (cycle in ('monthly', 'yearly')),
+  status                 text not null default 'none',   -- Stripe status: trialing, active, past_due, canceled, incomplete, unpaid...
+  trial_end              timestamptz,
+  current_period_end     timestamptz,
+  cancel_at_period_end   boolean not null default false,
+  trial_used             boolean not null default false,  -- the free trial can be used once per account
+  updated_at             timestamptz not null default now()
+);
+alter table public.subscriptions enable row level security;
+drop policy if exists "subscriptions: read own" on public.subscriptions;
+create policy "subscriptions: read own" on public.subscriptions for select to authenticated using (auth.uid() = user_id);
+drop trigger if exists subscriptions_touch on public.subscriptions;
+create trigger subscriptions_touch before update on public.subscriptions for each row execute function public.touch_updated_at();

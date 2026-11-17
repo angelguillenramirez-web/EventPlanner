@@ -11,12 +11,12 @@ import SupplierHome from "./SupplierHome";
 import ClientApp from "./client/ClientApp";
 import { TrialPage } from "./client/Billing";
 import Upsell from "./client/Upsell";
-import { HowToGate } from "./client/HowTo";
 import SignOutDialog from "./client/SignOut";
 import PublicCatalog from "./client/PublicCatalog";
 import Rsvp from "./client/Rsvp";
 import { RESERVED } from "./store";
 import CloudBadge from "./client/CloudBadge";
+import { AskHost } from "./client/Ask";
 
 export default function App() {
   const s = useStore();
@@ -59,5 +59,5 @@ export default function App() {
   else if (route === "/choose-type") page = s.loggedIn && !s.accountType && acct?.profile ? <ChooseType /> : null;
   else if (route === "/trial") page = s.loggedIn && s.accountType === "planner" ? <TrialPage /> : null;
   else if (route.startsWith("/app")) page = !s.loggedIn || !s.accountType ? null : s.accountType === "supplier" ? <SupplierHome /> : <ClientApp route={route} />;
-  return <>{page}{route.startsWith("/app") && s.accountType && <HowToGate />}<Upsell />{s.loggedIn && <SignOutDialog />}<CloudBadge /></>;
+  return <>{page}<Upsell />{s.loggedIn && <SignOutDialog />}<CloudBadge /><AskHost /></>;
 }

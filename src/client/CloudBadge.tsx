@@ -17,7 +17,7 @@ export default function CloudBadge() {
   if (!show || st === "idle") return null;
   const bad = st === "error";
   return (
-    <div role={bad ? "alert" : "status"} className="small" style={{ position: "fixed", left: 12, bottom: 12, zIndex: 60, padding: "6px 12px", borderRadius: 6, background: "var(--surface)", border: `1px solid ${bad ? "var(--rose)" : "var(--line)"}`, color: bad ? "var(--rose)" : "var(--muted)", boxShadow: "var(--shadow)", maxWidth: 320 }}>
+    <div role={bad ? "alert" : "status"} className="small" style={{ position: "fixed", left: 12, bottom: 12, zIndex: 60, padding: "6px 12px", borderRadius: 12, background: "var(--surface)", border: `1px solid ${bad ? "var(--danger)" : "var(--line)"}`, color: bad ? "var(--danger)" : "var(--muted)", boxShadow: "var(--shadow)", maxWidth: 320 }}>
       {t(bad ? "cloud.error" : st === "saving" ? "cloud.saving" : "cloud.saved")}
     </div>
   );

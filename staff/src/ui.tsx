@@ -4,6 +4,10 @@ import { X } from "lucide-react";
 
 // hash router
 const sub = (f: () => void) => { addEventListener("hashchange", f); return () => removeEventListener("hashchange", f); };
+import logoUrl from "./assets/logo.svg";
+import logoWhiteUrl from "./assets/logo-white.svg";
+/** The 643 logo (the white copy is shown in dark mode). */
+export const Logo = ({ height = 30 }: { height?: number }) => <span className="brandlogo"><img className="mark-light" src={logoUrl} alt="643" height={height} /><img className="mark-dark" src={logoWhiteUrl} alt="" height={height} /></span>;
 export const useRoute = () => useSyncExternalStore(sub, () => location.hash.slice(1) || "/");
 export const go = (p: string) => { location.hash = p; };
 

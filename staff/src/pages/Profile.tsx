@@ -44,7 +44,7 @@ export default function Profile({ me }: { me: Staff }) {
             ))}
           </div>
           <div><label htmlFor="pn">Status message (optional)</label><div className="row" style={{ flexWrap: "nowrap" }}><input id="pn" maxLength={60} placeholder="e.g. back at 2 pm" value={note} onChange={(e) => setNote(e.target.value)} /><button className="ghost" onClick={() => setPresence(m.id, m.presence, note)}>Save</button></div></div>
-          <p className="muted small" style={{ margin: 0 }}>Your status is visible to your colleagues and super admins (availability reports). <b>Customers and users of the Event Planner app never see it.</b> It switches to Online when you sign in and to Offline when you sign out or are signed out for inactivity.</p>
+          <p className="muted small" style={{ margin: 0 }}>Your status is visible to your colleagues and super admins (availability reports). <b>Customers and users of the 1Plan app never see it.</b> It switches to Online when you sign in and to Offline when you sign out or are signed out for inactivity.</p>
         </div>
       </div>
     </>

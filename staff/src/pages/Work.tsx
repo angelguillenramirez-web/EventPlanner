@@ -4,7 +4,7 @@ import { Avatar, Modal } from "../ui";
 import { Archive, CalendarDays, GripVertical, Plus, Tag as TagIcon, ThumbsUp, Trash2, User, X } from "../icons";
 
 /**
- * Internal task manager: same structure as the Event Planner task tracker (board, Gantt, calendar, list; lists, dates,
+ * Internal task manager: same structure as the 1Plan task tracker (board, Gantt, calendar, list; lists, dates,
  * priority, tags, responsible people, notes, history) but for work only — it is not linked to any customer event.
  */
 const DAY = 864e5;

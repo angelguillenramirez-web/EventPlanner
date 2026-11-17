@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
-import { uid, update, useStore, type ActHist, type Activity, type Dot, type EventT } from "../store";
+import { PLANS, openUpsell, uid, update, useStore, type ActHist, type Activity, type Dot, type EventT } from "../store";
 import { Copy, ChevronLeft, ChevronRight, Award, Beer, Bell, BriefcaseBusiness, Bus, Cake, Camera, Car, ChevronDown, ChevronUp, Church, ClipboardCheck, Clock, Coffee, Crown, Disc3, DoorOpen, FileText, Flame, Flower2, Gem, Gift, Handshake, HeartHandshake, Hotel, IceCream, Laptop, Lightbulb, MapPin, Martini, Megaphone, Mic, Music, Pencil, PartyPopper, Pizza, Plane, Plus, Presentation, Salad, Sparkles, Speaker, Star, Ticket, Trash2, Trophy, TypeIcon, Users, Utensils, Video, Wine } from "../icons";
 import { Modal } from "./ui";
 import ApprovalButton from "./Approval";
+import { ask } from "./Ask";
 
 const ACT_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
   // celebration & party
@@ -127,7 +128,7 @@ function Comments({ dotId, a }: { dotId: string; a: Activity }) {
       {a.comments.map((c) => (
         <div className="c row between" key={c.id} style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
           <div><div className="who">@{c.by} · {new Date(c.at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}</div>{c.text}</div>
-          <button className="ghost icon" aria-label={t("tl.deletecomment")} title={t("tl.deletecomment")} onClick={() => { if (confirm(t("confirm.delete"))) update((st) => { const x = st.dots.find((d) => d.id === dotId)!.activities.find((y) => y.id === a.id)!; x.comments = x.comments.filter((y) => y.id !== c.id); x.history.unshift({ id: uid(), at: Date.now(), by: st.userName, key: "commentdeleted" }); }); }}><Trash2 size={13} /></button>
+          <button className="ghost icon" aria-label={t("tl.deletecomment")} title={t("tl.deletecomment")} onClick={() => ask(t("confirm.delete"), () => update((st) => { const x = st.dots.find((d) => d.id === dotId)!.activities.find((y) => y.id === a.id)!; x.comments = x.comments.filter((y) => y.id !== c.id); x.history.unshift({ id: uid(), at: Date.now(), by: st.userName, key: "commentdeleted" }); }), { danger: true })}><Trash2 size={13} /></button>
         </div>
       ))}
       <div className="row" style={{ flexWrap: "nowrap", marginTop: 6 }}>
@@ -165,7 +166,7 @@ export default function Timeline({ event }: { event: EventT }) {
     }
     setNamer(null);
   };
-  const delItin = (i: { id: string; name: string }) => { if (itins.length > 1 && confirm(t("itin.deleteq", { name: i.name }))) { update((st) => { st.itineraries = st.itineraries.filter((x) => x.id !== i.id); st.dots = st.dots.filter((d) => d.itinId !== i.id); }); setCurId(""); } };
+  const delItin = (i: { id: string; name: string }) => { if (itins.length > 1) ask(t("itin.deleteq", { name: i.name }), () => { update((st) => { st.itineraries = st.itineraries.filter((x) => x.id !== i.id); st.dots = st.dots.filter((d) => d.itinId !== i.id); }); setCurId(""); }, { danger: true }); };
   const [itMenu, setItMenu] = useState(false);
   const moveItin = (id: string, dir: -1 | 1) => update((st) => {
     const mine = st.itineraries.filter((x) => x.eventId === event.id), i = mine.findIndex((x) => x.id === id), j = i + dir;
@@ -174,6 +175,7 @@ export default function Timeline({ event }: { event: EventT }) {
     [st.itineraries[a], st.itineraries[b]] = [st.itineraries[b], st.itineraries[a]];
   });
   const copyItin = (src: { id: string; name: string }) => {
+    if (itins.length >= PLANS[s.plan].itineraries) { openUpsell("itineraries"); return; }
     const id = uid(), at = Date.now();
     update((st) => {
       st.itineraries.push({ id, eventId: event.id, name: t("seat.copyname", { name: src.name }) });
@@ -184,7 +186,7 @@ export default function Timeline({ event }: { event: EventT }) {
   const dots = s.dots.filter((d) => d.eventId === event.id && d.itinId === cur);
   const all = dots.flatMap((d) => d.activities);
   const ordered = [...dots].sort((a, b) => (a.activities.length ? startMs(a.activities[0]) : Infinity) - (b.activities.length ? startMs(b.activities[0]) : Infinity));
-  const delDot = (id: string) => { if (confirm(t("tl.deletedot"))) update((st) => { st.dots = st.dots.filter((d) => d.id !== id); }); };
+  const delDot = (id: string) => ask(t("tl.deletedot"), () => update((st) => { st.dots = st.dots.filter((d) => d.id !== id); }), { danger: true });
   const proposeMove = (d: Dot, dir: -1 | 1) => {
     const i = ordered.findIndex((x) => x.id === d.id), o = ordered[i + dir];
     const a = d.activities[0], b = o?.activities[0];
@@ -254,7 +256,7 @@ export default function Timeline({ event }: { event: EventT }) {
                       <button role="menuitem" disabled={itins.indexOf(i) === 0} onClick={() => { setItMenu(false); moveItin(i.id, -1); }}><ChevronLeft size={14} /> {t("tab.left")}</button>
                       <button role="menuitem" disabled={itins.indexOf(i) === itins.length - 1} onClick={() => { setItMenu(false); moveItin(i.id, 1); }}><ChevronRight size={14} /> {t("tab.right")}</button>
                       <button role="menuitem" onClick={() => { setItMenu(false); copyItin(i); }}><Copy size={14} /> {t("seat.copysel")}</button>
-                      <button role="menuitem" style={{ color: "var(--rose)" }} disabled={itins.length < 2} onClick={() => { setItMenu(false); delItin(i); }}><Trash2 size={14} /> {t("delete")}</button>
+                      <button role="menuitem" style={{ color: "var(--danger)" }} disabled={itins.length < 2} onClick={() => { setItMenu(false); delItin(i); }}><Trash2 size={14} /> {t("delete")}</button>
                     </div>
                   </>
                 )}
@@ -262,7 +264,7 @@ export default function Timeline({ event }: { event: EventT }) {
             )}
           </span>
         ))}
-        <button className="ghost icon" aria-label={t("itin.new")} title={t("itin.new")} onClick={() => setNamer({ id: null, name: "" })}><Plus size={16} /></button>
+        <button className="ghost icon" aria-label={t("itin.new")} title={t("itin.new")} onClick={() => { if (itins.length >= PLANS[s.plan].itineraries) { openUpsell("itineraries"); return; } setNamer({ id: null, name: "" }); }}><Plus size={16} /></button>
         <span style={{ flex: 1 }} />
         <ApprovalButton event={event} scope="itinerary" subject={curItin?.name ?? ""} disabled={!all.length} summary={() => [...ordered.flatMap((d) => d.activities).map((a) => `${new Date(a.date + "T12:00").toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })} ${a.time}–${endTime(a)} · ${a.name}${a.location ? ` (${a.location})` : ""}`)]} snap={() => ({ k: "itinerary", acts: ordered.flatMap((d) => d.activities).map((a) => ({ when: new Date(a.date + "T12:00").toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" }), time: `${a.time}–${endTime(a)}`, name: a.name, location: a.location })) })} />
       </div>

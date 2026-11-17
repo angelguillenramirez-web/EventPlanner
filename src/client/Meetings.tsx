@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { iso, uid, update, useStore, type EventT, type Meeting } from "../store";
 import { CalendarPlus, Check, Clock, Copy, Pencil, Plus, Trash2, Users, Video } from "../icons";
 import { Modal } from "./ui";
+import { ask } from "./Ask";
 
 const rnd = (chars: string, n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 // Prototype: links look like the real thing but are generated locally, not created at Google or Zoom.
@@ -13,7 +14,7 @@ function icsFor(m: Meeting) {
   const f = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
   const esc = (x: string) => x.replace(/\\/g, "\\\\").replace(/[,;]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
   const st = startOf(m), en = new Date(st.getTime() + m.duration * 60000);
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//A plan//Meetings//EN", "BEGIN:VEVENT", `UID:${m.id}@eventplanner`, `DTSTAMP:${f(new Date())}`,
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//1Plan//Meetings//EN", "BEGIN:VEVENT", `UID:${m.id}@eventplanner`, `DTSTAMP:${f(new Date())}`,
     `DTSTART:${f(st)}`, `DTEND:${f(en)}`, `SUMMARY:${esc(m.title)}`, `DESCRIPTION:${esc((m.agenda ? m.agenda + "\n" : "") + m.link)}`, `LOCATION:${esc(m.link)}`, "END:VEVENT", "END:VCALENDAR"];
   return lines.join("\r\n");
 }
@@ -29,7 +30,7 @@ function ScheduleModal({ event, meeting, date, onClose }: { event: EventT; meeti
   const { t } = useT();
   const [f, setF] = useState({ title: meeting?.title ?? "", date: meeting?.date ?? date ?? iso(7), time: meeting?.time ?? "10:00", duration: meeting?.duration ?? 30, provider: (meeting?.provider ?? "meet") as Meeting["provider"], agenda: meeting?.agenda ?? "" });
   const [who, setWho] = useState<string[]>(meeting?.attendees ?? []);
-  const people = [...s.team.map((m) => m.name), ...s.guests.filter((g) => g.eventId === event.id).map((g) => g.name)];
+  const people = s.team.filter((m) => m.kind === "client" ? m.eventIds.includes(event.id) : (m.scopeAll || m.eventIds.includes(event.id))).map((m) => m.name); // your team and the clients created for this event; guests are not listed
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.title.trim()) return;
@@ -82,7 +83,7 @@ export default function Meetings({ event }: { event: EventT }) {
   const now = Date.now();
   const isPast = (m: Meeting) => +startOf(m) + m.duration * 60000 < now;
   const copy = async (m: Meeting) => { try { await navigator.clipboard.writeText(m.link); } catch { /* clipboard may be blocked */ } setCopied(m.id); setTimeout(() => setCopied(null), 1500); };
-  const del = (m: Meeting) => { if (confirm(t("confirm.delete"))) update((x) => { x.meetings = x.meetings.filter((y) => y.id !== m.id); }); };
+  const del = (m: Meeting) => ask(t("confirm.delete"), () => update((x) => { x.meetings = x.meetings.filter((y) => y.id !== m.id); }), { danger: true });
   const color = (m: Meeting) => (m.provider === "meet" ? "var(--teal)" : "var(--blue)");
   const actions = (m: Meeting) => (
     <>
@@ -108,7 +109,7 @@ export default function Meetings({ event }: { event: EventT }) {
         </div>
         {m.agenda && <p style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{m.agenda}</p>}
         <div className="row" style={{ marginTop: 8 }}>
-          <code className="small" style={{ background: "var(--soft)", padding: "3px 8px", borderRadius: 3, overflowWrap: "anywhere" }}>{m.link}</code>
+          <code className="small" style={{ background: "var(--soft)", padding: "3px 8px", borderRadius: 8, overflowWrap: "anywhere" }}>{m.link}</code>
           <button className="ghost sm" onClick={() => copy(m)}>{copied === m.id ? <><Check size={13} /> {t("meet.copied")}</> : <><Copy size={13} /> {t("meet.copy")}</>}</button>
           <button className="ghost sm" onClick={() => downloadIcs(m)}><CalendarPlus size={13} /> {t("meet.ics")}</button>
         </div>
@@ -167,7 +168,7 @@ export default function Meetings({ event }: { event: EventT }) {
             <div className="grow-g" key={m.id} style={{ gridTemplateColumns: `240px ${n * W}px` }} onDoubleClick={() => setModal({ meeting: m })}>
               <div className="row between" style={{ padding: "0 8px", flexWrap: "nowrap", gap: 2 }}><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</span><span className="row" style={{ gap: 0, flexWrap: "nowrap" }}>{actions(m)}</span></div>
               <div style={{ position: "relative", height: 34 }}>
-                {todayIdx >= 0 && todayIdx < n && <div style={{ position: "absolute", left: todayIdx * W, top: 0, bottom: 0, width: 2, background: "var(--rose)", opacity: .6 }} />}
+                {todayIdx >= 0 && todayIdx < n && <div style={{ position: "absolute", left: todayIdx * W, top: 0, bottom: 0, width: 2, background: "var(--danger)", opacity: .6 }} />}
                 <div className="gbar" style={{ position: "absolute", top: 7, left: idx(m.date) * W, width: W, background: color(m), opacity: isPast(m) ? .55 : 1 }} title={`${m.time} · ${m.title}`} />
                 <span className="small muted" style={{ position: "absolute", top: 8, left: idx(m.date) * W + W + 6, whiteSpace: "nowrap" }}>{m.time} · {m.duration} min</span>
               </div>

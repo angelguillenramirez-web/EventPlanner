@@ -5,6 +5,7 @@ import { BriefcaseBusiness, Share2, Copy, ImageIcon, Pencil, Plus, Star, Trash2 
 import { Modal } from "./ui";
 import { CatalogShare } from "./SupplierProfile";
 import { readImage } from "./MenuTab";
+import { ask } from "./Ask";
 
 const MODELS: PriceModel[] = ["fixed", "hourly", "perGuest", "quote"];
 const money = (n: number, locale: string) => "$" + n.toLocaleString(locale, { maximumFractionDigits: 2 });
@@ -39,10 +40,10 @@ function ServiceModal({ svc, onClose }: { svc?: Service; onClose: () => void }) 
         <div className="full"><label>{t("menu.image")}</label>
           <div className="row" style={{ gap: 12 }}>
             <div className="menuimg">{f.image ? <img src={f.image} alt="" /> : <ImageIcon size={26} className="muted" />}</div>
-            <label className="ghost" style={{ display: "inline-block", padding: "8px 14px", border: "1px solid var(--line)", borderRadius: 5, cursor: "pointer", margin: 0, color: "var(--ink)" }}>{t("menu.upload")}<input type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} /></label>
+            <label className="ghost" style={{ display: "inline-block", padding: "8px 14px", border: "1px solid var(--line)", borderRadius: 12, cursor: "pointer", margin: 0, color: "var(--ink)" }}>{t("menu.upload")}<input type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} /></label>
             {f.image && <button type="button" className="ghost sm" onClick={() => setF({ ...f, image: "" })}>{t("menu.removeimg")}</button>}
           </div>
-          {err && <div className="small" style={{ color: "var(--rose)" }}>{err}</div>}
+          {err && <div className="small" style={{ color: "var(--danger)" }}>{err}</div>}
         </div>
         <div className="row full">
           <label className="row small" style={{ margin: 0, color: "var(--ink)", gap: 6 }}><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />{t("svc.active")}</label>
@@ -107,7 +108,7 @@ export default function Services() {
               <span className="row" style={{ gap: 0 }}>
                 <button className="ghost icon" aria-label={t("svc.edit")} title={t("svc.edit")} onClick={() => setModal({ svc: x })}><Pencil size={15} /></button>
                 <button className="ghost icon" aria-label={t("seat.duplicate")} title={t("seat.duplicate")} onClick={() => update((st) => { st.services.push({ ...structuredClone(x), id: uid(), name: `${x.name} (${t("board.copy")})`, createdAt: Date.now() }); })}><Copy size={15} /></button>
-                <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => { if (confirm(t("confirm.delete"))) update((st) => { st.services = st.services.filter((y) => y.id !== x.id); }); }}><Trash2 size={15} /></button>
+                <button className="ghost icon" aria-label={t("delete")} title={t("delete")} onClick={() => ask(t("confirm.delete"), () => update((st) => { st.services = st.services.filter((y) => y.id !== x.id); }), { danger: true })}><Trash2 size={15} /></button>
               </span>
             </div>
           </div>
