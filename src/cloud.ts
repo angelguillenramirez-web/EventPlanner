@@ -87,14 +87,20 @@ async function loadFor(user: User, fromLink: boolean) {
 /** Starts listening: call once at start-up. */
 export function initCloud() {
   const params = new URLSearchParams(location.search);
-  const fromLink = params.has("code");
+  const tokenHash = params.get("token_hash"), linkType = params.get("type");
+  const hashFlow = !!tokenHash && ["recovery", "signup", "email", "invite", "magiclink"].includes(linkType ?? "");
+  const fromLink = params.has("code") || (hashFlow && linkType !== "recovery");
   const clean = () => { if (location.search) history.replaceState(null, "", location.pathname + location.hash); };
   // A link that Supabase rejected (expired, already used) comes back as ?error=… or #error=…: say so instead of showing the home page.
   const hp = new URLSearchParams(location.hash.replace(/^#\/?/, ""));
   const linkErr = params.get("error_code") || hp.get("error_code") || params.get("error") || hp.get("error");
   const showLinkError = (why: "expired" | "nosession") => { try { sessionStorage.setItem("aplan-linkerr", why); } catch { /* ignore */ } history.replaceState(null, "", location.pathname); go("/link-error"); };
-  if (linkErr) setTimeout(() => showLinkError("expired"), 0);
-  else if (fromLink) void supabase.auth.getSession().then(({ data }) => { if (!data.session) showLinkError("nosession"); }); // the code could not be exchanged (e.g. opened in another browser)
+  if (hashFlow) { // link built from a plain token (works in any browser, and mail scanners cannot use it up): the app verifies it itself
+    if (linkType === "recovery") recovery = true;
+    clean();
+    void supabase.auth.verifyOtp({ token_hash: tokenHash!, type: linkType as "recovery" | "signup" | "email" | "invite" | "magiclink" }).then(({ error }) => { if (error) { recovery = false; showLinkError("expired"); } });
+  } else if (linkErr) setTimeout(() => showLinkError("expired"), 0);
+  else if (params.has("code")) void supabase.auth.getSession().then(({ data }) => { if (!data.session) showLinkError("nosession"); }); // the code could not be exchanged (e.g. opened in another browser)
 
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") recovery = true;
@@ -102,7 +108,7 @@ export function initCloud() {
     setTimeout(async () => {
       if (event === "PASSWORD_RECOVERY") { clean(); if (session?.user) await loadFor(session.user, false); go("/set-password"); return; }
       if (event === "SIGNED_OUT") { if (ready || loadedFor) wipe(); return; }
-      if (session?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) { await loadFor(session.user, fromLink); clean(); }
+      if (session?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) { await loadFor(session.user, fromLink); if (recovery && event === "SIGNED_IN") go("/set-password"); clean(); }
     }, 0);
   });
 
@@ -131,7 +137,7 @@ export function initCloud() {
 
 /** Clears the user's data from this browser (shared computers must not keep it). */
 function wipe() {
-  ready = false; loadedFor = ""; lastSaved = ""; pending = null; clearTimeout(timer); writeSync("", false); setStatus("idle");
+  recovery = false; ready = false; loadedFor = ""; lastSaved = ""; pending = null; clearTimeout(timer); writeSync("", false); setStatus("idle");
   update((st) => { Object.assign(st, blankWorkspace()); st.accounts = st.accounts.filter((a) => !isCloudId(a.id)); st.loggedIn = false; st.sessionId = ""; st.viewAs = ""; st.userEmail = ""; });
 }
 

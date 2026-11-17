@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "./i18n";
 import { go, isLocalHost, TEST_USERS, update, useStore } from "./store";
-import { authErrorKey, cloudSignIn } from "./cloud";
+import { authErrorKey, cloudResend, cloudSignIn } from "./cloud";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
 
 /** Log in with e-mail (planners, suppliers) or the user ID created by the planner . No social sign-in. */
@@ -11,6 +11,9 @@ export default function Login() {
   const [f, setF] = useState({ id: "", pw: "" });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resend, setResend] = useState<"" | "ok" | "err">("");
+  const unconfirmed = err === t("login.err.unconfirmed") && !!f.id.trim();
+  const sendAgain = async () => { const { error } = await cloudResend(f.id.trim().toLowerCase()); setResend(error ? "err" : "ok"); };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = f.id.trim().toLowerCase();
@@ -18,7 +21,7 @@ export default function Login() {
     const acct = isLocalHost ? s.accounts.find((a) => a.email.toLowerCase() === id && !a.id.startsWith("sb:")) : undefined; // built-in test accounts: developer machines only
     const member = isLocalHost ? s.team.find((x) => x.email.toLowerCase() === id) : undefined; // collaborators and clients: prototype logins, real accounts come next
     if (!acct && !member) { // real account (Supabase)
-      setBusy(true); setErr("");
+      setBusy(true); setErr(""); setResend("");
       const { error } = await cloudSignIn(id, f.pw);
       setBusy(false);
       if (error) setErr(t(authErrorKey(error)));
@@ -48,6 +51,9 @@ export default function Login() {
           <div><label htmlFor="li">{t("login.id")}</label><input id="li" autoFocus value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="username" autoCapitalize="none" /></div>
           <div><label htmlFor="lp">{t("password")}</label><input id="lp" type="password" value={f.pw} onChange={(e) => setF({ ...f, pw: e.target.value })} autoComplete="current-password" /></div>
           {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
+          {unconfirmed && resend !== "ok" && <p style={{ margin: 0 }}><a href="#/login" onClick={(e) => { e.preventDefault(); void sendAgain(); }}>{t("login.resend")}</a></p>}
+          {resend === "ok" && <p role="status" className="small" style={{ color: "var(--teal)", margin: 0 }}>{t("login.resent")}</p>}
+          {resend === "err" && <p role="alert" className="small" style={{ color: "var(--danger)", margin: 0 }}>{t("auth.err.rate")}</p>}
           <button type="submit" disabled={busy}>{busy ? "…" : t("login")}</button>
         </form>
         <p style={{ textAlign: "center", margin: "0 0 8px" }}><a href="#/forgot">{t("forgot.link")}</a></p>

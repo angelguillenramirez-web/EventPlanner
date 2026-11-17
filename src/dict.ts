@@ -1079,4 +1079,6 @@ export const D: Record<string, E> = {
   "join.sub": ["Plan events, send invitations and manage guests in one place. A card is needed to start the trial.", "Planifica eventos, envía invitaciones y gestiona invitados en un solo lugar. Se necesita una tarjeta para iniciar la prueba.", "Planeje eventos, envie convites e gerencie convidados em um só lugar."],
   "plan.trialnote": ["The Essential plan starts with a {n}-day free trial. A card is required, and you are charged when the trial ends unless you cancel.", "El plan Essential comienza con {n} días de prueba gratis. Se requiere una tarjeta y se te cobra al terminar la prueba, salvo que canceles.", "O plano Essential começa com {n} dias de teste grátis."],
   "trial.sub": ["Add a card to start your Essential trial. You will not be charged today, and you can cancel at any time during the trial.", "Agrega una tarjeta para iniciar tu prueba de Essential. No se te cobrará hoy y puedes cancelar en cualquier momento durante la prueba.", "Adicione um cartão para iniciar seu teste do Essential."],
+  "login.resend": ["Resend confirmation email", "Reenviar correo de confirmación", "Reenviar e-mail de confirmação"],
+  "login.resent": ["We sent a new confirmation email. Open the newest one.", "Enviamos un nuevo correo de confirmación. Abre el más reciente.", "Enviamos um novo e-mail de confirmação."],
 };
