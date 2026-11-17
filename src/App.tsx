@@ -6,7 +6,7 @@ import ChooseType from "./ChooseType";
 import Welcome from "./Welcome";
 import { Join, Sent, Confirm, CloudSent } from "./Join";
 import { Invite, Access } from "./Invite";
-import { Forgot, ResetPage, SetPassword } from "./Reset";
+import { Forgot, LinkError, ResetPage, SetPassword } from "./Reset";
 import SupplierHome from "./SupplierHome";
 import ClientApp from "./client/ClientApp";
 import { TrialPage } from "./client/Billing";
@@ -46,6 +46,7 @@ export default function App() {
   else if (route === "/join") page = <Join />;
   else if (route === "/join/check") page = <CloudSent />;
   else if (route === "/set-password") page = <SetPassword />;
+  else if (route === "/link-error") page = <LinkError />;
   else if (route.startsWith("/join/sent/")) page = <Sent id={route.split("/")[3]} />;
   else if (route.startsWith("/confirm/")) page = <Confirm token={route.split("/")[2]} />;
   else if (route.startsWith("/rsvp/")) page = <Rsvp parts={route.split("/").slice(2)} />;

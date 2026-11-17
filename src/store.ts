@@ -48,7 +48,7 @@ export const slugify = (x: string) => x.toLowerCase().normalize("NFD").replace(/
 export const RESET_MINUTES = 60;
 export const queueReset = (st: State, to: string, name: string) => { st.outbox.push({ id: uid(), to, subject: "reset", token: uid() + uid() + uid(), at: Date.now(), kind: "reset", name }); };
 /** Words that cannot be used as the public catalog address. */
-export const RESERVED = ["forgot", "reset", "app", "login", "join", "invite", "access", "confirm", "welcome", "choose-type", "trial", "rsvp", "catalog", "api", "admin", "www"];
+export const RESERVED = ["forgot", "reset", "app", "login", "join", "invite", "access", "confirm", "welcome", "choose-type", "trial", "rsvp", "catalog", "api", "admin", "www", "link-error", "set-password"];
 /** The confirmation e-mail the prototype "sends" (shown in the demo inbox; no real mail is sent). */
 export interface Mail { id: string; to: string; subject: string; token: string; at: number; /** "confirm" = sign-up confirmation (default); "invite" = collaborator invitation; "client" = client access link with a temporary password */ kind?: "confirm" | "invite" | "client" | "notice" | "reset"; /** reset links can be used once */ used?: boolean; /** notices: how it is delivered and what it says (dictionary key + values) */ chan?: "email" | "whatsapp"; key?: string; vars?: Record<string, string>; name?: string; pw?: string; role?: string; from?: string; scope?: string }
 export const CANCEL_REASONS = ["price", "features", "usage", "competitor", "hard", "trying", "paused", "other"] as const;

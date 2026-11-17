@@ -89,6 +89,12 @@ export function initCloud() {
   const params = new URLSearchParams(location.search);
   const fromLink = params.has("code");
   const clean = () => { if (location.search) history.replaceState(null, "", location.pathname + location.hash); };
+  // A link that Supabase rejected (expired, already used) comes back as ?error=… or #error=…: say so instead of showing the home page.
+  const hp = new URLSearchParams(location.hash.replace(/^#\/?/, ""));
+  const linkErr = params.get("error_code") || hp.get("error_code") || params.get("error") || hp.get("error");
+  const showLinkError = (why: "expired" | "nosession") => { try { sessionStorage.setItem("aplan-linkerr", why); } catch { /* ignore */ } history.replaceState(null, "", location.pathname); go("/link-error"); };
+  if (linkErr) setTimeout(() => showLinkError("expired"), 0);
+  else if (fromLink) void supabase.auth.getSession().then(({ data }) => { if (!data.session) showLinkError("nosession"); }); // the code could not be exchanged (e.g. opened in another browser)
 
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === "PASSWORD_RECOVERY") recovery = true;

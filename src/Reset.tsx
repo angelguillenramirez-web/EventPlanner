@@ -130,3 +130,20 @@ export function SetPassword() {
     </Shell>
   );
 }
+
+/** Shown when an email link could not be used (expired, already used, or opened in a different browser). */
+export function LinkError() {
+  const { t } = useT();
+  const why = (() => { try { return sessionStorage.getItem("aplan-linkerr") ?? "expired"; } catch { return "expired"; } })();
+  return (
+    <Shell>
+      <div className="card grid" style={{ gap: 12 }}>
+        <h2 style={{ margin: 0 }}>{t("linkerr.title")}</h2>
+        <p className="muted" style={{ margin: 0 }}>{t(why === "nosession" ? "linkerr.nosession" : "linkerr.expired")}</p>
+        <a className="mailbtn" href="#/login">{t("login")}</a>
+        <a href="#/forgot">{t("linkerr.reset")}</a>
+        <a href="#/join">{t("signup")}</a>
+      </div>
+    </Shell>
+  );
+}
