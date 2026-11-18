@@ -13,6 +13,11 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" },
 });
 
+/** Used only to REQUEST auth emails (sign-up, resend, reset). Implicit flow = the emailed token is not tied to the requesting browser, so the link also works when opened on another device. It never stores a session. */
+export const supabaseMailer = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: "implicit", storageKey: "aplan-mailer" },
+});
+
 /** Quick health check: true when the auth service answers. */
 export async function supabaseReachable(): Promise<boolean> {
   try {

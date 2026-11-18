@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import type { User } from "@supabase/supabase-js";
-import { supabase } from "./supabase";
+import { supabase, supabaseMailer } from "./supabase";
 import { CLOUD_SKIP, blankWorkspace, getState, go, subscribe, update, type Plan, type State } from "./store";
 
 /**
@@ -144,10 +144,10 @@ function wipe() {
 /* ── account actions ── */
 const home = () => location.origin + "/";
 export const cloudSignUp = (v: { name: string; email: string; password: string; company: string; promo: string }) =>
-  supabase.auth.signUp({ email: v.email, password: v.password, options: { emailRedirectTo: home(), data: { full_name: v.name, company: v.company, promo: v.promo, account_type: "planner" } } });
+  supabaseMailer.auth.signUp({ email: v.email, password: v.password, options: { emailRedirectTo: home(), data: { full_name: v.name, company: v.company, promo: v.promo, account_type: "planner" } } });
 export const cloudSignIn = (email: string, password: string) => supabase.auth.signInWithPassword({ email, password });
-export const cloudResend = (email: string) => supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: home() } });
-export const cloudResetRequest = (email: string) => supabase.auth.resetPasswordForEmail(email, { redirectTo: home() });
+export const cloudResend = (email: string) => supabaseMailer.auth.resend({ type: "signup", email, options: { emailRedirectTo: home() } });
+export const cloudResetRequest = (email: string) => supabaseMailer.auth.resetPasswordForEmail(email, { redirectTo: home() });
 export const cloudSetPassword = async (password: string) => { const r = await supabase.auth.updateUser({ password }); if (!r.error) recovery = false; return r; };
 
 /** Turns a Supabase error into one of our dictionary keys. */

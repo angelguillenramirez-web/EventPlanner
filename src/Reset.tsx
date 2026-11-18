@@ -34,12 +34,17 @@ export function Forgot() {
   const s = useStore();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState("");
+  const [err, setErr] = useState("");
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const v = email.trim().toLowerCase(); if (!v) return;
     const name = isLocalHost ? ownerOf(s, v) : ""; // built-in test accounts and prototype collaborators (developer machines only)
     if (name) update((st) => { queueReset(st, v, name); });
-    else await cloudResetRequest(v); // real accounts: Supabase e-mails the link (it never reveals whether the address exists)
+    else { // real accounts: Supabase e-mails the link (it never reveals whether the address exists)
+      setErr("");
+      const { error } = await cloudResetRequest(v);
+      if (error) return setErr(t(authErrorKey(error))); // never say "check your email" when nothing was sent
+    }
     setSent(v);
   };
   const mail = sent ? [...s.outbox].reverse().find((m) => m.kind === "reset" && m.to === sent) : undefined;
@@ -49,6 +54,7 @@ export function Forgot() {
         <form onSubmit={submit} className="card grid" style={{ gap: 12 }}>
           <div><h2 style={{ margin: 0 }}>{t("forgot.title")}</h2><p className="muted" style={{ margin: "4px 0 0" }}>{t("forgot.sub")}</p></div>
           <div><label htmlFor="fe">{t("email")}</label><input id="fe" type="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
           <button type="submit">{t("forgot.send")}</button>
           <p className="muted small" style={{ margin: 0 }}>{t("reset.nomail")} <a href="#/login">{t("login")}</a></p>
         </form>
