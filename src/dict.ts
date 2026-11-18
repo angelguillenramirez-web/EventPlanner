@@ -1081,4 +1081,5 @@ export const D: Record<string, E> = {
   "trial.sub": ["Add a card to start your Essential trial. You will not be charged today, and you can cancel at any time during the trial.", "Agrega una tarjeta para iniciar tu prueba de Essential. No se te cobrará hoy y puedes cancelar en cualquier momento durante la prueba.", "Adicione um cartão para iniciar seu teste do Essential."],
   "login.resend": ["Resend confirmation email", "Reenviar correo de confirmación", "Reenviar e-mail de confirmação"],
   "login.resent": ["We sent a new confirmation email. Open the newest one.", "Enviamos un nuevo correo de confirmación. Abre el más reciente.", "Enviamos um novo e-mail de confirmação."],
+  "sent.wrong": ["Wrong email address? Start over", "¿Correo equivocado? Empezar de nuevo", "E-mail errado? Começar de novo"],
 };

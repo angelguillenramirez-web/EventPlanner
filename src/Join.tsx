@@ -18,18 +18,18 @@ export const Shell = ({ children, wide }: { children: React.ReactNode; wide?: bo
 export function Join() {
   const { t } = useT();
   const s = useStore();
-  const [f, setF] = useState(() => { let p = { name: "", email: "" }; try { p = JSON.parse(sessionStorage.getItem("aplan-join") ?? "") ?? p; sessionStorage.removeItem("aplan-join"); } catch { /* ignore */ } return { name: p.name ?? "", email: p.email ?? "", company: "", pw: "", promo: "" }; });
+  const [f, setF] = useState(() => { let p = { name: "", email: "" }; try { p = JSON.parse(sessionStorage.getItem("aplan-join") ?? "") ?? p; sessionStorage.removeItem("aplan-join"); } catch { /* ignore */ } return { name: p.name ?? "", last: "", email: p.email ?? "", company: "", pw: "", promo: "" }; });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const email = f.email.trim().toLowerCase(), name = f.name.trim();
-    if (!name || !email || !f.pw) return setErr(t("join.err.required"));
+    const email = f.email.trim().toLowerCase(), name = f.name.trim(), last = f.last.trim();
+    if (!name || !last || !email || !f.pw) return setErr(t("join.err.required"));
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr(t("join.err.email"));
     if (f.pw.length < 8) return setErr(t("auth.pwshort"));
     if (s.accounts.some((a) => a.email.toLowerCase() === email && !a.id.startsWith("sb:"))) return setErr(t("join.err.exists")); // built-in test accounts
     setBusy(true); setErr("");
-    const { data, error } = await cloudSignUp({ name, email, password: f.pw, company: f.company.trim(), promo: f.promo.trim() });
+    const { data, error } = await cloudSignUp({ name, last, email, password: f.pw, company: f.company.trim(), promo: f.promo.trim() });
     setBusy(false);
     if (error) return setErr(t(authErrorKey(error)));
     if (data.user && data.user.identities?.length === 0) return setErr(t("join.err.exists")); // address already registered
@@ -46,7 +46,10 @@ export function Join() {
           <ul className="joinlist">{[1, 2, 3, 4].map((n) => <li key={n}><Check size={16} /> {t("join.b" + n)}</li>)}</ul>
         </div>
         <form className="card grid" style={{ gap: 12 }} onSubmit={submit} noValidate>
-          <div><label htmlFor="jn">{t("auth.name")} *</label><input id="jn" autoFocus value={f.name} autoComplete="name" onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div><label htmlFor="jn">{t("name")} *</label><input id="jn" autoFocus value={f.name} autoComplete="given-name" onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+            <div><label htmlFor="jl">{t("team.lastname")} *</label><input id="jl" value={f.last} autoComplete="family-name" onChange={(e) => setF({ ...f, last: e.target.value })} /></div>
+          </div>
           <div><label htmlFor="je">{t("email")} *</label><input id="je" type="email" value={f.email} autoComplete="email" onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
           <div><label htmlFor="jc">{t("join.company")}</label><input id="jc" value={f.company} autoComplete="organization" onChange={(e) => setF({ ...f, company: e.target.value })} /></div>
           <div><label htmlFor="jp">{t("password")} *</label><input id="jp" type="password" value={f.pw} autoComplete="new-password" onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
@@ -113,6 +116,7 @@ export function CloudSent() {
   const [state, setState] = useState<"" | "ok" | "err">("");
   if (!email) return <Shell><div className="card"><p>{t("conf.invalid")}</p><a href="#/join">{t("conf.signup")}</a></div></Shell>;
   const again = async () => { const { error } = await cloudResend(email); setState(error ? "err" : "ok"); };
+  const startOver = () => { try { sessionStorage.removeItem("aplan-pending"); } catch { /* ignore */ } go("/join"); };
   return (
     <Shell>
       <div className="card" style={{ textAlign: "center" }}>
@@ -121,7 +125,7 @@ export function CloudSent() {
         <button className="ghost" onClick={again}>{t("sent.resend")}</button>
         {state === "ok" && <p className="small" role="status" style={{ color: "var(--teal)", marginBottom: 0 }}>{t("sent.resent")}</p>}
         {state === "err" && <p className="small" role="alert" style={{ color: "var(--danger)", marginBottom: 0 }}>{t("auth.err.rate")}</p>}
-        <p className="muted small" style={{ marginBottom: 0 }}><a href="#/login">{t("login")}</a></p>
+        <p className="muted small" style={{ marginBottom: 0 }}><a href="#/join" onClick={(e) => { e.preventDefault(); startOver(); }}>{t("sent.wrong")}</a> · <a href="#/login">{t("login")}</a></p>
       </div>
     </Shell>
   );

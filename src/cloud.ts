@@ -70,7 +70,7 @@ async function loadFor(user: User, fromLink: boolean) {
       const name = st.userName || meta.full_name || (user.email ?? "");
       st.accounts = st.accounts.filter((a) => !isCloudId(a.id));
       st.accounts.push({ id: PREFIX + user.id, name, email: user.email ?? "", company: saved?.cloudAccount?.company ?? meta.company ?? "", password: "", promo: saved?.cloudAccount?.promo ?? meta.promo ?? "", token: "", confirmed: true, confirmedAt: Date.now(), createdAt: Date.parse(user.created_at) || Date.now(), profile: saved?.cloudAccount?.profile ?? null, accountType: st.accountType });
-      st.loggedIn = true; st.sessionId = PREFIX + user.id; st.viewAs = ""; st.userName = name; st.userEmail = user.email ?? "";
+      st.loggedIn = true; st.sessionId = PREFIX + user.id; st.viewAs = ""; st.userName = name; st.userLastName = st.userLastName || meta.last_name || ""; st.userEmail = user.email ?? "";
     });
   } else update((st) => { st.loggedIn = true; st.userEmail = user.email ?? ""; });
   ready = true;
@@ -143,8 +143,8 @@ function wipe() {
 
 /* ── account actions ── */
 const home = () => location.origin + "/";
-export const cloudSignUp = (v: { name: string; email: string; password: string; company: string; promo: string }) =>
-  supabaseMailer.auth.signUp({ email: v.email, password: v.password, options: { emailRedirectTo: home(), data: { full_name: v.name, company: v.company, promo: v.promo, account_type: "planner" } } });
+export const cloudSignUp = (v: { name: string; last: string; email: string; password: string; company: string; promo: string }) =>
+  supabaseMailer.auth.signUp({ email: v.email, password: v.password, options: { emailRedirectTo: home(), data: { full_name: v.name, last_name: v.last, company: v.company, promo: v.promo, account_type: "planner" } } });
 export const cloudSignIn = (email: string, password: string) => supabase.auth.signInWithPassword({ email, password });
 export const cloudResend = (email: string) => supabaseMailer.auth.resend({ type: "signup", email, options: { emailRedirectTo: home() } });
 export const cloudResetRequest = (email: string) => supabaseMailer.auth.resetPasswordForEmail(email, { redirectTo: home() });
