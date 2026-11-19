@@ -218,9 +218,9 @@ function InvCard({ inv, event, blocked, approved, onOpen, onEdit }: { inv: Invit
       <div className="row between" style={{ marginTop: 8, flexWrap: "nowrap" }}>
         <div style={{ minWidth: 0 }}><b style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.name}</b><span className="muted small">{t("ins.src." + (inv.source ?? "template"))}</span></div>
         <span className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
-          {onEdit && (approved ? <span className="row" title={t("ins.locked")} style={{ padding: "0 8px" }}><LockI /></span> : <button className="ghost sm" aria-label={t("ins.edit")} title={t("ins.edit")} onClick={onEdit}><Pencil size={15} /></button>)}
-          <button className={`ghost sm likebtn${liked ? " on" : ""}`} aria-pressed={liked} aria-label={liked ? t("task.unlike") : t("task.like")} title={liked ? t("task.unlike") : t("task.like")} onClick={() => patch((i) => { const l = i.likes ?? []; i.likes = liked ? l.filter((x) => x !== who) : [...l, who]; })}><Heart size={15} fill={liked ? "currentColor" : "none"} /> {(inv.likes ?? []).length || ""}</button>
-          <button className="ghost sm" aria-expanded={open} aria-label={t("tl.comments")} title={t("tl.comments")} onClick={() => setOpen(!open)}><MessageCircle size={15} /> {(inv.comments ?? []).length || ""}</button>
+          {onEdit && (approved ? <span className="row" title={t("ins.locked")} style={{ padding: "0 8px" }}><LockI /></span> : <button className="ghost sm invact" aria-label={t("ins.edit")} title={t("ins.edit")} onClick={onEdit}><Pencil size={20} /></button>)}
+          <button className={`ghost sm invact likebtn${liked ? " on" : ""}`} aria-pressed={liked} aria-label={liked ? t("task.unlike") : t("task.like")} title={liked ? t("task.unlike") : t("task.like")} onClick={() => patch((i) => { const l = i.likes ?? []; i.likes = liked ? l.filter((x) => x !== who) : [...l, who]; })}><Heart size={20} fill={liked ? "currentColor" : "none"} /> {(inv.likes ?? []).length || ""}</button>
+          <button className="ghost sm invact" aria-expanded={open} aria-label={t("tl.comments")} title={t("tl.comments")} onClick={() => setOpen(!open)}><MessageCircle size={20} /> {(inv.comments ?? []).length || ""}</button>
         </span>
       </div>
       {open && (

@@ -110,6 +110,13 @@ export default function AgreementTab({ event }: { event: EventT }) {
   const [taskFor, setTaskFor] = useState<string | null>(null);
   const [tk, setTk] = useState({ name: "", who: "", due: "" });
   const artRef = useRef<HTMLElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  // the header bar stays visible while scrolling; the side list and the format toolbar sit just below it
+  useLayoutEffect(() => {
+    const el = barRef.current, host = el?.parentElement; if (!el || !host) return;
+    const set = () => host.style.setProperty("--agbar-h", el.offsetHeight + "px");
+    set(); window.addEventListener("resize", set); return () => window.removeEventListener("resize", set);
+  }); // measured after every render: the bar grows when its buttons wrap
   const marRef = useRef<HTMLDivElement>(null);
   /** Places each section's comment bubbles beside the section, pushing later ones down so they never overlap. */
   const layout = () => {
@@ -266,7 +273,7 @@ export default function AgreementTab({ event }: { event: EventT }) {
 
   return (
     <>
-      <div className="row between agbar">
+      <div className="row between agbar" ref={barRef}>
         <div className="row" style={{ gap: 8 }}>
           <b style={{ fontSize: "1.1rem" }}>{t("ag.title")}</b>
           <span className="badge">{t("ag.version")} {ag.version}</span>

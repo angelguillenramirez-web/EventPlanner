@@ -268,8 +268,6 @@ function Notifications() {
         <Modal title={t("inb.prefs")} onClose={() => setPrefs(false)}>
           <p className="muted small" style={{ marginTop: 0 }}>{t("inb.prefs.sub")}</p>
           {NOTIF_TYPES.map((k) => <label key={k} className="row between" style={{ margin: "6px 0", color: "var(--ink)" }}><span className="row" style={{ gap: 8 }}>{NICON[k]} {t("inb.t." + k)}</span><input type="checkbox" style={{ width: "auto" }} checked={s.inboxPrefs.types[k] !== false} onChange={(e) => update((st) => { st.inboxPrefs.types[k] = e.target.checked; })} /></label>)}
-          <label htmlFor="dg" style={{ marginTop: 12 }}>{t("inb.digest")}</label>
-          <select id="dg" value={s.inboxPrefs.digest} onChange={(e) => update((st) => { st.inboxPrefs.digest = e.target.value as "off" | "daily" | "weekly"; })}>{(["off", "daily", "weekly"] as const).map((d) => <option key={d} value={d}>{t("inb.digest." + d)}</option>)}</select>
           <div className="row" style={{ justifyContent: "flex-end", marginTop: 14 }}><button onClick={() => setPrefs(false)}>{t("done")}</button></div>
         </Modal>
       )}
