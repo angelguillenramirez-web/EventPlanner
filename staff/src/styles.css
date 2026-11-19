@@ -118,3 +118,25 @@ th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 500; } .chat .head b { white-space: nowrap; } .composer textarea { min-width: 0; }
 
 .note.cust { border-color: var(--accent); background: var(--bg); border-left-width: 4px; }
+
+/* request conversation: customer on the left, our replies on the right, internal notes as yellow notes */
+.cv { display: grid; gap: 10px; max-height: 460px; min-height: 120px; overflow-y: auto; padding: 10px 4px; align-content: start; }
+.cv-day { text-align: center; font-size: .72rem; color: var(--muted); margin: 2px 0; }
+.cv-row { display: flex; gap: 8px; align-items: flex-end; max-width: 86%; }
+.cv-row.out { justify-self: end; flex-direction: row-reverse; } .cv-row.out > div { display: flex; flex-direction: column; align-items: flex-end; }
+.cv-av { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line); font-weight: 700; font-size: .8rem; }
+.cv-meta { font-size: .74rem; color: var(--muted); margin-bottom: 2px; }
+.cv-bub { padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.cv-row.in .cv-bub { background: var(--soft); border-bottom-left-radius: 4px; }
+.cv-row.out .cv-bub { background: color-mix(in srgb, var(--teal) 28%, var(--surface)); border-bottom-right-radius: 4px; }
+.cv-internal { width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px dashed color-mix(in srgb, var(--amber) 75%, var(--line)); background: color-mix(in srgb, var(--amber) 16%, var(--surface)); }
+.cv-internal .cv-meta { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; } .cv-internal .cv-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cv-composer { margin-top: 12px; padding: 10px; border-radius: 12px; display: grid; gap: 8px; border: 2px solid var(--line); }
+.cv-composer.reply { border-color: var(--teal); }
+.cv-composer.notebox { border-style: dashed; border-color: color-mix(in srgb, var(--amber) 75%, var(--line)); background: color-mix(in srgb, var(--amber) 12%, var(--surface)); }
+.cv-hint { font-size: .8rem; font-weight: 600; } .cv-composer.reply .cv-hint { color: var(--teal); } .cv-composer.notebox .cv-hint { color: color-mix(in srgb, var(--amber) 60%, var(--ink)); }
+.cv-composer .seg button { display: inline-flex; align-items: center; gap: 5px; }
+
+/* new requests / customer messages not yet opened */
+.badge.b-new { background: var(--rose); color: #fff; font-weight: 700; }
+tr.isnew td:first-child { box-shadow: inset 3px 0 0 var(--rose); } tr.isnew td b { font-weight: 800; }

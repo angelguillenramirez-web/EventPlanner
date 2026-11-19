@@ -5,7 +5,7 @@ import { SUPABASE_AUTH, supabase } from "./supabase";
 import { cloudStatus, onCloud, startCloud } from "./cloud";
 import { BarChart3, BookOpen, Brush, ClipboardCheck, Gauge, KeyRound, LifeBuoy, ListChecks, LogOut, MessageCircle, Moon, Palette, ScrollText, Sun, UserCircle, Users, Globe, DollarSign, Inbox } from "./icons";
 import Login from "./Login";
-import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, unreadTotal, update, useStore, type Presence, type Role } from "./store";
+import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, unreadTotal, newRequests, useSeen, update, useStore, type Presence, type Role } from "./store";
 import { Avatar, go, Logo, Modal, useRoute } from "./ui";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
@@ -83,6 +83,9 @@ export default function App() {
   // deactivated or removed while signed in → out
   useEffect(() => { if (sess && !me) { setSession(null); setSess(null); } }, [sess, me]);
 
+  useSeen();
+  const fresh = me ? newRequests(s, me) : [];
+  useEffect(() => { document.title = (fresh.length ? `(${fresh.length}) ` : "") + "643 · Staff"; }, [fresh.length]); // new requests show in the browser tab
   if (!me) return <Login onDone={() => { setSess(getSession()); go("/"); }} />;
 
   const allowed = ACCESS[me.role];
@@ -90,6 +93,7 @@ export default function App() {
   const area = seg === "studio" ? "templates" : seg; // the HTML studio belongs to the templates area
   const out = () => { setConfirmOut(false); signOut(me); setSess(null); go("/"); };
   const unread = unreadTotal(s, me.id);
+  const freshMine = fresh.filter((t) => t.assigneeId === me.id).length;
   const cur = (href: string) => (href === "/" ? route === "/" : route === href || route.startsWith(href + "/"));
   let lastSec = "";
 
@@ -114,7 +118,7 @@ export default function App() {
         <div id="navlinks" className="navlinks">
         {NAV.filter((n) => allowed.includes(n.area)).map((n) => {
           const sec = n.sec && n.sec !== lastSec ? (lastSec = n.sec) : "";
-          return <span key={n.href} style={{ display: "contents" }}>{sec && <div className="sec">{sec}</div>}<a href={"#" + n.href} aria-current={cur(n.href) ? "page" : undefined}>{n.icon}{n.label}{n.area === "chat" && unread > 0 && <span className="navbadge">{unread}</span>}</a></span>;
+          return <span key={n.href} style={{ display: "contents" }}>{sec && <div className="sec">{sec}</div>}<a href={"#" + n.href} aria-current={cur(n.href) ? "page" : undefined}>{n.icon}{n.label}{n.area === "chat" && unread > 0 && <span className="navbadge">{unread}</span>}{n.href === "/tasks" && fresh.length > 0 && <span className="navbadge" title="New requests and customer messages you have not opened" aria-label={`${fresh.length} new`}>{fresh.length}</span>}{n.href === "/" && freshMine > 0 && <span className="navbadge" title="New activity on your requests" aria-label={`${freshMine} new`}>{freshMine}</span>}</a></span>;
         })}
         <span className="grow" />
         <div style={{ padding: "8px 10px", fontSize: ".78rem" }}>

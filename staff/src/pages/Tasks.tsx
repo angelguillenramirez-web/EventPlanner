@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { addTemplate, assignTask, canSee, createTask, handOffToDesigner, isOpen, KIND_TEAM, patchTask, ROLE_LABEL, setStatus, STATUSES, STATUS_LABEL, uid, useStore, type Priority, type Staff, type TaskKind, type TaskStatus } from "../store";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { addTemplate, assignTask, canSee, createTask, handOffToDesigner, isNewTask, isOpen, KIND_TEAM, markSeen, patchTask, useSeen, ROLE_LABEL, setStatus, STATUSES, STATUS_LABEL, uid, useStore, type Priority, type Staff, type TaskKind, type TaskStatus } from "../store";
 import { fmtAge, fmtDate, go, isLate, Modal, PriorityBadge, StatusBadge, taskAge, useTick } from "../ui";
 import { TaskTable } from "./Dashboard";
+import { Lock } from "../icons";
 
 export default function Tasks({ me, route }: { me: Staff; route: string }) {
   const id = route.split("/")[2];
@@ -10,6 +11,7 @@ export default function Tasks({ me, route }: { me: Staff; route: string }) {
 
 function Queue({ me }: { me: Staff }) {
   const s = useStore();
+  useSeen();
   useTick();
   const [owner, setOwner] = useState<"all" | "me" | "none">("all");
   const [st, setSt] = useState<"open" | "all">("open");
@@ -28,7 +30,7 @@ function Queue({ me }: { me: Staff }) {
       {unassigned.length > 0 && (
         <div className="card" style={{ marginBottom: 14 }}>
           <h3>Waiting for an owner ({unassigned.length})</h3>
-          {unassigned.map((t) => <div key={t.id} className="row between" style={{ padding: "4px 0" }}><span><a className="mono" href={"#/tasks/" + t.id}>{t.id}</a> {t.title}</span><button className="sm" onClick={() => claim(t.id)}>Take it</button></div>)}
+          {unassigned.map((t) => <div key={t.id} className="row between" style={{ padding: "4px 0" }}><span><a className="mono" href={"#/tasks/" + t.id}>{t.id}</a> {t.title}{isNewTask(t, me.id) && <span className="badge b-new" style={{ marginLeft: 6 }}>New</span>}</span><button className="sm" onClick={() => claim(t.id)}>Take it</button></div>)}
         </div>
       )}
       <div className="card">
@@ -73,13 +75,23 @@ function Detail({ me, id }: { me: Staff; id: string }) {
   const s = useStore();
   useTick();
   const [text, setText] = useState("");
-  const [internal, setInternal] = useState(true);
+  const [mode, setMode] = useState<"" | "note" | "reply">(""); // "" = pick a sensible default
   const [hand, setHand] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
   const t = s.tasks.find((x) => x.id === id);
+  const nNotes = t?.notes.length ?? 0;
+  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [nNotes, id]); // show the newest message
+  useEffect(() => { if (t) markSeen(me.id, t.id); }, [id, nNotes, me.id]); // opening a request (or a message arriving while it is open) clears its "new" marker
   if (!t || !canSee(me, t)) return <div className="card"><h2>Request not found</h2><p className="muted">It does not exist or belongs to another team.</p><a className="btn" href="#/tasks">Back to the queue</a></div>;
   const owner = s.staff.find((m) => m.id === t.assigneeId);
   const team = s.staff.filter((m) => m.active && (me.role === "super_admin" ? true : m.role === KIND_TEAM[t.kind]));
   const cust = s.customers.find((c) => c.id === t.customerId);
+  // Only requests that came from a customer (they have a reference) can be answered; everything else is internal notes.
+  const canReply = !!t.ref;
+  const last = t.notes[t.notes.length - 1];
+  const replyMode = canReply && (mode ? mode === "reply" : !last || !!last.customer); // default: reply while the customer is waiting
+  const internal = !replyMode;
+  const hm = (at: number) => new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   const addNote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
@@ -108,16 +120,46 @@ function Detail({ me, id }: { me: Staff; id: string }) {
             {cust && <div className="row" style={{ marginTop: 10 }}>{(me.role === "support" || me.role === "super_admin") && <a className="btn ghost sm" href={"#/customers/" + cust.id}>Open customer account</a>}</div>}
           </div>
           <div className="card">
-            <h3>Conversation & notes</h3>
-            <div className="grid" style={{ gap: 8 }}>
-              {t.notes.map((n) => <div key={n.id} className={`note${n.internal ? " internal" : ""}${n.customer ? " cust" : ""}`}><div className="muted small">{n.by} · {fmtDate(n.at)} · {n.internal ? "internal note" : n.customer ? "customer message" : "reply to customer"}</div>{n.text}</div>)}
-              {!t.notes.length && <p className="muted" style={{ margin: 0 }}>No notes yet.</p>}
+            <div className="row between"><h3 style={{ margin: 0 }}>Conversation</h3><span className="muted small">{t.notes.length} {t.notes.length === 1 ? "message" : "messages"}</span></div>
+            <div className="cv" ref={box} role="log" aria-live="polite">
+              {!t.notes.length && <p className="muted" style={{ margin: 0, textAlign: "center" }}>No messages yet.</p>}
+              {t.notes.map((n, i) => {
+                const prev = t.notes[i - 1];
+                const newDay = !prev || new Date(prev.at).toDateString() !== new Date(n.at).toDateString();
+                return (
+                  <Fragment key={n.id}>
+                    {newDay && <div className="cv-day">{new Date(n.at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>}
+                    {n.internal ? (
+                      <div className="cv-internal">
+                        <div className="cv-meta"><Lock size={12} /> <b>Internal note</b> · {n.by} · {hm(n.at)} · only staff can see this</div>
+                        <div className="cv-text">{n.text}</div>
+                      </div>
+                    ) : (
+                      <div className={`cv-row ${n.customer ? "in" : "out"}`}>
+                        {n.customer && <span className="cv-av" aria-hidden="true">{(n.by || "C").trim()[0]?.toUpperCase()}</span>}
+                        <div>
+                          <div className="cv-meta">{n.customer ? <><b>{n.by}</b> · customer</> : <><b>{n.by}</b> · reply to customer</>} · {hm(n.at)}</div>
+                          <div className="cv-bub">{n.text}</div>
+                        </div>
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
-            <form onSubmit={addNote} className="grid" style={{ gap: 8, marginTop: 10 }}>
-              <textarea rows={3} aria-label="Note" placeholder="Write a note or a reply…" value={text} onChange={(e) => setText(e.target.value)} />
+            <form onSubmit={addNote} className={`cv-composer ${replyMode ? "reply" : "notebox"}`}>
+              {canReply ? (
+                <div className="seg" role="group" aria-label="Message type">
+                  <button type="button" aria-pressed={replyMode} onClick={() => setMode("reply")}>Reply to customer</button>
+                  <button type="button" aria-pressed={!replyMode} onClick={() => setMode("note")}><Lock size={12} /> Internal note</button>
+                </div>
+              ) : <div className="muted small">This request has no customer to reply to, so messages here are internal notes.</div>}
+              <div className="cv-hint">{replyMode ? "The customer will see this message." : "Only staff can see this. The customer never will."}</div>
+              <textarea rows={3} aria-label={replyMode ? "Reply to the customer" : "Internal note"} placeholder={replyMode ? "Write your reply to the customer…" : "Write a note for your team…"} value={text} onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} />
               <div className="row between">
-                <div className="seg"><button type="button" aria-pressed={internal} onClick={() => setInternal(true)}>Internal note</button><button type="button" aria-pressed={!internal} onClick={() => setInternal(false)}>Reply to customer</button></div>
-                <button disabled={!text.trim()}>Add</button>
+                <span className="muted small">Enter to send · Shift+Enter for a new line{replyMode && t.status !== "done" ? " · sending sets the status to “Waiting on customer”" : ""}</span>
+                <button disabled={!text.trim()}>{replyMode ? "Send reply" : "Add note"}</button>
               </div>
             </form>
           </div>

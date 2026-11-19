@@ -267,6 +267,39 @@ export function markRead(staffId: string, ch: string) {
   const s = getState(); if ((s.reads[staffId]?.[ch] ?? 0) >= (s.messages.filter((m) => m.ch === ch).at(-1)?.at ?? 0)) return;
   update((x) => { if (!x.reads[staffId]) x.reads[staffId] = {}; x.reads[staffId][ch] = Date.now(); });
 }
+// ───────── "New" markers for the request queue (per staff member, kept in this browser) ─────────
+type SeenMap = { since: number; seen: Record<string, number> };
+const seenKey = (staffId: string) => `ep-staff.seen.${staffId}`;
+const seenCache = new Map<string, SeenMap>();
+let seenVersion = 0;
+const seenSubs = new Set<() => void>();
+function seenOf(staffId: string): SeenMap {
+  let m = seenCache.get(staffId);
+  if (!m) {
+    try { m = JSON.parse(localStorage.getItem(seenKey(staffId)) ?? "null") as SeenMap | null ?? undefined; } catch { m = undefined; }
+    if (!m) { m = { since: Date.now(), seen: {} }; try { localStorage.setItem(seenKey(staffId), JSON.stringify(m)); } catch { /* ignore */ } } // first visit: what already exists counts as seen
+    seenCache.set(staffId, m);
+  }
+  return m;
+}
+/** The person opened this request: its "new" marker goes away. */
+export function markSeen(staffId: string, taskId: string) {
+  const m = seenOf(staffId);
+  m.seen[taskId] = Date.now();
+  try { localStorage.setItem(seenKey(staffId), JSON.stringify(m)); } catch { /* ignore */ }
+  seenVersion++; seenSubs.forEach((f) => f());
+}
+/** Re-renders a component when "seen" markers change. */
+export function useSeen() { return useSyncExternalStore((f) => { seenSubs.add(f); return () => { seenSubs.delete(f); }; }, () => seenVersion); }
+/** A request is "new" for someone when it arrived from a customer (or was handed over to their team) or the customer wrote again, after they last opened it. */
+export function isNewTask(t: Task, staffId: string): boolean {
+  if (t.status === "done") return false;
+  const m = seenOf(staffId);
+  const fromOutside = t.source === "platform" || !!t.origin;
+  const act = Math.max(fromOutside ? t.createdAt : 0, ...t.notes.filter((n) => n.customer).map((n) => n.at));
+  return act > Math.max(m.since, m.seen[t.id] ?? 0);
+}
+export function newRequests(s: State, me: Staff) { return s.tasks.filter((t) => canSee(me, t) && isNewTask(t, me.id)); }
 export function unreadIn(s: State, staffId: string, ch: string) { const r = s.reads[staffId]?.[ch] ?? 0; return s.messages.filter((m) => m.ch === ch && m.at > r && m.by !== staffId && !m.deleted).length; }
 export function unreadTotal(s: State, staffId: string) { return s.channels.filter((c) => c.members.includes(staffId)).reduce((n, c) => n + unreadIn(s, staffId, c.id), 0); }
 export function assignTask(id: string, by: string, staffId: string | null) {

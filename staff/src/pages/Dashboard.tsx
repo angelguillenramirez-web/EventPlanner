@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { fmtAge, fmtDate, go, isLate, PriorityBadge, Stat, StatusBadge, taskAge, useTick } from "../ui";
 import { PresenceBoard } from "./Metrics";
-import { isOpen, ROLE_LABEL, setStatus, STATUSES, STATUS_LABEL, useStore, type Staff, type Task, type TaskStatus } from "../store";
+import { isNewTask, isOpen, ROLE_LABEL, setStatus, STATUSES, STATUS_LABEL, useSeen, useStore, type Staff, type Task, type TaskStatus } from "../store";
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
@@ -48,6 +48,7 @@ export default function Dashboard({ me }: { me: Staff }) {
 
 export function TaskTable({ rows, me, showOwner }: { rows: Task[]; me: Staff; showOwner?: boolean }) {
   const s = useStore();
+  useSeen();
   if (!rows.length) return <p className="muted" style={{ margin: 8 }}>Nothing here.</p>;
   return (
     <div style={{ overflowX: "auto" }}>
@@ -55,9 +56,9 @@ export function TaskTable({ rows, me, showOwner }: { rows: Task[]; me: Staff; sh
         <thead><tr><th>Task ID</th><th>Request</th><th>Created</th><th>Age</th>{showOwner && <th>Owner</th>}<th>Priority</th><th>Status</th></tr></thead>
         <tbody>
           {rows.map((t) => (
-            <tr key={t.id} className="click" onClick={() => go("/tasks/" + t.id)}>
+            <tr key={t.id} className={`click${isNewTask(t, me.id) ? " isnew" : ""}`} onClick={() => go("/tasks/" + t.id)}>
               <td className="mono"><a href={"#/tasks/" + t.id}>{t.id}</a></td>
-              <td><b>{t.title}</b><div className="muted small">{t.requester || "—"}</div></td>
+              <td><b>{t.title}</b>{isNewTask(t, me.id) && <span className="badge b-new" style={{ marginLeft: 6 }}>New</span>}{t.channel === "chat" && <span className="badge" style={{ marginLeft: 6 }}>live chat</span>}<div className="muted small">{t.requester || "—"}</div></td>
               <td className="small">{fmtDate(t.createdAt)}</td>
               <td className="small">{fmtAge(taskAge(t))} {isLate(t) && <span className="badge b-late">late</span>}</td>
               {showOwner && <td className="small">{s.staff.find((m) => m.id === t.assigneeId)?.name ?? <i className="muted">unassigned</i>}</td>}
