@@ -164,7 +164,7 @@ export function resetAll() { try { localStorage.removeItem(KEY); sessionStorage.
 
 // ───────── Session (tab-scoped, idle timeout) ─────────
 const SKEY = "ep-staff.session";
-export const IDLE_MS = 15 * 60_000;
+export const IDLE_MS = 30 * 60_000;
 export function getSession(): Session | null {
   try { const s = JSON.parse(sessionStorage.getItem(SKEY) ?? "null") as Session | null; return s && s.expires > Date.now() ? s : null; } catch { return null; }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { askLogout, go, me, unreadCounts, update, useStore } from "../store";
+import { askLogout, go, me, supportUnread, unreadCounts, update, useStore } from "../store";
 import { Modal } from "./ui";
 import { AppMark, LangSwitch, Logo, ThemeToggle, useMedia } from "../shared";
 import { Play, Inbox as InboxIcon, Menu, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, ListChecks, BriefcaseBusiness, Bell, MessageSquare, Search, Store, User, Users, LogOut, Languages } from "../icons";
@@ -91,12 +91,12 @@ export default function ClientApp({ route }: { route: string }) {
         {!s.viewAs && nav("/app/suppliers", <DI k="store" />, t("nav.suppliers"), sec === "suppliers")}
 
         <button className="nav navbtn" title={t("nav.help")} aria-expanded={helpOpen} onClick={() => { if (collapsed) { update((st) => { st.sidebarCollapsed = false; }); setHelp(true); } else setHelp(!help); }}>
-          <DI k="help" /><span className="lbl" style={{ flex: 1, textAlign: "left" }}>{t("nav.help")}</span>
+          <span style={{ position: "relative", display: "inline-flex" }}><DI k="help" />{supportUnread(s) > 0 && !helpOpen && <i className="bdot nav" aria-label={t("support.badge")} />}</span><span className="lbl" style={{ flex: 1, textAlign: "left" }}>{t("nav.help")}</span>
           <ChevronDown size={14} className="lbl" style={{ transform: helpOpen ? "rotate(180deg)" : undefined }} />
         </button>
         {helpOpen && (
           <div className="subnav">
-            <button className="nav navbtn" onClick={() => update((st) => { st.supportOpen = true; })}><Headset size={16} /><span className="lbl">{t("nav.support")}</span></button>
+            <button className="nav navbtn" onClick={() => update((st) => { st.supportOpen = true; })}><span style={{ position: "relative", display: "inline-flex" }}><Headset size={16} />{supportUnread(s) > 0 && <i className="bdot nav" aria-label={t("support.badge")} />}</span><span className="lbl">{t("nav.support")}</span>{supportUnread(s) > 0 && <span className="badge" style={{ marginLeft: "auto" }}>{t("support.badge")}</span>}</button>
             {nav("/app/feedback", <MessageSquare size={16} />, t("nav.feedback"), sec === "feedback")}
           </div>
         )}

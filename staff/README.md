@@ -21,7 +21,7 @@ npm run dev        # open http://643.localhost:5174
 1. Work email + password (salted PBKDF2-SHA256, 210k iterations; same generic error for any wrong detail).
 2. Authenticator code (standard TOTP, RFC 6238 — Google Authenticator, Authy, 1Password…; verified against the RFC test vectors). A code cannot be used twice.
 3. New accounts: temporary password → forced personal password (12+ chars, upper/lower, number, symbol) → QR enrollment of the authenticator.
-- 5 failed attempts lock the account for 15 min (a super admin can unlock). Auto sign-out after 15 min idle. Session lives in `sessionStorage` (closes with the tab).
+- 5 failed attempts lock the account for 15 min (a super admin can unlock). Auto sign-out after 30 min idle. Session lives in `sessionStorage` (closes with the tab).
 - In `npm run dev` only, the login page shows a **demo box** (demo accounts, live authenticator code, reset data). It is stripped from production builds. Demo accounts use the password `DEMO_PASSWORD` in `src/store.ts`; there are three starter accounts for testing: `admin@` (super admin), `support@` (customer support), `designer@eventplanner.test`. Add more people from **Staff & roles**. (Data from the earlier 5-account prototype is replaced the first time this version loads.)
 
 ## Profiles

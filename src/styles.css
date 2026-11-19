@@ -893,3 +893,4 @@ select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-rig
 /* message bubble button next to a guest name */
 .msgbtn { flex: none; width: 26px; height: 26px; padding: 0; display: inline-grid; place-items: center; border-radius: 4px; background: color-mix(in srgb, var(--teal) 18%, transparent); color: var(--teal); border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent); cursor: pointer; }
 .msgbtn:hover { background: color-mix(in srgb, var(--teal) 30%, transparent); }
+.bdot.nav { top: -3px; right: -4px; width: 9px; height: 9px; }

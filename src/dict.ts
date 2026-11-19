@@ -1147,4 +1147,8 @@ export const D: Record<string, E> = {
   "ins.f.cover": ["Cover photo", "Foto de portada", "Foto de capa"],
   "ins.f.story": ["Story photo", "Foto de la historia", "Foto da história"],
   "rsvp.linkname.none": ["The invitation link appears here once you have created at least one invitation (add a guest). Every link includes the guest's name and cannot be reused for someone else.", "El enlace de invitación aparece aquí cuando hayas creado al menos una invitación (agrega un invitado). Cada enlace incluye el nombre del invitado y no se puede reutilizar para otra persona.", "O link do convite aparece aqui depois que você criar pelo menos um convite (adicione um convidado). Cada link inclui o nome do convidado e não pode ser reutilizado para outra pessoa."],
+  "inb.t.support": ["Support", "Soporte", "Suporte"],
+  "support.n.reply": ["Support answered your request: “{subject}”", "Soporte respondió tu solicitud: «{subject}»", "O suporte respondeu sua solicitação: “{subject}”"],
+  "support.n.chat": ["New message from support in the live chat", "Nuevo mensaje de soporte en el chat en vivo", "Nova mensagem do suporte no chat ao vivo"],
+  "support.badge": ["New", "Nuevo", "Novo"],
 };

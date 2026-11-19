@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
-import { go, update, useStore } from "../store";
+import { go, goNotif, update, useStore } from "../store";
 import { DI } from "../navicons";
 import { reduce, toast } from "../motion";
 
@@ -23,7 +23,7 @@ export default function NotifDrawer({ onClose }: { onClose: () => void }) {
     if (Math.abs(m) < 1440) return rtf.format(Math.round(m / 60), "hour");
     return rtf.format(Math.round(m / 1440), "day");
   };
-  const open = (id: string, href: string) => { update((st) => { const n = st.notifs.find((x) => x.id === id); if (n) n.read = true; }); onClose(); go(href); };
+  const open = (id: string, href: string) => { update((st) => { const n = st.notifs.find((x) => x.id === id); if (n) n.read = true; }); onClose(); goNotif(href); };
   const markAll = () => { update((st) => { st.notifs.forEach((n) => { n.read = true; }); }); toast(t("toast.allread")); };
   return (
     <>

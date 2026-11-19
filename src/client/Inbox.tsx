@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { NOTIF_TYPES, go, iso, newTask, uid, update, useStore, unreadCounts, type InboxMsg, type NotifType, type Thread } from "../store";
+import { NOTIF_TYPES, go, goNotif, iso, newTask, uid, update, useStore, unreadCounts, type InboxMsg, type NotifType, type Thread } from "../store";
 import { SUPPLIERS, SUPPLIER_CATEGORIES, type Supplier } from "../suppliers";
 import { useMedia } from "../shared";
+import { Headset } from "lucide-react";
 import { ArrowLeft, Archive, ArchiveRestore, Bell, BellOff, Check, CheckCheck, ListTodo, MailOpen, Paperclip, Pin, PinOff, Plus, Search, Send, Settings, ThumbsDown, ThumbsUp, Users, Wallet, ClipboardCheck, CalendarCheck, Store } from "../icons";
 import { Modal } from "./ui";
 import { money } from "./Billing";
@@ -10,7 +11,7 @@ import { money } from "./Billing";
 const supOf = (id: string): Supplier | undefined => SUPPLIERS.find((x) => x.id === id);
 const HUES: Record<string, string> = { venue: "#FF7A59", catering: "#F0B429", photo: "#6FA8FF", music: "#9B87F5", decor: "#46C8B2", cake: "#FF9C7F", entertainment: "#FFC93C", rentals: "#B9A6FF", beauty: "#2FB09B", transport: "#B8A98A" };
 const Avatar = ({ sup, size = 40 }: { sup?: Supplier; size?: number }) => <span className="inbav" style={{ width: size, height: size, background: `${HUES[sup?.category ?? ""] ?? "#46C8B2"}` }}>{(sup?.name ?? "?")[0]}</span>;
-const NICON: Record<NotifType, React.ReactNode> = { approval: <ClipboardCheck size={16} />, supplier: <Store size={16} />, task: <ListTodo size={16} />, guest: <CalendarCheck size={16} />, collab: <Users size={16} />, billing: <Wallet size={16} /> };
+const NICON: Record<NotifType, React.ReactNode> = { approval: <ClipboardCheck size={16} />, supplier: <Store size={16} />, task: <ListTodo size={16} />, guest: <CalendarCheck size={16} />, collab: <Users size={16} />, billing: <Wallet size={16} />, support: <Headset size={16} /> };
 const kb = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
 
 /** Relative time in the user's language ("3 h ago", "yesterday"). */
@@ -237,7 +238,7 @@ function Notifications() {
   const list = s.notifs.filter((n) => (type === "all" || n.type === type) && (!onlyUnread || !n.read));
   const today = new Date().toDateString();
   const groups: [string, typeof list][] = [[t("inb.today"), list.filter((n) => new Date(n.at).toDateString() === today)], [t("inb.earlier"), list.filter((n) => new Date(n.at).toDateString() !== today)]];
-  const open = (id: string, href: string) => { update((st) => { const n = st.notifs.find((x) => x.id === id); if (n) n.read = true; }); go(href); };
+  const open = (id: string, href: string) => { update((st) => { const n = st.notifs.find((x) => x.id === id); if (n) n.read = true; }); goNotif(href); };
   return (
     <div className="card" style={{ maxWidth: 820 }}>
       <div className="row between" style={{ marginBottom: 10 }}>

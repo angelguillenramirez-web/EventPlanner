@@ -141,7 +141,7 @@ export interface Support { id: string; subject: string; message: string; status:
 /** Inbox: conversations with suppliers and a feed of platform notifications. */
 export interface InboxMsg { id: string; from: "me" | "them"; text: string; /** dictionary key for seeded messages (so they follow the language) */ key?: string; at: number; attach?: { name: string; size: number }; quote?: { amount: number; status: "pending" | "accepted" | "declined" }; read: boolean }
 export interface Thread { id: string; supplierId: string; eventId: string; pinned: boolean; archived: boolean; muted: boolean; createdAt: number; msgs: InboxMsg[] }
-export const NOTIF_TYPES = ["approval", "supplier", "task", "guest", "collab", "billing"] as const;
+export const NOTIF_TYPES = ["approval", "supplier", "task", "guest", "collab", "billing", "support"] as const;
 export type NotifType = (typeof NOTIF_TYPES)[number];
 export interface Notif { id: string; type: NotifType; key: string; vars: Record<string, string | number>; at: number; read: boolean; href: string }
 export interface InboxPrefs { types: Record<NotifType, boolean>; digest: "off" | "daily" | "weekly" }
@@ -156,7 +156,7 @@ export interface EventType { id: string; color: string; name?: string; custom?: 
 export interface State {
   lang: Lang; theme: Theme; plan: Plan; sidebarCollapsed: boolean; businessLogo: string; userLastName: string; budgets: Budget[]; defaultFields: TaskField[]; defaultFieldsCustom: boolean; loggedIn: boolean; sub: Subscription; eventLog: number[]; invoices: Invoice[]; card: Card | null; sessionId: string; accounts: Account[]; outbox: Mail[]; accountType: "planner" | "supplier" | null; userName: string; avatar: string;
   tags: string[]; team: Member[]; events: EventT[]; tasks: Task[]; todos: Todo[]; guests: Guest[]; invitations: Invitation[]; seatings: Seating[]; menu: MenuItem[]; menuLibrary: MenuItem[]; services: Service[]; documents: Doc[]; meetings: Meeting[]; dots: Dot[]; itineraries: Itinerary[]; talents: Talent[]; signoffs: Signoff[]; agreements: Agreement[]; designRequests: DesignRequest[]; folders: Folder[]; defaultSurvey: DefaultSurvey | null; userEmail: string; userPhone: string; billing: Billing;
-  supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
+  supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; /** how many staff replies the customer has already seen, per request id and "chat" */ supportSeen: Record<string, number>; /** staff messages in the live chat as last checked */ chatTotal: number; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
   eventTypes: EventType[]; upsell: string | null; supportOpen: boolean; viewAs: string; seatEditor: boolean; seatDirty: boolean;
 }
 
@@ -335,7 +335,8 @@ function seed(): State {
       { id: uid(), type: "collab", key: "inb.n.joined", vars: { name: "Sofía" }, at: Date.now() - 2 * 86400000, read: true, href: "/app/team" },
     ],
     tourSeen: [], cancelSurveys: [], supplierProfile: emptyProfile(), accDraft: null, confirmOut: false,
-    inboxPrefs: { types: { approval: true, supplier: true, task: true, guest: true, collab: true, billing: true }, digest: "daily" },
+    inboxPrefs: { types: { approval: true, supplier: true, task: true, guest: true, collab: true, billing: true, support: true }, digest: "daily" },
+    supportSeen: {}, chatTotal: 0,
     chat: [{ id: uid(), from: "support", text: "¡Hola! ¿En qué podemos ayudarte?" }],
     surveys: seedSurveys(w.id),
     feedback: [],
@@ -460,6 +461,10 @@ export const notify = (st: State, type: NotifType, key: string, vars: Record<str
   if (st.inboxPrefs?.types[type] === false) return;
   st.notifs.unshift({ id: uid(), type, key, vars, at: Date.now(), read: false, href });
 };
+/** Opens what a notification points to ("support" opens the support panel). */
+export const goNotif = (href: string) => { if (href === "support") update((s) => { s.supportOpen = true; }); else go(href); };
+/** Staff replies the customer has not seen yet (requests with new replies, plus the live chat). */
+export const supportUnread = (s: State) => (s.support ?? []).filter((r) => (r.replies?.length ?? 0) > ((s.supportSeen ?? {})[r.id] ?? 0)).length + ((s.chatTotal ?? 0) > ((s.supportSeen ?? {}).chat ?? 0) ? 1 : 0);
 /** Unread conversations (messages) and unread notifications. */
 export const unreadCounts = (s: State) => ({
   msgs: (s.threads ?? []).filter((t) => !t.archived && !t.muted && t.msgs.some((m) => m.from === "them" && !m.read)).length,

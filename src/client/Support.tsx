@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { getState, uid, update, useStore, type Support } from "../store";
+import { getState, notify, uid, update, useStore, type Support } from "../store";
 import { X } from "../icons";
 import { fetchChat, fetchStatuses, sendChat, sendRequest, type LiveMsg } from "../bridge";
 
@@ -28,6 +28,40 @@ export default function SupportWidget() {
     const tick = async () => { const r = await fetchChat(chatId); if (!alive || !r) return; setLive(r.messages); setClosed(r.closed); };
     tick(); const i = setInterval(tick, 2500); return () => { alive = false; clearInterval(i); };
   }, [s.supportOpen, chatId]);
+  // while the panel is closed: look for new answers every 30 s without telling the team they were read, and raise a notification
+  useEffect(() => {
+    if (s.supportOpen || !s.loggedIn) return;
+    let alive = true;
+    const look = async () => {
+      const refs = getState().support.map((x) => x.ref).filter((x): x is string => !!x);
+      const st = refs.length ? await fetchStatuses(refs, false) : {};
+      const cid = readId(), ch = cid ? await fetchChat(cid, false) : null;
+      if (!alive) return;
+      update((state) => {
+        for (const r of state.support) {
+          const x = r.ref ? st[r.ref] : undefined; if (!x) continue;
+          const before = r.replies?.length ?? 0;
+          r.taskId = x.taskId; r.remote = x.status; r.replies = x.replies ?? []; r.status = x.status === "done" || (x.replies?.length ?? 0) > 0 ? "answered" : "open";
+          if (r.replies.length > before) notify(state, "support", "support.n.reply", { subject: r.subject }, "support");
+        }
+        if (ch) { const n = ch.messages.filter((m) => m.from === "support").length; if (n > (state.chatTotal ?? 0)) notify(state, "support", "support.n.chat", {}, "support"); state.chatTotal = n; }
+      });
+    };
+    void look(); const i = setInterval(look, 30000); return () => { alive = false; clearInterval(i); };
+  }, [s.supportOpen, s.loggedIn]);
+  // opening the panel means the answers are being read: clear the indicators
+  useEffect(() => {
+    if (!s.supportOpen) return;
+    const cur = getState(), seen = cur.supportSeen ?? {}, chatN = Math.max(cur.chatTotal ?? 0, live.filter((m) => m.from === "support").length);
+    if (!cur.support.some((r) => (r.replies?.length ?? 0) !== (seen[r.id] ?? 0)) && seen.chat === chatN && cur.chatTotal === chatN && !cur.notifs.some((n) => n.type === "support" && !n.read)) return; // nothing new: avoid a render loop
+    update((st) => {
+      st.supportSeen = st.supportSeen ?? {};
+      for (const r of st.support) st.supportSeen[r.id] = r.replies?.length ?? 0;
+      st.supportSeen.chat = Math.max(st.chatTotal ?? 0, live.filter((m) => m.from === "support").length);
+      st.chatTotal = st.supportSeen.chat;
+      st.notifs.forEach((n) => { if (n.type === "support") n.read = true; });
+    });
+  }, [s.supportOpen, s.support, live]); // eslint-disable-line react-hooks/exhaustive-deps
   const setOpen = (v: boolean) => update((st) => { st.supportOpen = v; });
 
   const deliver = async (r: { id: string; subject: string; message: string; kind?: "support" | "design" }) => {

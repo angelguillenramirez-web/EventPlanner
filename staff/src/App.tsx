@@ -65,7 +65,7 @@ export default function App() {
     const bump = () => touchSession();
     const evs = ["click", "keydown", "mousemove"] as const;
     evs.forEach((e) => addEventListener(e, bump, { passive: true }));
-    const i = setInterval(() => { if (!getSession()) { if (me) setPresence(me.id, "offline"); setOutReason("15 minutes without activity"); setSess(null); } }, 5000);
+    const i = setInterval(() => { if (!getSession()) { if (me) setPresence(me.id, "offline"); setOutReason("30 minutes without activity"); setSess(null); } }, 5000);
     return () => { evs.forEach((e) => removeEventListener(e, bump)); clearInterval(i); };
   }, [me]);
   // keep prices / templates / request statuses in sync with the 1Plan app, and receive its requests
