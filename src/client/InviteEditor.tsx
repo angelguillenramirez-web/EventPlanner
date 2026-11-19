@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
-import { invitationDoc } from "../invitationTemplates";
+import { invitationDoc, isFullDoc } from "../invitationTemplates";
 import { getState, uid, update, useStore, type EventT, type Invitation } from "../store";
 import { Download, Save, X } from "../icons";
 import { ask } from "./Ask";
+import { Modal } from "./ui";
 
 type Prop = { addOption?: (o: Record<string, string>) => void };
 type Editor = {
@@ -19,7 +20,13 @@ const FONT_URL = "https://fonts.googleapis.com/css2?family=Great+Vibes&family=Pl
 const PHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#EDE6D8"/><text x="200" y="160" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#6B6458">Double-click to add a photo</text></svg>');
 
 /** Full-screen visual HTML editor (GrapesJS + its free web-page preset: drag & drop blocks, forms, navbar, countdown, gradients, code import/export, responsive preview, undo/redo). */
-export default function InviteEditor({ event, invitation, onClose }: { event: EventT; invitation: Invitation; onClose: () => void }) {
+export default function InviteEditor(p: { event: EventT; invitation: Invitation; onClose: () => void }) {
+  const { t } = useT();
+  return isFullDoc(p.invitation.html)
+    ? <Modal title={p.invitation.name} onClose={p.onClose}><p>{t("ins.nofull")}</p><div className="row" style={{ justifyContent: "flex-end" }}><button onClick={p.onClose}>OK</button></div></Modal>
+    : <VisualEditor {...p} />;
+}
+function VisualEditor({ event, invitation, onClose }: { event: EventT; invitation: Invitation; onClose: () => void }) {
   const { t, locale } = useT();
   const s = useStore();
   const host = useRef<HTMLDivElement>(null);

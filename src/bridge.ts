@@ -11,7 +11,7 @@ export interface PublicData {
   plans: Record<string, { name: string; monthly: number; yearly: number }> | null;
   web: { maintenance: boolean; banner: string; seoTitle: string; seoDescription: string } | null;
   design: { primary: string; accent: string; heroTitle: string; heroSubtitle: string; ctaLabel: string } | null;
-  templates: { id: string; name: string; category: string; html: string; css: string }[];
+  templates: { id: string; name: string; category: string; html: string; css: string; version?: number; full?: boolean; suits?: string[] }[];
 }
 
 export async function sendRequest(b: { kind: "support" | "design"; title: string; description: string; customerName: string; customerEmail: string }): Promise<string | null> {

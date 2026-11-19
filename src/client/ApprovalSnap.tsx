@@ -1,5 +1,5 @@
 import { useT } from "../i18n";
-import { invitationDoc } from "../invitationTemplates";
+import { invSandbox, invitationDoc } from "../invitationTemplates";
 import type { Snap } from "../store";
 import { SeatStatic } from "./Tables";
 import Thumb from "./InvThumb";
@@ -23,6 +23,6 @@ function Page({ snap }: { snap: Extract<Snap, { k: "itinerary" | "menu" }> }) {
 export default function SnapView({ snap, mini }: { snap: Snap; mini?: boolean }) {
   if (snap.k === "agreement") { const inner = <div className="snappage agdoc-snap" style={{ background: paperBg(snap.paper) }} dangerouslySetInnerHTML={{ __html: cleanVis(snap.html) }} />; return mini ? <div className="snapmini"><div style={{ width: 430, transform: "scale(.38)", transformOrigin: "0 0" }}>{inner}</div></div> : inner; }
   if (snap.k === "tables") return <SeatStatic rec={snap.rec} guests={[]} />;
-  if (snap.k === "invitation") return mini ? <Thumb html={snap.html} css={snap.css} title="" /> : <iframe title="invitation" sandbox="" srcDoc={invitationDoc(snap.html, snap.css)} style={{ width: "100%", height: "66vh", border: "1px solid var(--line)", borderRadius: 12, background: "#fff" }} />;
+  if (snap.k === "invitation") return mini ? <Thumb html={snap.html} css={snap.css} title="" /> : <iframe title="invitation" sandbox={invSandbox(snap.html)} srcDoc={invitationDoc(snap.html, snap.css)} style={{ width: "100%", height: "66vh", border: "1px solid var(--line)", borderRadius: 12, background: "#fff" }} />;
   return mini ? <div className="snapmini"><div style={{ width: 430, transform: "scale(.38)", transformOrigin: "0 0" }}><Page snap={snap} /></div></div> : <Page snap={snap} />;
 }

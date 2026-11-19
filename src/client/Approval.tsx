@@ -97,7 +97,7 @@ export default function ApprovalButton({ event, scope, subject, summary, snap, b
                   </div>
                 </div>
               ))}
-              {!pendingOne && <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}><button className="ghost" onClick={() => setStarting(true)}><ClipboardCheck size={15} /> {t("apv.new")}</button></div>}
+              {!pendingOne && !(scope === "invitations" && lastDone) && <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}><button className="ghost" onClick={() => setStarting(true)}><ClipboardCheck size={15} /> {t("apv.new")}</button></div>}
             </>
           )}
         </Modal>

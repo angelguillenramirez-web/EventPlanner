@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { addTemplate, getState, log, patchTask, setStatus, SOURCE_LABEL, uid, update, useStore, type Staff, type Template, type TplSource } from "../store";
+import { addFullTemplate, addTemplate, getState, log, patchTask, setStatus, SOURCE_LABEL, uid, update, useStore, type Staff, type Template, type TplSource } from "../store";
+import FullTemplate from "./FullTemplate";
+import { thumbDoc, validateFull } from "../fullDoc";
 import { fmtDate, go } from "../ui";
 import { Download, Save, X } from "../icons";
 
@@ -20,7 +22,8 @@ const invitationDoc = (html: string, css: string) => `<!doctype html><html><head
 /** Designer area: template library (draft / published) and the HTML design studio. */
 export default function Templates({ me, route }: { me: Staff; route: string }) {
   const parts = route.split("/");
-  if (parts[1] === "studio") return <Studio me={me} id={parts[2]} />;
+  const st = useStore();
+  if (parts[1] === "studio") return st.templates.find((t) => t.id === parts[2])?.full ? <FullTemplate me={me} id={parts[2]} /> : <Studio me={me} id={parts[2]} />;
   return <Library me={me} />;
 }
 
@@ -36,6 +39,14 @@ function Library({ me }: { me: Staff }) {
   const [openC, setOpenC] = useState<string | null>(null);
   const [text, setText] = useState("");
   const create = (e: React.FormEvent) => { e.preventDefault(); const t = addTemplate(me.name, name.trim(), cat, undefined, kind); log(me.name, "Created design", t.name); setName(""); go("/studio/" + t.id); };
+  const imp = useRef<HTMLInputElement>(null);
+  const importFull = async (f?: File) => {
+    if (!f) return;
+    const html = await f.text(), err = validateFull(html);
+    if (err) { alert("This file cannot be imported as a template.\n" + err); return; }
+    const t = addFullTemplate(me.name, f.name.replace(/\.html?$/i, "").replace(/[-_]+/g, " ").trim() || "Imported template", cat, html);
+    log(me.name, "Imported full-page template", t.name); go("/studio/" + t.id);
+  };
   const toggle = (t: Template) => { update((st) => { const x = st.templates.find((y) => y.id === t.id)!; x.status = x.status === "published" ? "draft" : "published"; x.publishedAt = x.status === "published" ? Date.now() : 0; x.updatedAt = Date.now(); }); log(me.name, t.status === "published" ? "Unpublished template" : "Published template", t.name); };
   const del = (t: Template) => { if (confirm(`Delete "${t.name}"?`)) { update((st) => { st.templates = st.templates.filter((y) => y.id !== t.id); }); log(me.name, "Deleted template", t.name); } };
   const edit = (id: string, fn: (t: Template) => void) => update((st) => { const x = st.templates.find((y) => y.id === id); if (x) fn(x); });
@@ -55,6 +66,11 @@ function Library({ me }: { me: Staff }) {
         <div><label htmlFor="tc">Category</label><select id="tc" value={cat} onChange={(e) => setCat(e.target.value)}>{["wedding", "birthday", "babyshower", "graduation", "anniversary", "corporate", "custom"].map((c) => <option key={c}>{c}</option>)}</select></div>
         <div><button>Create and open studio</button></div>
       </form>
+      <div className="card row between" style={{ marginBottom: 14 }}>
+        <span className="muted small grow"><b>Full-page templates</b> (complete HTML pages with their own design, music and sections) are edited in their own editor. Import a finished one here, check it, then publish it for customers.</span>
+        <input ref={imp} type="file" accept=".html,text/html" hidden onChange={(e) => { void importFull(e.target.files?.[0]); e.target.value = ""; }} />
+        <button type="button" className="ghost sm" onClick={() => imp.current?.click()}>Import full-page template</button>
+      </div>
       <div className="card" style={{ marginBottom: 14, display: "grid", gap: 10 }}>
         <div className="row between">
           <div className="seg" role="group" aria-label="Design type">
@@ -73,15 +89,17 @@ function Library({ me }: { me: Staff }) {
           return (
             <div key={t.id} className="card" style={{ display: "grid", gap: 8, alignContent: "start" }}>
               <div style={{ height: 180, overflow: "hidden", borderRadius: 8, border: "1px solid var(--line)", background: "#fff", position: "relative" }}>
-                <iframe title={t.name} sandbox="" srcDoc={`<style>${t.css}</style>${t.html}`} style={{ border: 0, width: "200%", height: "200%", transform: "scale(.5)", transformOrigin: "0 0", pointerEvents: "none" }} />
+                {t.full
+                  ? <iframe title={t.name} sandbox="allow-scripts" srcDoc={thumbDoc(t.html)} style={{ border: 0, width: 390, height: 640, position: "absolute", left: "50%", top: 0, transform: "translateX(-50%) scale(.46)", transformOrigin: "top center", pointerEvents: "none" }} />
+                  : <iframe title={t.name} sandbox="" srcDoc={`<style>${t.css}</style>${t.html}`} style={{ border: 0, width: "200%", height: "200%", transform: "scale(.5)", transformOrigin: "0 0", pointerEvents: "none" }} />}
               </div>
               <div className="row between"><b>{t.name}</b><span className="badge" style={t.status === "published" ? { background: "#dcf3e8", color: "#1f7a52" } : undefined}>{t.status}</span></div>
-              <div className="row" style={{ gap: 6 }}><span className="badge">{SOURCE_LABEL[t.source ?? "template"]}</span>{task && <a className="badge mono" href={"#/tasks/" + task.id}>{task.id}</a>}<span className="muted small">{t.category} · v{t.version}</span></div>
+              <div className="row" style={{ gap: 6 }}><span className="badge">{SOURCE_LABEL[t.source ?? "template"]}</span>{t.full && <span className="badge">Full page</span>}{t.builtin && <span className="badge">Built in</span>}{task && <a className="badge mono" href={"#/tasks/" + task.id}>{task.id}</a>}<span className="muted small">{t.category} · v{t.version}</span></div>
               <div className="muted small">Updated {fmtDate(t.updatedAt)} by {t.by}</div>
               <div className="tagrow">{(t.tags ?? []).map((g) => <span key={g} className="tagchip on">{g}<button type="button" className="ghost icon" style={{ padding: 0, border: 0 }} aria-label={`Remove tag ${g}`} onClick={() => edit(t.id, (x) => { x.tags = x.tags.filter((y) => y !== g); })}><X size={12} /></button></span>)}<button className="ghost sm" onClick={() => addTag(t)}>+ Tag</button></div>
               <div className="row"><button className="sm" onClick={() => go("/studio/" + t.id)}>Edit</button><button className="ghost sm" onClick={() => toggle(t)}>{t.status === "published" ? "Unpublish" : "Publish"}</button>
                 <select aria-label="Change type" className="sm" style={{ width: "auto", padding: "3px 6px" }} value={t.source ?? "template"} onChange={(e) => edit(t.id, (x) => { x.source = e.target.value as TplSource; })}>{(Object.keys(SOURCE_LABEL) as TplSource[]).map((k) => <option key={k} value={k}>{SOURCE_LABEL[k]}</option>)}</select>
-                <button className="ghost sm" aria-expanded={openC === t.id} onClick={() => { setOpenC(openC === t.id ? null : t.id); setText(""); }}>Comments ({cm.length})</button><button className="danger sm" onClick={() => del(t)}>Delete</button></div>
+                <button className="ghost sm" aria-expanded={openC === t.id} onClick={() => { setOpenC(openC === t.id ? null : t.id); setText(""); }}>Comments ({cm.length})</button><button className="danger sm" disabled={!!t.builtin} title={t.builtin ? "Built-in templates can be unpublished but not deleted" : undefined} onClick={() => del(t)}>Delete</button></div>
               {openC === t.id && (
                 <div className="grid" style={{ gap: 6 }}>
                   {cm.map((c) => <div key={c.id} className="note"><div className="muted small">{c.by} · {fmtDate(c.at)}</div>{c.text}</div>)}

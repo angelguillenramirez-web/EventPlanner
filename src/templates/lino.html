@@ -1,0 +1,951 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fbfaf7">
+<title>Invitación</title>
+<meta name="description" content="Invitación de boda · Template «Lino» (borrador de diseño)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Draft only: self-host this single family (woff2) in production -->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..600;1,6..72,200..500&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================================
+   TEMPLATE «LINO»  ·  ultra-minimal wedding
+   One serif family, one ink colour, hairlines. Restyle via tokens only.
+   ===================================================================== */
+:root{
+  --bg:    #fbfaf7;
+  --ink:   #161616;
+  --grey:  #86837b;
+  --line:  rgb(22 22 22 / .2);
+  --tint:  #efece5;
+
+  --font: "Newsreader", "Times New Roman", serif;
+
+  --step--1: clamp(.78rem, .76rem + .1vw, .85rem);
+  --step-0:  clamp(1.06rem, 1.02rem + .2vw, 1.18rem);
+  --step-1:  clamp(1.3rem, 1.2rem + .5vw, 1.6rem);
+  --step-2:  clamp(1.9rem, 1.5rem + 2vw, 2.7rem);
+  --step-3:  clamp(2.5rem, 1.9rem + 3.2vw, 4rem);
+  --gutter:  clamp(1.4rem, 7vw, 2.4rem);
+  --col:     33rem;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;overflow-x:clip;background:var(--bg)}
+body{
+  margin:0;min-height:100dvh;background:var(--bg);color:var(--ink);overflow-x:clip;
+  font-family:var(--font);font-size:var(--step-0);font-weight:300;line-height:1.65;-webkit-font-smoothing:antialiased;font-optical-sizing:auto;
+}
+img,svg{display:block;max-width:100%}
+[hidden]{display:none!important}
+h1,h2,h3,p{margin:0;font-weight:300}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
+.wrap{width:min(100% - 2*var(--gutter), var(--col));margin-inline:auto}
+section{padding-block:clamp(4rem,15vw,7.5rem)}
+.sc{font-size:var(--step--1);font-weight:400;letter-spacing:.24em;text-transform:uppercase;color:var(--grey)}
+.copy{color:color-mix(in oklab,var(--ink) 74%,transparent);max-width:28rem;text-wrap:pretty}
+.copy + .copy{margin-top:1.1em}
+
+/* hairline that draws itself on scroll */
+.hl{display:block;height:1px;background:var(--ink);margin-bottom:1.1rem;transform-origin:left}
+@supports (animation-timeline: view()){
+  @media (prefers-reduced-motion: no-preference){
+    .hl{animation:draw linear both;animation-timeline:view();animation-range:entry 0% entry 90%}
+    @keyframes draw{from{scale:0 1}to{scale:1 1}}
+    .rise{animation:rise linear both;animation-timeline:view();animation-range:entry 0% entry 45%}
+    @keyframes rise{from{opacity:0;translate:0 1.4rem}to{opacity:1;translate:0 0}}
+  }
+}
+.sec{font-size:var(--step-3);line-height:1.02;letter-spacing:-.025em;font-weight:200;text-wrap:balance;margin-bottom:1.6rem}
+.sec em{font-style:italic;font-weight:200}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:1rem;min-height:3.1rem;padding:.7rem 1.5rem;border:1px solid var(--ink);background:transparent;color:var(--ink);text-decoration:none;
+  font-family:var(--font);font-size:var(--step--1);font-weight:400;letter-spacing:.22em;text-transform:uppercase;transition:background .3s,color .3s;
+}
+.btn::after{content:"→";font-size:1rem;letter-spacing:0;transition:translate .3s}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn:hover::after{translate:.25rem 0}
+.btn--solid{background:var(--ink);color:var(--bg)}
+.btn--solid:hover{background:transparent;color:var(--ink)}
+.btn--block{width:100%;justify-content:space-between}
+.btn svg{width:1.05rem;height:1.05rem}
+.btn.no-arrow::after{content:none}
+
+/* =====================================================================
+   TOOLS
+   ===================================================================== */
+.tools{position:fixed;inset:max(.9rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) auto max(1rem,env(safe-area-inset-left));display:flex;justify-content:space-between;z-index:20;pointer-events:none}
+.tools > *{pointer-events:auto}
+.chip{display:inline-flex;align-items:center;gap:.5rem;min-height:2.75rem;min-width:2.75rem;justify-content:center;padding-inline:.8rem;border:1px solid var(--line);background:rgb(251 250 247 / .85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:.74rem;font-weight:400;letter-spacing:.22em}
+.chip svg{width:1.1rem;height:1.1rem}
+.lang button{all:unset;cursor:pointer;padding:.2rem .3rem;color:var(--grey)}
+.lang button[aria-pressed="true"]{color:var(--ink);text-decoration:underline;text-underline-offset:.35em}
+.lang button:focus-visible{outline:1px solid var(--ink)}
+.lang span{color:var(--grey)}
+#music[hidden]{display:none}
+#music .bars{display:none;gap:2px;align-items:flex-end;height:.95rem}
+#music[aria-pressed="true"] .bars{display:flex}
+#music[aria-pressed="true"] .ico-note{display:none}
+.bars i{width:2px;background:var(--ink);animation:eq 1s ease-in-out infinite}
+.bars i:nth-child(1){height:40%}.bars i:nth-child(2){height:100%;animation-delay:.2s}.bars i:nth-child(3){height:60%;animation-delay:.4s}
+@keyframes eq{50%{transform:scaleY(.3)}}
+@media (prefers-reduced-motion: reduce){.bars i{animation:none}}
+
+/* =====================================================================
+   GATE
+   ===================================================================== */
+dialog{border:0;padding:0;background:none;color:inherit;max-width:none;max-height:none}
+dialog::backdrop{background:rgb(251 250 247 / .92);backdrop-filter:blur(10px)}
+#gate{width:100%;height:100dvh;display:none;place-items:center;padding:var(--gutter);text-align:center}
+#gate[open]{display:grid}
+#gate::backdrop{background:var(--bg)}
+.gate-in{display:grid;gap:2rem;justify-items:center;animation:fade 1.4s ease both}
+.gate-in .nm{font-size:clamp(3rem,15vw,6rem);font-weight:200;line-height:.95;letter-spacing:-.035em;text-wrap:balance}
+.gate-in h2{font-size:var(--step-0);font-style:italic;color:var(--grey);max-width:20rem;text-wrap:balance}
+@keyframes fade{from{opacity:0;translate:0 .8rem}}
+
+/* =====================================================================
+   1 · COVER
+   ===================================================================== */
+.cover{min-height:100dvh;padding:max(5.2rem,env(safe-area-inset-top)) var(--gutter) 3rem;display:grid;grid-template-rows:auto 1fr auto;gap:2rem}
+.cover > *{width:min(100%,var(--col));margin-inline:auto}
+.cover .top{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--ink);padding-bottom:.8rem}
+.names{font-size:clamp(3.4rem,17vw,8.4rem);font-weight:200;line-height:.92;letter-spacing:-.04em;text-wrap:balance;align-self:center}
+.photo{aspect-ratio:4/5;position:relative;background:var(--tint);overflow:hidden}
+.photo svg{width:100%;height:100%}
+.photo .ph-label{position:absolute;left:50%;top:50%;translate:-50% -50%;font-size:var(--step--1);letter-spacing:.24em;text-transform:uppercase;color:var(--grey);background:var(--bg);padding:.4rem .9rem;white-space:nowrap}
+.cover .bottom{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.cover .bottom b{display:block;font-weight:300;font-size:var(--step-0);line-height:1.3;color:var(--ink);margin-top:.2rem}
+.scroll{display:flex;align-items:center;gap:1rem}
+.scroll i{flex:1;height:1px;background:var(--line)}
+
+/* =====================================================================
+   2 · GUEST
+   ===================================================================== */
+.rows{margin:0;border-top:1px solid var(--ink)}
+.rows > div{display:grid;grid-template-columns:7.5rem 1fr;gap:1rem;padding:.95rem 0;border-bottom:1px solid var(--line);align-items:baseline}
+.rows dt{margin:0}
+.rows dd{margin:0}
+.guest{font-size:var(--step-3);font-weight:200;line-height:1.02;letter-spacing:-.025em;margin:.4rem 0 2rem;text-wrap:balance}
+.status{display:inline-flex;align-items:center;gap:.6rem}
+.status::before{content:"";width:.45rem;height:.45rem;border-radius:50%;background:var(--ink)}
+
+/* =====================================================================
+   3 · QUOTE + COUNTDOWN
+   ===================================================================== */
+.quote{font-size:var(--step-2);line-height:1.2;font-weight:200;font-style:italic;letter-spacing:-.015em;text-wrap:balance}
+.quote p + p{margin-top:1.1em;color:var(--grey)}
+.story{aspect-ratio:3/2;margin-top:3rem;background:var(--tint);position:relative;overflow:hidden}
+.story svg,.story img{width:100%;height:100%;object-fit:cover}
+.story .ph-label{position:absolute;left:50%;top:50%;translate:-50% -50%;font-size:var(--step--1);letter-spacing:.24em;text-transform:uppercase;color:var(--grey);background:var(--bg);padding:.4rem .9rem;white-space:nowrap}
+.countdown{display:grid;grid-template-columns:repeat(4,1fr);margin-top:3.6rem;border-top:1px solid var(--ink)}
+.countdown div{padding:1rem 0 0 .9rem;border-left:1px solid var(--line)}
+.countdown div:first-child{border-left:0;padding-left:0}
+.countdown b{display:block;font-weight:200;font-size:clamp(2.2rem,11vw,3.6rem);line-height:1;font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.03em}
+.countdown span{display:block;margin-top:.5rem}
+
+/* =====================================================================
+   4 · WHERE
+   ===================================================================== */
+.where-name{font-size:var(--step-2);font-weight:200;line-height:1.05;letter-spacing:-.02em;margin-bottom:1.6rem}
+.actions{display:grid;gap:.7rem;margin-top:2rem;position:relative}
+@media (min-width:34rem){.actions{grid-template-columns:1fr 1fr}}
+.menu{position:fixed;margin:0;inset:auto;padding:0;border:1px solid var(--ink);background:var(--bg);color:var(--ink);min-width:15rem;text-align:left}
+.menu a,.menu button{display:flex;gap:.8rem;align-items:center;width:100%;padding:.95rem 1.1rem;border:0;border-bottom:1px solid var(--line);background:none;font-family:var(--font);font-size:var(--step--1);font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);text-decoration:none;min-height:3rem;text-align:left}
+.menu a:last-child,.menu button:last-child{border-bottom:0}
+.menu a:hover,.menu button:hover{background:var(--tint)}
+.menu svg{width:1.05rem;height:1.05rem}
+
+/* =====================================================================
+   6 · PROGRAMME
+   ===================================================================== */
+.timeline{list-style:none;margin:2rem 0 0;padding:0;border-top:1px solid var(--ink)}
+.timeline li{display:grid;grid-template-columns:5.5rem 1fr;gap:1rem;align-items:baseline;padding:1.15rem 0;border-bottom:1px solid var(--line)}
+.timeline svg{display:none}
+.timeline .txt{display:contents}
+.timeline time{font-size:var(--step-0);font-variant-numeric:tabular-nums lining-nums;color:var(--grey);order:-1}
+.timeline h3{font-size:var(--step-2);font-weight:200;line-height:1.1;letter-spacing:-.02em}
+
+/* =====================================================================
+   7–9 · DRESS · GIFTS · NOTICE
+   ===================================================================== */
+.rule{padding:1rem 0;border-top:1px solid var(--line)}
+.rule .sc{display:block;margin-bottom:.25rem}
+.dots{display:flex;gap:.7rem;margin-top:1.8rem}
+.dots i{width:1.6rem;height:1.6rem;border-radius:50%;border:1px solid var(--line)}
+.tag{display:inline-block;font-style:italic;font-size:var(--step-1);font-weight:300;margin-bottom:1.6rem}
+.notice{border:1px solid var(--ink);padding:1.6rem 1.4rem}
+.notice h2{font-size:var(--step-1);font-style:italic;font-weight:300;margin-bottom:.4rem}
+
+/* =====================================================================
+   10 · RSVP
+   ===================================================================== */
+.rsvp{background:var(--ink);color:var(--bg)}
+.rsvp .hl{background:var(--bg)}
+.rsvp .sc{color:rgb(251 250 247 / .6)}
+.rsvp .copy{color:rgb(251 250 247 / .75)}
+.rsvp .sec{font-size:clamp(3rem,15vw,6rem)}
+.rsvp .btn{border-color:var(--bg);color:var(--bg)}
+.rsvp .btn:hover{background:var(--bg);color:var(--ink)}
+.rsvp .btn--solid{background:var(--bg);color:var(--ink)}
+.rsvp .btn--solid:hover{background:transparent;color:var(--bg)}
+.rsvp-actions{display:grid;gap:.7rem;margin-top:1.8rem}
+.deadline{margin-top:1.6rem;color:rgb(251 250 247 / .6)}
+.rsvp .confirmed{display:none;margin-top:1.6rem}
+.rsvp .confirmed p{font-size:var(--step-2);font-weight:200;font-style:italic;line-height:1.2;letter-spacing:-.015em;text-wrap:balance}
+.rsvp .confirmed strong{font-weight:300}
+.rsvp .confirmed #confirmed-people{font-size:var(--step--1);font-style:normal;font-weight:400;letter-spacing:.22em;text-transform:uppercase;color:rgb(251 250 247 / .6);margin-top:1.1rem}
+.rsvp .confirmed .btn{margin-top:1.6rem}
+.rsvp[data-state="yes"] .ask,.rsvp[data-state="no"] .ask{display:none}
+.rsvp[data-state="yes"] .confirmed,.rsvp[data-state="no"] .confirmed{display:block}
+
+#rsvp-dialog{width:min(100% - 2rem,27rem);margin:auto;background:var(--bg);color:var(--ink);border:1px solid var(--ink)}
+#rsvp-dialog[open]{animation:fade .5s ease both}
+.form{padding:1.8rem 1.5rem 1.5rem;display:grid;gap:1.3rem}
+.form h2{font-size:var(--step-3);font-weight:200;letter-spacing:-.03em;line-height:1}
+.form .who{margin-top:.5rem}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);padding:0;margin:0}
+.seg legend{padding:0;margin-bottom:.6rem}
+.seg label{position:relative}
+.seg label + label{border-left:1px solid var(--ink)}
+.seg input{position:absolute;opacity:0;inset:0}
+.seg span{display:grid;place-items:center;min-height:3.1rem;font-size:var(--step--1);font-weight:400;letter-spacing:.16em;text-transform:uppercase;text-align:center;padding:.3rem .5rem;transition:.2s}
+.seg input:checked + span{background:var(--ink);color:var(--bg)}
+.seg input:focus-visible + span{outline:1px solid var(--ink);outline-offset:-4px}
+.field label{display:block;margin-bottom:.4rem}
+.field select,.field textarea{width:100%;font:inherit;font-size:1.05rem;font-weight:300;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--ink);border-radius:0;padding:.6rem 0;min-height:2.9rem}
+.field textarea{min-height:5.5rem;resize:vertical;border:1px solid var(--line);padding:.7rem}
+.field select{appearance:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23161616'/%3E%3C/svg%3E") right .2rem center no-repeat}
+.form .row{display:grid;grid-template-columns:1fr 1.3fr;gap:.6rem}
+.form .btn{justify-content:space-between;width:100%}
+
+footer{padding:3rem var(--gutter) calc(3rem + env(safe-area-inset-bottom))}
+footer .wrap{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;border-top:1px solid var(--ink);padding-top:1rem}
+footer .nm{font-size:var(--step-1);font-weight:300;font-style:italic}
+
+.toast{position:fixed;left:50%;bottom:max(1.2rem,env(safe-area-inset-bottom));translate:-50% 160%;background:var(--ink);color:var(--bg);padding:.85rem 1.4rem;font-size:var(--step--1);letter-spacing:.18em;text-transform:uppercase;font-weight:400;z-index:50;opacity:0;visibility:hidden;transition:translate .45s cubic-bezier(.2,.8,.2,1),opacity .3s,visibility .45s;max-width:calc(100vw - 2rem);text-align:center}
+.toast.show{translate:-50% 0;opacity:1;visibility:visible}
+@media (min-width:48rem){:root{--col:36rem}}
+@media print{.tools,#gate,.scroll{display:none!important}}
+</style>
+</head>
+
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.200 7-11.500A7 7 0 0 0 5 9.500C5 14.800 12 21 12 21Zm0-9a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5Z" fill="none" stroke="currentColor" stroke-width="1.300" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Zm0 3h16M8 3v4m8-4v4" fill="none" stroke="currentColor" stroke-width="1.300" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="1.300" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3Zm10-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3Z" fill="none" stroke="currentColor" stroke-width="1.300" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wa" viewBox="0 0 24 24"><path d="m3.500 20.500 1.200-4.200A8.500 8.500 0 1 1 8 19.400l-4.500 1.100ZM9 8.500c0 3.500 3 6.500 6.500 6.500l1-1.500-2-1-1 .8c-1-.4-2-1.400-2.400-2.400l.8-1-1-2L9 8.500Z" fill="none" stroke="currentColor" stroke-width="1.200" stroke-linejoin="round"/></symbol>
+    <symbol id="i-google" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 6.700 9H12v-3.500h10.400A10.500 10.500 0 1 1 18.500 4.200" fill="none" stroke="currentColor" stroke-width="1.400" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="tools">
+  <div class="chip lang" role="group" aria-label="Idioma / Language">
+    <button type="button" data-lang="es" aria-pressed="true">ES</button><span>/</span><button type="button" data-lang="en" aria-pressed="false">EN</button>
+  </div>
+  <button class="chip" id="music" type="button" aria-pressed="false" hidden>
+    <svg class="ico-note" aria-hidden="true"><use href="#i-note"/></svg>
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
+</div>
+
+<!-- GATE -->
+<dialog id="gate" aria-labelledby="gate-title">
+  <div class="gate-in">
+    <p class="nm" data-bind="couple"></p>
+    <h2 id="gate-title" data-i18n="gate"></h2>
+    <button class="btn" id="enter" type="button" data-i18n="enter"></button>
+  </div>
+</dialog>
+
+<main>
+
+<!-- 1 · COVER -->
+<header class="cover">
+  <div class="top sc"><span data-i18n="tagline"></span><span id="cover-date"></span></div>
+  <h1 class="names" data-bind="couple"></h1>
+  <div class="photo" id="cover-arch">
+    <!-- PHOTO PLACEHOLDER: replaced automatically when photos.cover is set -->
+    <svg id="cover-ph" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="500" fill="#efece5"/>
+      <g stroke="#161616" stroke-opacity=".25" stroke-width="1" fill="none"><path d="M0 0 400 500M400 0 0 500"/><rect x="40" y="40" width="320" height="420"/></g>
+    </svg>
+    <span class="ph-label" data-i18n="photo"></span>
+  </div>
+  <div>
+    <div class="bottom">
+      <div><span class="sc" data-i18n="when"></span><b id="cover-when"></b></div>
+      <div><span class="sc" data-i18n="address"></span><b data-bind="venue.name"></b></div>
+    </div>
+    <p class="scroll sc" style="margin-top:1.8rem" aria-hidden="true"><span data-i18n="scroll"></span><i></i></p>
+  </div>
+  <span id="long-date" hidden></span>
+</header>
+
+<!-- 2 · GUEST -->
+<section>
+  <div class="wrap rise">
+    <i class="hl"></i>
+    <p class="sc" data-i18n="invited"></p>
+    <h2 class="guest" data-bind="guest.name"></h2>
+    <dl class="rows">
+      <div><dt class="sc" data-i18n="f_people"></dt><dd data-bind="guest.people"></dd></div>
+      <div><dt class="sc" data-i18n="f_desc"></dt><dd data-bind="guest.description"></dd></div>
+      <div><dt class="sc" data-i18n="f_status"></dt><dd><span class="status" data-bind="guest.status"></span></dd></div>
+      <div><dt class="sc" data-i18n="f_msg"></dt><dd data-bind="guest.message"></dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- 3 · QUOTE + COUNTDOWN -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div data-toggle="quote">
+      <i class="hl"></i>
+      <div class="quote rise"><p data-i18n="q1"></p><p data-i18n="q2"></p></div>
+    </div>
+    <figure class="story rise" id="story-fig" style="margin-bottom:0;margin-inline:0">
+      <svg id="story-ph" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <rect width="300" height="200" fill="#efece5"/><g stroke="#161616" stroke-opacity=".22" fill="none"><path d="M0 0 300 200M300 0 0 200"/></g>
+      </svg>
+      <figcaption class="ph-label" data-i18n="photo"></figcaption>
+    </figure>
+    <div data-toggle="countdown">
+      <div class="countdown rise" id="countdown" role="timer" aria-live="off">
+        <div><b data-k="d">0</b><span class="sc" data-i18n="c_d"></span></div>
+        <div><b data-k="h">0</b><span class="sc" data-i18n="c_h"></span></div>
+        <div><b data-k="m">0</b><span class="sc" data-i18n="c_m"></span></div>
+        <div><b data-k="s">0</b><span class="sc" data-i18n="c_s"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · WHERE -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <i class="hl"></i>
+    <p class="sc" data-i18n="where"></p>
+    <h2 class="where-name rise" style="margin-top:.8rem" data-bind="venue.name"></h2>
+    <dl class="rows rise">
+      <div><dt class="sc" data-i18n="when"></dt><dd id="when-v"></dd></div>
+      <div><dt class="sc" data-i18n="address"></dt><dd data-bind="venue.address"></dd></div>
+    </dl>
+    <div class="actions rise">
+      <a class="btn btn--block" id="map" href="#" target="_blank" rel="noopener"><span data-i18n="map"></span></a>
+      <button class="btn btn--block" type="button" popovertarget="cal-menu" id="cal-btn"><span data-i18n="addcal"></span></button>
+      <div class="menu" id="cal-menu" popover>
+        <a id="gcal" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-google"/></svg>Google Calendar</a>
+        <button type="button" id="ics"><svg aria-hidden="true"><use href="#i-down"/></svg><span data-i18n="ics"></span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · LODGING -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div data-toggle="lodging" data-scope="section"><i class="hl"></i><h2 class="sec rise" data-i18n="lodging"></h2></div>
+    <p class="copy rise" data-i18n="lodging_t"></p>
+    <p class="rise" style="margin-top:1.6rem"><a class="btn" id="hotels-link" href="#" target="_blank" rel="noopener"><span data-i18n="hotels"></span></a></p>
+  </div>
+</section>
+
+<!-- 6 · PROGRAMME -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <i class="hl"></i>
+    <h2 class="sec rise" data-toggle="itinerary" data-scope="section" data-i18n="details"></h2>
+    <p class="copy rise" data-i18n="details_t"></p>
+    <ol class="timeline" id="timeline"></ol>
+  </div>
+</section>
+
+<!-- 7 · DRESS CODE -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <i class="hl"></i>
+    <h2 class="sec rise" data-toggle="dresscode" data-scope="section" data-i18n="dresstitle"></h2>
+    <span class="tag rise" data-i18n="dc"></span>
+    <p class="rule rise"><span class="sc" data-i18n="dc_w"></span><span class="copy" data-i18n="dc_w_t"></span></p>
+    <p class="rule rise"><span class="sc" data-i18n="dc_m"></span><span class="copy" data-i18n="dc_m_t"></span></p>
+    <p class="copy rise sc" style="margin-top:1rem" data-i18n="dc_note"></p>
+    <div class="dots rise" aria-hidden="true"><i style="background:#161616"></i><i style="background:#86837b"></i><i style="background:#c9c4b8"></i><i style="background:#efece5"></i></div>
+  </div>
+</section>
+
+<!-- 8 · GIFTS -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <i class="hl"></i>
+    <h2 class="sec rise" data-toggle="gifts" data-scope="section" data-i18n="gifts"></h2>
+    <p class="copy rise" data-i18n="gifts1"></p><p class="copy rise" data-i18n="gifts2"></p><p class="copy rise" data-i18n="gifts3"></p>
+  </div>
+</section>
+
+<!-- 9 · NOTICE -->
+<section style="padding-top:0">
+  <div class="wrap"><div class="notice rise"><h2 data-i18n="adults" data-toggle="adultsOnly" data-scope="section"></h2><p class="copy" data-i18n="adults_t"></p></div></div>
+</section>
+
+<!-- 10 · RSVP -->
+<section class="rsvp" id="rsvp" data-state="">
+  <div class="wrap">
+    <i class="hl"></i>
+    <h2 class="sec rise" data-toggle="rsvp" data-scope="section" data-i18n="count"></h2>
+    <p class="copy rise" data-i18n="count_t"></p>
+    <p class="deadline sc rise" id="deadline"></p>
+    <div class="ask rise"><div class="rsvp-actions">
+      <button class="btn btn--solid btn--block" type="button" data-answer="yes" data-i18n="accept"></button>
+      <button class="btn btn--block" type="button" data-answer="no" data-i18n="decline"></button>
+    </div></div>
+    <div class="confirmed" aria-live="polite">
+      <p id="confirmed-text"></p><p id="confirmed-people"></p>
+      <button class="btn" type="button" id="modify" data-i18n="modify"></button>
+    </div>
+  </div>
+</section>
+
+<dialog id="rsvp-dialog" aria-labelledby="rsvp-title">
+  <form class="form" method="dialog" id="rsvp-form">
+    <header><h2 id="rsvp-title" data-i18n="form_title"></h2><p class="who sc" data-bind="guest.name"></p></header>
+    <fieldset class="seg"><legend class="sc" data-i18n="form_att"></legend>
+      <label><input type="radio" name="att" value="yes" checked><span data-i18n="form_yes"></span></label>
+      <label><input type="radio" name="att" value="no"><span data-i18n="form_no"></span></label>
+    </fieldset>
+    <div class="field count-wrap"><label class="sc" for="people" data-i18n="form_people"></label><select id="people"></select></div>
+    <div class="field"><label class="sc" for="msg" data-i18n="f_msg"></label><textarea id="msg" maxlength="495" rows="3" data-i18n-ph="form_ph"></textarea></div>
+    <div class="row">
+      <button class="btn no-arrow" type="button" id="cancel" data-i18n="close"></button>
+      <button class="btn btn--solid" type="submit" data-i18n="send"></button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 11 · CONTACT -->
+<section style="padding-block:clamp(4rem,15vw,7rem)">
+  <div class="wrap">
+    <i class="hl"></i>
+    <h2 class="sec rise" data-toggle="contact" data-scope="section" data-i18n="contact"></h2>
+    <p class="copy rise" data-i18n="contact_t"></p>
+    <p class="rise" style="margin-top:1.6rem"><a class="btn" id="wa" href="#" target="_blank" rel="noopener"><span>WhatsApp</span></a></p>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap"><span class="nm" data-bind="couple"></span><span class="sc" data-i18n="withlove"></span></div></footer>
+<div class="toast" id="toast" role="status"></div>
+
+<!-- =====================================================================
+     INVITATION DATA  ·  the ONLY thing that changes between events/guests
+     ---------------------------------------------------------------------
+     Text fields accept a plain string OR {"es": "...", "en": "..."}.
+     Omit a field/section to fall back to the template default.
+       event.names ........ 1–2 names shown as title ("A & B")
+       event.milestone .... optional big figure on the cover (age, years, edition…)
+       event.start/end .... ISO 8601 with timezone
+       event.timeZone ..... IANA zone of the venue (e.g. America/Mexico_City): all dates/times display in it
+       event.timeZone ..... IANA zone of the venue (e.g. America/Mexico_City): all dates/times display in it
+       guest .............. who is opening this invitation (per-guest link)
+       guest.response ..... null, or {"answer":"yes|no","people":2} when already replied
+       music .............. {"src": audio URL, "title": "...", "loop": true}; no src → no music button
+       itinerary .......... [{icon: arrive|games|food|pinata|cake (also ceremony|toast|dinner|party), time:"HH:MM", title}]
+       sections ........... true/false switch per block
+       photos ............. image URLs; omit → illustrated placeholder
+       copy ............... optional text overrides per language (see keys in T below)
+     ===================================================================== -->
+<script type="application/json" id="invitation-data">
+{
+  "template": "lino",
+  "languages": {
+    "default": "es",
+    "available": [
+      "es",
+      "en"
+    ]
+  },
+  "event": {
+    "type": "wedding",
+    "names": [
+      "Lucía",
+      "Andrés"
+    ],
+    "start": "2027-05-15T17:00:00-06:00",
+    "end": "2027-05-16T00:00:00-06:00",
+    "timeZone": "America/Mexico_City"
+  },
+  "guest": {
+    "name": "Familia Herrera Ruiz",
+    "people": 2,
+    "maxPeople": 2,
+    "description": {
+      "es": "Todos adultos",
+      "en": "Adults only"
+    },
+    "status": {
+      "es": "Habilitado",
+      "en": "Active"
+    },
+    "message": {
+      "es": "Gracias por acompañarnos y formar parte de este día tan especial.",
+      "en": "Thank you for joining us and being part of this very special day."
+    },
+    "response": null
+  },
+  "music": {
+    "src": "assets/demo-music.wav",
+    "title": "Demo ambient loop",
+    "loop": true
+  },
+  "venue": {
+    "name": "Casa Blanca",
+    "address": "Camino al Mirador 12, San Miguel de Allende, Gto.",
+    "mapUrl": ""
+  },
+  "lodging": {
+    "url": "https://example.com/hoteles"
+  },
+  "contact": {
+    "whatsapp": "5210000000000"
+  },
+  "rsvp": {
+    "deadline": "2027-04-10T12:00:00-06:00"
+  },
+  "itinerary": [
+    {
+      "icon": "ceremony",
+      "time": "17:00",
+      "title": {
+        "es": "Ceremonia",
+        "en": "Ceremony"
+      }
+    },
+    {
+      "icon": "toast",
+      "time": "18:20",
+      "title": {
+        "es": "Coctel de bienvenida",
+        "en": "Welcome cocktail"
+      }
+    },
+    {
+      "icon": "dinner",
+      "time": "19:30",
+      "title": {
+        "es": "Cena",
+        "en": "Dinner"
+      }
+    },
+    {
+      "icon": "party",
+      "time": "20:45",
+      "title": {
+        "es": "Baile",
+        "en": "Dancing"
+      }
+    }
+  ],
+  "sections": {
+    "quote": true,
+    "countdown": true,
+    "itinerary": true,
+    "lodging": true,
+    "dresscode": true,
+    "gifts": true,
+    "adultsOnly": true,
+    "rsvp": true,
+    "contact": true
+  },
+  "photos": {
+    "cover": "",
+    "story": ""
+  },
+  "copy": {}
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   DEFAULT COPY  (template wording; overridable per event via data.copy)
+   ===================================================================== */
+const T = {
+  es: {
+    gate:"Nos casamos. Nos gustaría que estés con nosotros.",
+    enter:"Ingresar",
+    photo:"Tu foto aquí",
+    tagline:"Nos casamos",
+    scroll:"Desliza",
+    invited:"Invitación para",
+    f_name:"Nombre",
+    f_people:"Personas",
+    f_desc:"Descripción",
+    f_status:"Estado del pase",
+    f_msg:"Mensaje",
+    q1:"El amor no necesita más que dos personas<br>y a quienes más queremos cerca.",
+    q2:"Gracias por ser parte de esta historia.",
+    hatch:"Faltan",
+    c_d:"Días",
+    c_h:"Horas",
+    c_m:"Min",
+    c_s:"Seg",
+    where:"Lugar",
+    when:"Cuándo",
+    address:"Dirección",
+    map:"Ver mapa",
+    addcal:"Agendar",
+    ics:"Descargar .ics",
+    lodging:"Hospedaje recomendado",
+    lodging_t:"Te dejamos unas sugerencias para que tengas una estadía placentera.",
+    hotels:"Ver hoteles",
+    details:"Programa",
+    details_t:"Te invitamos a llegar con anticipación<br>para que puedas acompañarnos desde el inicio.",
+    dresstitle:"Vestimenta",
+    dc:"Formal",
+    dc_w:"Mujeres",
+    dc_w_t:"Vestido largo.",
+    dc_m:"Hombres",
+    dc_m_t:"Traje oscuro.",
+    dc_note:"Paleta neutra · el blanco, para la novia",
+    gifts:"Regalos",
+    gifts1:"Lo que más valoramos es compartir este día con ustedes.",
+    gifts2:"Si deseas hacernos un presente, una aportación en efectivo será recibida con todo nuestro cariño. Habrá un buzón en la recepción.",
+    gifts3:"Por practicidad, nos resulta difícil recibir cajas o paquetes.",
+    adults:"Boda sin niños",
+    adults_t:"Para que todos nuestros invitados puedan relajarse y disfrutar plenamente, nuestra boda será exclusivamente para adultos.",
+    count:"Confirmación",
+    count_t:"Por favor, confirma tu asistencia.",
+    accept:"Asistiré",
+    decline:"No podré asistir",
+    modify:"Modificar confirmación",
+    form_title:"Confirmación",
+    form_att:"¿Asistirás?",
+    form_yes:"Sí, asistiré",
+    form_no:"No podré ir",
+    form_people:"Personas que asistirán",
+    form_ph:"Puedes dejarnos una nota o comentario",
+    close:"Cerrar",
+    send:"Enviar",
+    contact:"Contacto",
+    contact_t:"También puedes confirmar vía WhatsApp.",
+    withlove:"Con cariño",
+    event_of:"Boda de",
+    music:"Música",
+    toast_sent:"¡Gracias! Tu respuesta fue enviada.",
+    toast_ics:"Archivo descargado",
+    from:"Origen",
+    from_v:"Tu casa",
+    to:"Destino",
+    postmark:"Con<br>amor<br>desde<br>la costa",
+    deadline:(d)=>`Confirma antes del ${d}`, yes_text:(d)=>["Confirmaste que ","asistirás",` el ${d}`], no_text:(d)=>["Lamentamos que ","no asistirás",` (${d})`], people_text:(n)=>`Personas confirmadas: ${n}`
+  },
+  en: {
+    gate:"We’re getting married. We’d love for you to be there.",
+    enter:"Enter",
+    photo:"Your photo here",
+    tagline:"We’re getting married",
+    scroll:"Scroll",
+    invited:"Invitation for",
+    f_name:"Name",
+    f_people:"Guests",
+    f_desc:"Details",
+    f_status:"Pass status",
+    f_msg:"Message",
+    q1:"Love needs nothing more than two people<br>and those we hold dearest nearby.",
+    q2:"Thank you for being part of this story.",
+    hatch:"Countdown",
+    c_d:"Days",
+    c_h:"Hours",
+    c_m:"Min",
+    c_s:"Sec",
+    where:"Venue",
+    when:"When",
+    address:"Address",
+    map:"View map",
+    addcal:"Add to calendar",
+    ics:"Download .ics",
+    lodging:"Where to stay",
+    lodging_t:"We’re sharing a few suggestions so you have a pleasant stay.",
+    hotels:"See hotels",
+    details:"Programme",
+    details_t:"We invite you to arrive early<br>so you can join us from the very start.",
+    dresstitle:"Attire",
+    dc:"Formal",
+    dc_w:"Women",
+    dc_w_t:"Long dress.",
+    dc_m:"Men",
+    dc_m_t:"Dark suit.",
+    dc_note:"Neutral palette · white is for the bride",
+    gifts:"Gifts",
+    gifts1:"What we value most is sharing this day with you.",
+    gifts2:"If you wish to give us a gift, a cash contribution will be received with all our heart. There will be a mailbox at the reception.",
+    gifts3:"For practical reasons, we can’t easily receive boxes or packages.",
+    adults:"Adults-only wedding",
+    adults_t:"So that all our guests can relax and fully enjoy the celebration, our wedding will be for adults only.",
+    count:"RSVP",
+    count_t:"Please let us know if you can join us.",
+    accept:"I’ll attend",
+    decline:"I can’t attend",
+    modify:"Change my reply",
+    form_title:"RSVP",
+    form_att:"Will you attend?",
+    form_yes:"Yes, I’ll be there",
+    form_no:"Can’t make it",
+    form_people:"Number of guests",
+    form_ph:"Leave us a note or comment",
+    close:"Close",
+    send:"Send",
+    contact:"Contact",
+    contact_t:"You can also confirm via WhatsApp.",
+    withlove:"With love",
+    event_of:"Wedding of",
+    music:"Music",
+    toast_sent:"Thank you! Your reply was sent.",
+    toast_ics:"File downloaded",
+    from:"From",
+    from_v:"Home",
+    to:"To",
+    postmark:"With<br>love<br>from<br>the coast",
+    deadline:(d)=>`Please reply before ${d}`, yes_text:(d)=>["You confirmed you ","will attend",` on ${d}`], no_text:(d)=>["We’re sorry that ","you won’t attend",` (${d})`], people_text:(n)=>`Confirmed guests: ${n}`
+  }
+};
+
+/* =====================================================================
+   DATA  +  helpers
+   ===================================================================== */
+const CFG = JSON.parse(document.getElementById("invitation-data").textContent);
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const store = { get(k){try{return localStorage.getItem(k)}catch{return null}}, set(k,v){try{localStorage.setItem(k,v)}catch{}} };
+
+const AVAILABLE = CFG.languages?.available?.length ? CFG.languages.available : ["es","en"];
+let lang = store.get("inv-lang") || CFG.languages?.default || (navigator.language||"es").slice(0,2);
+if(!AVAILABLE.includes(lang) || !T[lang]) lang = CFG.languages?.default || "es";
+
+const get  = (path)=>path.split(".").reduce((o,k)=>o?.[k],CFG);
+const pick = (v)=> (v && typeof v==="object" && !Array.isArray(v)) ? (v[lang] ?? v[CFG.languages?.default] ?? Object.values(v)[0]) : v;
+const copy = ()=>({ ...T[lang], ...(CFG.copy?.[lang]||{}) });
+const TZ   = CFG.event?.timeZone;
+const fmt  = (o)=> new Intl.DateTimeFormat(lang, TZ ? {...o, timeZone:TZ} : o);
+
+/* Safe rich text: only <br> / newline become line breaks; everything else is plain text (no HTML injection). */
+function setRich(el, str){
+  el.textContent = "";
+  String(str ?? "").replace(/&amp;/g,"&").split(/<br\s*\/?>|\n/).forEach((part,i)=>{ if(i) el.append(document.createElement("br")); el.append(part); });
+}
+
+const EV = {
+  start: new Date(CFG.event.start),
+  end:   new Date(CFG.event.end || +new Date(CFG.event.start)+6*36e5),
+  names: CFG.event.names || [],
+  couple: (CFG.event.names||[]).join(" & "),
+  rsvpBy: CFG.rsvp?.deadline ? new Date(CFG.rsvp.deadline) : null
+};
+let answer = CFG.guest?.response?.answer || null;
+let people = CFG.guest?.response?.people || CFG.guest?.people || 1;
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+const ICON = { ceremony:"t-none", arrive:"t-none", toast:"t-none", dinner:"t-none", food:"t-none", party:"t-none", games:"t-none", cake:"t-none", pinata:"t-none" };
+
+function applyConfig(){
+  const t = copy();
+
+  // static copy
+  $$("[data-i18n]").forEach(el=>{ const v=t[el.dataset.i18n]; if(typeof v==="string") setRich(el,v); });
+  $$("[data-i18n-ph]").forEach(el=>{ el.placeholder = t[el.dataset.i18nPh]; });
+
+  // data bindings  (names, guest, venue …)
+  $$("[data-bind]").forEach(el=>{
+    const k=el.dataset.bind;
+    const v = k==="couple" ? EV.couple : pick(get(k));
+    setRich(el, v ?? "");
+    if("optional" in el.dataset) el.hidden = !v;
+  });
+
+  // section switches
+  $$("[data-toggle]").forEach(el=>{
+    const on = CFG.sections?.[el.dataset.toggle] !== false;
+    const target = el.dataset.scope==="section" ? el.closest("section") : el;
+    if(target) target.hidden = !on;
+  });
+
+  // language switcher: only the languages offered for this event
+  $$(".lang button").forEach(b=>{ b.hidden = !AVAILABLE.includes(b.dataset.lang); b.setAttribute("aria-pressed", b.dataset.lang===lang); });
+  $(".lang").hidden = AVAILABLE.length < 2;
+
+  // dates
+  const dShort = fmt({day:"numeric",month:"long",year:"numeric"});
+  const time = fmt({hour:"numeric",minute:"2-digit"}).format(EV.start);
+  $("#long-date").textContent = `${fmt({weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(EV.start)} · ${time}`;
+  $("#when-v").textContent = `${dShort.format(EV.start)} · ${time}`;
+  const P = Object.fromEntries(new Intl.DateTimeFormat("en-US",{day:"2-digit",month:"2-digit",year:"numeric",...(TZ?{timeZone:TZ}:{})}).formatToParts(EV.start).map(p=>[p.type,p.value]));
+  $("#cover-date").textContent = [P.day,P.month,P.year.slice(-2)].join(" . ");
+  $("#cover-date").setAttribute("aria-label", dShort.format(EV.start));
+  if(EV.rsvpBy) $("#deadline").textContent = t.deadline(dShort.format(EV.rsvpBy)); else $("#deadline").hidden = true;
+
+  // «lino» extras
+  $("#cover-when").textContent = dShort.format(EV.start) + " · " + time;
+
+  // title + a11y
+  document.title = `${EV.couple} · ${t.invited.replace(/[¡!]/g,"")}`;
+
+  // itinerary
+  const tl = $("#timeline"); tl.textContent = "";
+  (CFG.itinerary||[]).forEach(it=>{
+    const [h,m] = String(it.time||"00:00").split(":").map(Number);
+    const d = new Date(Date.UTC(2000,0,1,h||0,m||0));
+    const li = document.createElement("li"); li.className="reveal";
+    li.innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true"><use href="#${ICON[it.icon]||"t-arch"}"/></svg>`;
+    const tm = document.createElement("time"); tm.dateTime = it.time; tm.textContent = new Intl.DateTimeFormat(lang,{hour:"numeric",minute:"2-digit",timeZone:"UTC"}).format(d);
+    const h3 = document.createElement("h3"); setRich(h3, pick(it.title));
+    const box = document.createElement("div"); box.className="txt"; box.append(tm,h3); li.append(box); tl.append(li);
+  });
+
+  // links
+  const addr = encodeURIComponent(`${CFG.venue?.name||""} ${CFG.venue?.address||""}`.trim());
+  $("#map").href = CFG.venue?.mapUrl || `https://www.google.com/maps/search/?api=1&query=${addr}`;
+  const hl = $("#hotels-link"); if(CFG.lodging?.url) hl.href = CFG.lodging.url; else hl.hidden = true;
+  const wa = $("#wa"); if(CFG.contact?.whatsapp) wa.href = `https://wa.me/${String(CFG.contact.whatsapp).replace(/\D/g,"")}?text=${encodeURIComponent(EV.couple)}`; else wa.hidden = true;
+
+  // people selector
+  const max = Math.max(1, CFG.guest?.maxPeople || CFG.guest?.people || 1), sel = $("#people");
+  sel.textContent = "";
+  for(let i=1;i<=max;i++){ const o=new Option(String(i),String(i)); o.selected = i===Math.min(people,max); sel.add(o); }
+
+  // photos
+  setPhoto("#cover-arch","#cover-ph",CFG.photos?.cover,"eager");
+  setPhoto("#story-fig","#story-ph",CFG.photos?.story,"lazy");
+
+  renderRsvp();
+}
+
+function setPhoto(box, ph, url, loading){
+  const wrap = $(box), svg = $(ph);
+  wrap.querySelector("img")?.remove();
+  const real = !!url;
+  svg.hidden = real; $$(".ph-label",wrap).forEach(l=>l.hidden=real);
+  if(real){
+    const img = new Image(); img.src=url; img.alt=EV.couple; img.loading=loading; img.decoding="async";
+    img.style.cssText="width:100%;height:100%;object-fit:cover";
+    wrap.prepend(img);
+  } else { wrap.setAttribute("role","img"); wrap.setAttribute("aria-label",EV.couple); }
+}
+
+function renderRsvp(){
+  const t = copy(), sec = $("#rsvp");
+  sec.dataset.state = answer || "";
+  if(!answer) return;
+  const d = fmt({day:"numeric",month:"long",year:"numeric"}).format(new Date());
+  const [a,b,c] = (answer==="yes"?t.yes_text:t.no_text)(d);
+  const box = $("#confirmed-text"); box.textContent = a; const st=document.createElement("strong"); st.textContent=b; box.append(st, c);
+  $("#confirmed-people").textContent = answer==="yes" ? t.people_text(people) : "";
+}
+
+function tick(){
+  let ms = Math.max(0, EV.start - Date.now());
+  const d=Math.floor(ms/864e5); ms%=864e5; const h=Math.floor(ms/36e5); ms%=36e5; const m=Math.floor(ms/6e4); const s=Math.floor(ms%6e4/1e3);
+  const v={d,h,m,s}; $$("#countdown [data-k]").forEach(el=>el.textContent=String(v[el.dataset.k]).padStart(el.dataset.k==="d"?1:2,"0"));
+}
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toast.id); toast.id=setTimeout(()=>el.classList.remove("show"),2800); }
+
+/* =====================================================================
+   LANGUAGE
+   ===================================================================== */
+$$(".lang button").forEach(b=>b.addEventListener("click",()=>{ lang=b.dataset.lang; store.set("inv-lang",lang); applyConfig(); syncMusicLabel(); }));
+
+/* =====================================================================
+   MUSIC  (chosen by the host; starts after the guest taps “Ingresar” – browsers require a tap)
+   ===================================================================== */
+const music = $("#music");
+const audio = CFG.music?.src ? new Audio() : null;
+let wantPlay = false;
+function syncMusicLabel(){
+  const on = music.getAttribute("aria-pressed")==="true";
+  const lbl = `${copy().music}${CFG.music?.title ? ": "+CFG.music.title : ""}`;
+  music.setAttribute("aria-label", lbl); music.title = lbl; music.dataset.on = on;
+}
+function setPlaying(on){ music.setAttribute("aria-pressed", String(on)); syncMusicLabel(); }
+if(audio){
+  audio.src = CFG.music.src; audio.loop = CFG.music.loop !== false; audio.preload = "auto"; audio.volume = 0;
+  music.hidden = false;
+  const fade = (to)=>{ clearInterval(fade.id); fade.id=setInterval(()=>{ const d=to-audio.volume; if(Math.abs(d)<.04){audio.volume=to;clearInterval(fade.id); if(!to) audio.pause();} else audio.volume=Math.min(1,Math.max(0,audio.volume+Math.sign(d)*.04)); },60); };
+  const play  = ()=> audio.play().then(()=>{ wantPlay=true; setPlaying(true); fade(.7); }).catch(()=> setPlaying(false));
+  const pause = ()=>{ wantPlay=false; setPlaying(false); fade(0); };
+  music.addEventListener("click",()=> audio.paused ? play() : pause());
+  document.addEventListener("visibilitychange",()=>{ if(document.hidden){ audio.pause(); } else if(wantPlay){ audio.play().catch(()=>{}); } });
+  window.__startMusic = play;
+}
+syncMusicLabel();
+
+/* =====================================================================
+   WELCOME GATE
+   ===================================================================== */
+const gate = $("#gate");
+gate.showModal();
+gate.addEventListener("cancel",e=>e.preventDefault());
+$("#enter").addEventListener("click",()=>{ gate.close(); window.__startMusic?.(); });
+
+/* =====================================================================
+   CALENDAR
+   ===================================================================== */
+const stamp = d=>d.toISOString().replace(/[-:]|\.\d{3}/g,"");
+const evTitle = ()=>`${copy().event_of} ${EV.couple}`;
+$("#gcal").addEventListener("click",function(){
+  this.href = "https://calendar.google.com/calendar/render?action=TEMPLATE"
+    + "&text="+encodeURIComponent(evTitle())
+    + "&dates="+stamp(EV.start)+"/"+stamp(EV.end)
+    + "&location="+encodeURIComponent(`${CFG.venue?.name||""}, ${CFG.venue?.address||""}`);
+});
+$("#ics").addEventListener("click",()=>{
+  const esc = s=>String(s).replace(/([,;\\])/g,"\\$1");
+  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Invitation//EN","BEGIN:VEVENT",
+    `UID:${stamp(EV.start)}-${esc(EV.couple)}@invitation`,`DTSTAMP:${stamp(new Date())}`,`DTSTART:${stamp(EV.start)}`,`DTEND:${stamp(EV.end)}`,
+    `SUMMARY:${esc(evTitle())}`,`LOCATION:${esc(`${CFG.venue?.name||""}, ${CFG.venue?.address||""}`)}`,"END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([ics],{type:"text/calendar"})); a.download="invitation.ics"; a.click();
+  $("#cal-menu").hidePopover?.(); toast(copy().toast_ics);
+});
+$("#cal-menu").addEventListener("toggle",e=>{
+  if(e.newState!=="open") return;
+  const r=$("#cal-btn").getBoundingClientRect(), m=e.target, w=m.offsetWidth;
+  m.style.top=(r.bottom+8)+"px"; m.style.left=Math.max(12,Math.min(innerWidth-w-12, r.left+r.width/2-w/2))+"px";
+});
+
+/* =====================================================================
+   RSVP   →  the platform listens to the "invitation:rsvp" event and saves the reply
+   ===================================================================== */
+const dlg=$("#rsvp-dialog"), form=$("#rsvp-form");
+const syncPeople=()=>{ $(".count-wrap").hidden = form.att.value==="no"; };
+$$("[data-answer]").forEach(b=>b.addEventListener("click",()=>{ form.att.value=b.dataset.answer; syncPeople(); dlg.showModal(); }));
+$("#modify").addEventListener("click",()=>{ form.att.value=answer||"yes"; syncPeople(); dlg.showModal(); });
+form.addEventListener("change",syncPeople);
+$("#cancel").addEventListener("click",()=>dlg.close());
+dlg.addEventListener("click",e=>{ if(e.target===dlg) dlg.close(); });
+form.addEventListener("submit",()=>{
+  answer=form.att.value; people = answer==="yes" ? +$("#people").value : 0;
+  renderRsvp(); toast(copy().toast_sent);
+  document.dispatchEvent(new CustomEvent("invitation:rsvp",{detail:{ guest:CFG.guest?.name, answer, people, message:$("#msg").value.trim() }}));
+});
+
+/* init */
+applyConfig(); tick(); setInterval(tick,1000);
+</script>
+</body>
+</html>
+
+
+
+

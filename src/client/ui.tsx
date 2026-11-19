@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import type { Priority } from "../store";
 import { LockI, X } from "../icons";
@@ -13,7 +14,7 @@ export function PriBadge({ p }: { p: Priority }) {
   if (!p) return null;
   return <span className={`pill pri-${p}`}>{t("pri." + p)}</span>;
 }
-export function Modal({ title, onClose, children, wide, headerExtra }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; headerExtra?: React.ReactNode }) {
+export function Modal({ title, onClose, children, wide, xl, headerExtra }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; /** extra large (side-by-side editors) */ xl?: boolean; headerExtra?: React.ReactNode }) {
   const [out, setOut] = useState(false); // closing: play the exit animation first
   const close = () => { if (out) return; if (reduce()) { onClose(); return; } setOut(true); setTimeout(onClose, 170); };
   useEffect(() => {
@@ -23,7 +24,7 @@ export function Modal({ title, onClose, children, wide, headerExtra }: { title: 
   }); // eslint-disable-line
   return (
     <div className={`modal-bg${out ? " out" : ""}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <div className="modal" style={wide ? { width: 860 } : undefined}>
+      <div className="modal" style={xl ? { width: "min(1240px, 96vw)" } : wide ? { width: 860 } : undefined}>
         <div className="row between"><div className="row" style={{ flexWrap: "nowrap" }}><h3 style={{ margin: 0 }}>{title}</h3>{headerExtra}</div><button className="ghost sm icon" aria-label="Close" onClick={close}><X size={14} /></button></div>
         {children}
       </div>
@@ -106,3 +107,25 @@ export const RichText = forwardRef<{ clear: () => void }, { onChange: (html: str
     </div>
   );
 });
+
+/** Small squared window anchored to a button. It is drawn on top of everything (never clipped by a table), and closes when you click outside it or press Escape. */
+export function Popover({ anchor, onClose, width = 260, children, label }: { anchor: DOMRect; onClose: () => void; width?: number; children: React.ReactNode; label?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [h, setH] = useState(0);
+  useEffect(() => { if (ref.current) setH(ref.current.offsetHeight); }, [children]);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", k); window.addEventListener("scroll", onClose, true); window.addEventListener("resize", onClose);
+    return () => { window.removeEventListener("keydown", k); window.removeEventListener("scroll", onClose, true); window.removeEventListener("resize", onClose); };
+  }); // eslint-disable-line
+  const w = Math.min(width, window.innerWidth - 16);
+  const left = Math.max(8, Math.min(anchor.right - w, window.innerWidth - w - 8));
+  const below = anchor.bottom + 6;
+  const top = h && below + h > window.innerHeight - 8 ? Math.max(8, anchor.top - h - 6) : below;
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 200 }} onMouseDown={onClose}>
+      <div ref={ref} role="dialog" aria-label={label} onMouseDown={(e) => e.stopPropagation()} style={{ position: "fixed", left, top, width: w, padding: 12, boxSizing: "border-box", overflowWrap: "anywhere", background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--line)", borderRadius: 4, boxShadow: "0 10px 30px rgba(0,0,0,.22)" }}>{children}</div>
+    </div>,
+    document.body,
+  );
+}

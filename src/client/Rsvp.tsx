@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { update, useStore } from "../store";
 import { LangSwitch, Logo, ThemeToggle } from "../shared";
@@ -9,10 +9,20 @@ export default function Rsvp({ parts }: { parts: string[] }) {
   const { t, locale } = useT();
   const s = useStore();
   const code = parts[parts.length - 1];
-  const g = s.guests.find((x) => x.token === code);
+  // the link carries the guest's name (…/<event>/<name>/<code>), so a copied link cannot be passed to someone else; older links (…/<code>) still open
+  const slug = (x: string) => x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  const found = s.guests.find((x) => x.token === code);
+  const g = found && (parts.length < 3 || parts[parts.length - 2] === (slug(found.name) || "guest")) ? found : undefined;
   const ev = g ? s.events.find((e) => e.id === g.eventId) : undefined;
   const [done, setDone] = useState<"" | "confirmed" | "declined">("");
-  const answer = (v: "confirmed" | "declined") => { update((st) => { const x = st.guests.find((y) => y.token === code); if (x) x.status = v; }); setDone(v); };
+  const [n, setN] = useState(0); // how many of the party will come
+  const counted = useRef(false);
+  useEffect(() => { // every time the guest opens the link counts as a view (the planner sees it in Sent invitations)
+    if (counted.current || !g || g.status === "draft") return;
+    counted.current = true;
+    update((st) => { const x = st.guests.find((y) => y.token === code); if (x) { x.views = (x.views ?? 0) + 1; x.lastViewedAt = Date.now(); } });
+  }, [code, g?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const answer = (v: "confirmed" | "declined") => { update((st) => { const x = st.guests.find((y) => y.token === code); if (x) { x.status = v; x.confirmedN = v === "confirmed" ? Math.min(x.invitees, n || x.invitees) : 0; } }); setDone(v); };
   return (
     <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 520, maxWidth: "100%", textAlign: "center" }}>
@@ -28,6 +38,7 @@ export default function Rsvp({ parts }: { parts: string[] }) {
             {done || g.status === "confirmed" || g.status === "declined" ? (
               <p role="status" style={{ color: (done || g.status) === "confirmed" ? "var(--teal)" : "var(--danger)", fontWeight: 700 }}>{t((done || g.status) === "confirmed" ? "rsvp.pg.yes" : "rsvp.pg.no")}</p>
             ) : null}
+            {g.invitees > 1 && !done && g.status !== "confirmed" && g.status !== "declined" && <div style={{ margin: "8px auto 0", maxWidth: 260 }}><label htmlFor="rn">{t("rsvp.pg.howmany")}</label><select id="rn" value={n || g.invitees} onChange={(e) => setN(Number(e.target.value))}>{Array.from({ length: g.invitees }, (_, i) => i + 1).map((k) => <option key={k} value={k}>{k}</option>)}</select></div>}
             <div className="row" style={{ justifyContent: "center", marginTop: 10 }}>
               <button onClick={() => answer("confirmed")}><Check size={16} /> {t("rsvp.pg.attend")}</button>
               <button className="ghost" onClick={() => answer("declined")}><X size={16} /> {t("rsvp.pg.decline")}</button>

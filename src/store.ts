@@ -69,11 +69,13 @@ export interface Task {
 }
 export interface Todo { id: string; eventId: string; text: string; done: boolean }
 export type Channel = "whatsapp" | "email";
-export interface Guest { id: string; eventId: string; name: string; email: string; phone: string; status: "draft" | "sent" | "confirmed" | "declined"; table: string; invitees: number; message: string; channel: Channel; country: string; lang: Lang; token: string; sentAt: number; sentVia: "" | Channel }
+export interface Guest { id: string; eventId: string; name: string; email: string; phone: string; status: "draft" | "sent" | "confirmed" | "declined"; table: string; invitees: number; message: string; channel: Channel; country: string; lang: Lang; token: string; sentAt: number; sentVia: "" | Channel; /** times the guest opened the personal RSVP link */ views?: number; lastViewedAt?: number; /** last time the invitation was sent again */ resentAt?: number; /** how many of the invitees confirmed */ confirmedN?: number; /** did the guest attend? only filled in after the event date */ attended?: "" | "yes" | "no" }
 export const guestDefaults = (g: Partial<Guest> & { id: string; eventId: string; name: string }): Guest => ({ email: "", phone: "", status: "draft", table: "", invitees: 1, message: "", channel: g.phone && !g.email ? "whatsapp" : g.email ? "email" : "whatsapp", country: "MX", lang: "es", token: uid() + uid(), sentAt: 0, sentVia: "", ...g });
 /** A hand-built HTML invitation (made in the invitation studio editor). */
 export interface InvVersion { id: string; at: number; name: string; html: string; css: string }
-export interface Invitation { id: string; eventId: string; name: string; html: string; css: string; createdAt: number; modifiedAt: number; versions: InvVersion[]; /** who made it: an 1Plan designer, or the user from a template / the AI. Nobody but 1Plan staff edits the HTML. */ source?: "staff" | "template" | "ai"; comments?: Comment[]; likes?: string[]; requestId?: string }
+/** Everything the user can customize in an invitation made from a template (the invitation is rebuilt from these). */
+export interface TplFields { title: string; message: string; iso: string; time: string; venue: string; color: string; font: string; address?: string; mapUrl?: string; lodging?: string; whatsapp?: string; deadline?: string; cover?: string; story?: string; dress?: string; gifts?: string; itinerary?: { time: string; title: string }[] }
+export interface Invitation { id: string; /** template and customized values it was built from (only invitations made from a template can be edited) */ tpl?: string; fields?: TplFields; eventId: string; name: string; html: string; css: string; createdAt: number; modifiedAt: number; versions: InvVersion[]; /** who made it: an 1Plan designer, or the user from a template / the AI. Nobody but 1Plan staff edits the HTML. */ source?: "staff" | "template" | "ai"; comments?: Comment[]; likes?: string[]; requestId?: string }
 /** A custom design requested from the 1Plan design team. */
 export interface DesignRequest { id: string; eventId: string; colors: string; tone: string; vibe: string; links: string[]; images: string[]; ref: string; createdAt: number; delivered: boolean }
 export interface Design { template: string; title: string; message: string; color: string; font: string; edits: number; sent: boolean }
@@ -209,7 +211,7 @@ export const defaultStatuses = (): Status[] => [
   { id: "done", name: "Done", color: COLORS.teal },
 ];
 const defaultDesign = (type: string): Design => ({
-  template: type === "wedding" ? "classic" : "party", title: "", message: "", color: type === "wedding" ? COLORS.rose : type === "birthday" ? COLORS.gold : COLORS.teal, font: type === "wedding" ? "serif" : "sans", edits: 0, sent: false,
+  template: type === "wedding" ? "botanica" : "mono", title: "", message: "", color: type === "wedding" ? COLORS.rose : type === "birthday" ? COLORS.gold : COLORS.teal, font: type === "wedding" ? "serif" : "sans", edits: 0, sent: false,
 });
 export const DEFAULT_FIELDS: TaskField[] = [];
 export const newEvent = (p: { name: string; type: string; date: string; time?: string; location?: string; venue?: string; description?: string; picture?: string }, fields: TaskField[] = DEFAULT_FIELDS): EventT => ({

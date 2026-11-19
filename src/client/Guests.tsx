@@ -3,8 +3,8 @@ import { useT } from "../i18n";
 import { LANGS } from "../i18n";
 import { uid, update, guestDefaults, useStore, type Channel, type EventT, type Guest, type Lang } from "../store";
 import { COUNTRIES, dialOf, flag } from "../countries";
-import { Check, Download, FileSpreadsheet, LockI, Mail, MessageCircle, Pencil, Plus, X } from "../icons";
-import { Bar, Modal } from "./ui";
+import { Check, Download, FileSpreadsheet, LockI, Mail, MessageSquareText, Pencil, Plus, WhatsApp, X } from "../icons";
+import { Bar, Modal, Popover } from "./ui";
 import { CsvImport, downloadTemplate } from "./GuestCsv";
 
 type SF = Guest["status"] | "all";
@@ -22,6 +22,7 @@ export default function Guests({ event }: { event: EventT }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [added, setAdded] = useState(0);
   const [sf, setSf] = useState<SF>("all");
+  const [bubble, setBubble] = useState<{ id: string; r: DOMRect } | null>(null); // guest whose message bubble is open, and where
   const guests = s.guests.filter((g) => g.eventId === event.id);
   // RSVP summary: invited = everyone who was sent an invitation, replied = confirmed + declined
   const cnt = (st: Guest["status"]) => guests.filter((g) => g.status === st).length;
@@ -49,7 +50,7 @@ export default function Guests({ event }: { event: EventT }) {
     setF({ name: g.name, invitees: g.invitees, message: g.message, channel: g.channel, country: g.country, number: g.phone.startsWith(dial) ? g.phone.slice(dial.length).trim() : g.phone, email: g.email, lang: g.lang });
     setOpen(true);
   };
-  const chan = (c: Channel) => (c === "whatsapp" ? <MessageCircle size={14} /> : <Mail size={14} />);
+  const chan = (c: Channel) => (c === "whatsapp" ? <WhatsApp size={14} /> : <Mail size={14} />);
   const contact = (g: Guest) => (g.channel === "whatsapp" ? `${flag(g.country)} ${g.phone || "—"}` : g.email || "—");
 
   return (
@@ -69,6 +70,7 @@ export default function Guests({ event }: { event: EventT }) {
           <button onClick={() => { setEditing(null); setF(blank(s.lang)); setOpen(true); }}><Plus size={16} /> {t("gst.add")}</button>
         </span>
       </div>
+      {bubble && (() => { const bg = guests.find((x) => x.id === bubble.id); return bg ? <Popover anchor={bubble.r} onClose={() => setBubble(null)} label={t("gst.message")}><div className="small muted" style={{ marginBottom: 4 }}>{bg.name}</div><div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word", maxHeight: 240, overflowY: "auto" }}>{bg.message}</div></Popover> : null; })()}
       {csv && <CsvImport event={event} existing={guests} onClose={() => setCsv(false)} />}
       {open && <Modal title={editing ? t("gst.edit") : t("gst.add")} onClose={close} wide>
       <form ref={formRef} onSubmit={(e) => { e.preventDefault(); save(false); }} className="form">
@@ -77,7 +79,7 @@ export default function Guests({ event }: { event: EventT }) {
         <div className="full"><label htmlFor="gm">{t("gst.message")}</label><textarea id="gm" rows={2} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} /></div>
         <div className="full"><label>{t("gst.channel")}</label>
           <div className="scope" role="group" aria-label={t("gst.channel")}>
-            <button type="button" className={f.channel === "whatsapp" ? "" : "ghost"} aria-pressed={f.channel === "whatsapp"} onClick={() => setF({ ...f, channel: "whatsapp" })}>{f.channel === "whatsapp" ? <Check size={15} /> : <MessageCircle size={15} />} WhatsApp</button>
+            <button type="button" className={f.channel === "whatsapp" ? "" : "ghost"} aria-pressed={f.channel === "whatsapp"} onClick={() => setF({ ...f, channel: "whatsapp" })}>{f.channel === "whatsapp" ? <Check size={15} /> : <WhatsApp size={15} />} WhatsApp</button>
             <button type="button" className={f.channel === "email" ? "" : "ghost"} aria-pressed={f.channel === "email"} onClick={() => setF({ ...f, channel: "email" })}>{f.channel === "email" ? <Check size={15} /> : <Mail size={15} />} Email</button>
           </div>
         </div>
@@ -107,7 +109,9 @@ export default function Guests({ event }: { event: EventT }) {
             {rows.length === 0 && <tr><td colSpan={6} className="muted">{t("none")}</td></tr>}
             {rows.map((g) => (
               <tr key={g.id}>
-                <td>{g.name}{g.message && <div className="muted small" style={{ maxWidth: 260 }}>{g.message}</div>}</td>
+                <td><span className="row" style={{ gap: 6, flexWrap: "nowrap" }}>{g.name}
+                  {g.message && <button className="msgbtn" aria-label={t("gst.message")} aria-expanded={bubble?.id === g.id} title={t("gst.message")} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setBubble(bubble?.id === g.id ? null : { id: g.id, r }); }}><MessageSquareText size={15} /></button>}
+                </span></td>
                 <td>{g.invitees}</td>
                 <td><span className="row" style={{ gap: 6 }}>{chan(g.channel)}{contact(g)}</span></td>
                 <td>{g.lang.toUpperCase()}</td>

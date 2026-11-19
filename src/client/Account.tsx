@@ -3,7 +3,7 @@ import { useT } from "../i18n";
 import { Checkout, CardModal, InvoiceModal, money, planBullets, usePrices } from "./Billing";
 import { yearlySaving, RESET_MINUTES, TRIAL_DAYS, askLogout, go, logout, eventLimit, queueReset, eventsLast30, resetDemo, uid, update, useStore, type Invoice, type Plan } from "../store";
 import CancelSurvey from "./CancelSurvey";
-import { cloudResetRequest, goCheckout, goPortal, isCloudId } from "../cloud";
+import { authErrorKey, cloudChangeEmail, cloudResetRequest, cloudVerifyPassword, goCheckout, goPortal, isCloudId } from "../cloud";
 import { Modal } from "./ui";
 import SupplierProfileTab from "./SupplierProfile";
 import { ResetMail } from "../Reset";
@@ -24,9 +24,13 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
   const s = useStore();
   const old = kind === "email" ? s.userEmail : s.userPhone;
   const [v, setV] = useState(old);
+  const [pw, setPw] = useState(""); // sensitive details: the current password is always asked
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState(""); // new e-mail waiting for the confirmation link
   const [sent, setSent] = useState<import("../store").Mail[] | null>(null);
-  const save = (e: React.FormEvent) => {
+  const cloud = isCloudId(s.sessionId);
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
     const nv = v.trim();
     if (nv === old) return onClose();
@@ -34,6 +38,18 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nv)) return setErr(t("join.err.email"));
       if (s.accounts.some((a) => a.id !== s.sessionId && a.email.toLowerCase() === nv.toLowerCase()) || s.team.some((m) => m.email.toLowerCase() === nv.toLowerCase())) return setErr(t("team.taken"));
     } else if (nv.replace(/\D/g, "").length < 7) return setErr(t("acct.err.phone"));
+    if (!pw) return setErr(t("acct.err.pwneeded"));
+    setBusy(true); setErr("");
+    const acct = s.accounts.find((x) => x.id === s.sessionId);
+    const pwOk = cloud ? !(await cloudVerifyPassword(s.userEmail, pw)).error : !acct?.password || acct.password === pw;
+    if (!pwOk) { setBusy(false); return setErr(t("acct.err.pw")); }
+    if (kind === "email" && cloud) { // the login e-mail changes only when the link sent to the new address is opened
+      const { error } = await cloudChangeEmail(nv);
+      setBusy(false);
+      if (error) return setErr(t(authErrorKey(error)));
+      setPending(nv); return;
+    }
+    setBusy(false);
     const msgs = [old, nv].filter(Boolean).map((to) => ({ id: uid(), to, subject: "notice", token: "", at: Date.now(), kind: "notice" as const, chan: kind === "email" ? "email" as const : "whatsapp" as const, key: to === nv ? `notice.${kind}.new` : `notice.${kind}.old`, vars: { name: s.userName, old: old || "—", new: nv } }));
     update((st) => {
       if (kind === "email") { st.userEmail = nv; const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.email = nv; } else st.userPhone = nv;
@@ -41,6 +57,13 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
     });
     setSent(msgs);
   };
+  if (pending) return (
+    <Modal title={t("acct.email.check")} onClose={onClose}>
+      <p style={{ marginTop: 0 }}>{t("acct.email.pending", { email: pending })}</p>
+      <p className="muted small">{t("acct.email.pending2", { old: s.userEmail })}</p>
+      <div className="row" style={{ justifyContent: "flex-end" }}><button onClick={onClose}>{t("done")}</button></div>
+    </Modal>
+  );
   if (sent) return (
     <Modal title={t("acct.notified")} onClose={onClose}>
       <p className="muted small" style={{ marginTop: 0 }}>{t("team.invite.demo")}</p><Notices list={sent} />
@@ -50,9 +73,10 @@ function ContactModal({ kind, onClose }: { kind: "email" | "phone"; onClose: () 
   return (
     <Modal title={t(kind === "email" ? "acct.change.email" : "acct.change.phone")} onClose={onClose}>
       <form onSubmit={save} className="form">
-        <div className="full"><label htmlFor="cv">{t(kind === "email" ? "email" : "account.phone")}</label><input id="cv" autoFocus type={kind === "email" ? "email" : "tel"} value={v} onChange={(e) => { setV(e.target.value); setErr(""); }} />
-          <div className="muted small">{t(kind === "email" ? "acct.notify.email" : "acct.notify.phone")}</div>{err && <div className="small" style={{ color: "var(--danger)" }}>{err}</div>}</div>
-        <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button>{t("save")}</button></div>
+        <div className="full"><label htmlFor="cv">{t(kind === "email" ? "acct.newemail" : "acct.newphone")}</label><input id="cv" autoFocus type={kind === "email" ? "email" : "tel"} value={v} onChange={(e) => { setV(e.target.value); setErr(""); }} />
+          <div className="muted small">{t(kind === "email" && cloud ? "acct.email.confirmnote" : kind === "email" ? "acct.notify.email" : "acct.notify.phone")}</div></div>
+        <div className="full"><label htmlFor="cp">{t("acct.curpw")}</label><input id="cp" type="password" autoComplete="current-password" value={pw} onChange={(e) => { setPw(e.target.value); setErr(""); }} /><div className="muted small">{t("acct.curpw.why")}</div>{err && <div className="small" role="alert" style={{ color: "var(--danger)" }}>{err}</div>}</div>
+        <div className="row full" style={{ justifyContent: "flex-end" }}><button type="button" className="ghost" onClick={onClose}>{t("cancel")}</button><button disabled={busy}>{busy ? "…" : t("save")}</button></div>
       </form>
     </Modal>
   );

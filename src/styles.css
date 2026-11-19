@@ -439,6 +439,8 @@ button.dio-sec { display: flex; align-items: center; gap: 6px; width: 100%; back
 
 .invgrid.wide { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } .invgrid.mini { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 .invmake { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; } @media (max-width: 800px) { .invmake { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .invmake.edit { grid-template-columns: 1fr; } .invmake.edit > .form { max-height: none; } }
+.invmake.edit { grid-template-columns: 1fr 1.2fr; align-items: start; } .invmake.edit > .form { max-height: 70vh; overflow-y: auto; padding-right: 6px; align-content: start; }
 .colorchip { width: 28px; height: 28px; border-radius: 50%; padding: 0; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); } .addimg { width: 64px; height: 64px; border: 2px dashed var(--line); border-radius: 4px; display: grid; place-items: center; font-size: 1.5rem; color: var(--muted); cursor: pointer; margin: 0; }
 .likebtn.on { color: var(--danger); } .invcard2 { padding: 10px; }
 .apvbody { display: flex; gap: 14px; align-items: flex-start; } .apvmini { flex: 0 0 170px; width: 170px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: #fff; overflow: hidden; cursor: zoom-in; } .apvmini .seatview, .apvmini .invthumb { pointer-events: none; }
@@ -887,3 +889,7 @@ select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-rig
 .evhead-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 2px 0; color: var(--ink); font-size: .72rem; font-weight: 400; box-shadow: none; }
 .evhist li.nowrap-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .evmeta > span:first-child { background: var(--surface); color: color-mix(in srgb, var(--accent, var(--teal)) 70%, var(--ink)); opacity: 1; }
+
+/* message bubble button next to a guest name */
+.msgbtn { flex: none; width: 26px; height: 26px; padding: 0; display: inline-grid; place-items: center; border-radius: 4px; background: color-mix(in srgb, var(--teal) 18%, transparent); color: var(--teal); border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent); cursor: pointer; }
+.msgbtn:hover { background: color-mix(in srgb, var(--teal) 30%, transparent); }

@@ -1,21 +1,24 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "../i18n";
-import { COLORS, PLANS, openUpsell, uid, update, useStore, me, type Comment, type EventT, type Invitation } from "../store";
-import { ChevronDown, Heart, LayoutTemplate, LockI, MessageCircle, Plus, Send, Sparkles, X } from "../icons";
-import { TEMPLATE_IDS, invitationDoc, templateHtml, type TplText } from "../invitationTemplates";
+import { PLANS, notify, openUpsell, uid, update, useStore, me, type Comment, type EventT, type Invitation, type TplFields } from "../store";
+import { ChevronDown, Heart, Pencil, LayoutTemplate, LockI, MessageCircle, Plus, Send, Sparkles, X } from "../icons";
+import { buildInvitation, catalogName, invSandbox, invitationDoc, templateHtml, templatesFor, useCatalog, type TplText } from "../invitationTemplates";
 import { sendRequest } from "../bridge";
 import { Modal } from "./ui";
 import ApprovalButton from "./Approval";
 import Thumb from "./InvThumb";
 import { readImage } from "./MenuTab";
 
-const IDEAS: Record<string, { title: string; message: string; template: string; color: string; font: string }[]> = {
-  wedding: [{ title: "Con amor, nos casamos", message: "Hoy y siempre. Acompáñanos a celebrar el comienzo de nuestra historia.", template: "floral", color: COLORS.rose, font: "serif" },
-    { title: "Save the date", message: "Dos corazones, un solo camino. Te esperamos.", template: "gold", color: COLORS.gold, font: "serif" }],
-  birthday: [{ title: "¡Hora de festejar!", message: "Música, pastel y mucha diversión. ¡No faltes!", template: "party", color: COLORS.gold, font: "sans" },
-    { title: "Un año más de aventuras", message: "Ven a celebrar conmigo.", template: "modern", color: COLORS.blue, font: "sans" }],
-  default: [{ title: "Estás invitado", message: "Queremos compartir este momento contigo.", template: "modern", color: COLORS.teal, font: "sans" }],
+/** "Design with AI" (demo): picks a template that suits the event type, guided by the words in the prompt. */
+const IDEAS: Record<string, { template: string }[]> = {
+  wedding: [{ template: "botanica" }, { template: "deco" }, { template: "costa" }, { template: "lino" }],
+  birthday: [{ template: "mono" }, { template: "dino" }, { template: "cosmos" }, { template: "eras" }],
+  default: [{ template: "lino" }, { template: "mono" }],
 };
+const IDEA_WORDS: [string[], string][] = [
+  [["gold", "dorad", "gala", "glam"], "deco"], [["flor", "flower", "bot"], "botanica"], [["dino"], "dino"], [["space", "espacio", "astro", "cosm"], "cosmos"],
+  [["sea", "mar", "beach", "playa", "costa"], "costa"], [["minimal", "simple", "sencill"], "lino"], [["glitter", "brillo", "sparkle"], "eras"],
+];
 
 const PALETTE = ["#FF7A59", "#F0B429", "#46C8B2", "#6FA8FF", "#1F2937", "#F5EFE4", "#7C5CFF", "#FF9C7F"];
 
@@ -23,33 +26,62 @@ const PALETTE = ["#FF7A59", "#F0B429", "#46C8B2", "#6FA8FF", "#1F2937", "#F5EFE4
 function PreviewModal({ inv, onClose }: { inv: Invitation; onClose: () => void }) {
   return (
     <Modal title={inv.name} onClose={onClose} wide>
-      <iframe title={inv.name} sandbox="" srcDoc={invitationDoc(inv.html, inv.css)} style={{ width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 12, marginTop: 10, background: "#fff" }} />
+      <iframe title={inv.name} sandbox={invSandbox(inv.html)} srcDoc={invitationDoc(inv.html, inv.css)} style={{ width: "100%", height: "68vh", border: "1px solid var(--line)", borderRadius: 12, marginTop: 10, background: "#fff" }} />
     </Modal>
   );
 }
 
-/** "Create from template" and "Design with AI": pick/generate a design, then only the basic info can be changed. */
-function CreateModal({ event, mode, onClose, onCreated }: { event: EventT; mode: "template" | "ai"; onClose: () => void; onCreated: (i: Invitation) => void }) {
+/** "Create from template" / "Design with AI" / edit: pick a template (the list folds away once one is chosen), then customize it with a live preview. */
+function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT; mode: "template" | "ai"; edit?: Invitation; onClose: () => void; onCreated: (i: Invitation) => void }) {
   const { t, tn, locale } = useT();
-  const [tpl, setTpl] = useState<string | null>(null);
-  const [look, setLook] = useState<{ color: string; font: string } | null>(null);
+  const s = useStore();
+  useCatalog(); // the template list follows what 643 publishes
+  const [tpl, setTpl] = useState<string | null>(edit?.tpl ?? null);
+  const [changing, setChanging] = useState(false); // template list open again
   const [prompt, setPrompt] = useState("");
-  const [f, setF] = useState({ name: new Date().toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }), title: event.name, message: t("design.msg.default"), date: event.date, venue: [event.venue, event.location].filter(Boolean).join(" · ") });
-  const texts = (): TplText => ({ title: f.title, message: f.message, date: new Date(f.date + "T12:00").toLocaleDateString(locale, { dateStyle: "full" }), typeName: tn(event.type), venue: f.venue });
-  const ev = look ? { ...event, design: { ...event.design, ...look } } : event;
+  const [name, setName] = useState(edit?.name ?? new Date().toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }));
+  const [F, setF] = useState<TplFields>(() => edit?.fields ?? { title: event.name, message: t("design.msg.default"), iso: event.date, time: event.time || "17:00", venue: [event.venue, event.location].filter(Boolean).join(" · "), color: event.design.color, font: event.design.font });
+  const [err, setErr] = useState("");
+  const set = (p: Partial<TplFields>) => setF((x) => ({ ...x, ...p }));
+  const build = (id: string) => buildInvitation(id, event, F, locale, tn(event.type));
+  const html = tpl ? build(tpl) : "";
+  const [shown, setShown] = useState(html); // the preview follows the form a moment after typing stops
+  useEffect(() => { const id = setTimeout(() => setShown(html), 500); return () => clearTimeout(id); }, [html]);
+  const ids = templatesFor(event.type);
+  const thumbs = useMemo(() => Object.fromEntries(ids.map((id) => [id, buildInvitation(id, event, F, locale, tn(event.type))])), [ids.join(), F.title, F.iso, F.time, F.venue, locale]); // eslint-disable-line
   const generate = () => {
     const list = IDEAS[event.type] ?? IDEAS.default, w = prompt.toLowerCase();
-    const idea = list.find((i) => (w.includes("gold") || w.includes("dorad")) ? i.template === "gold" : (w.includes("flor") || w.includes("flower")) ? i.template === "floral" : false) ?? list[Math.floor(Math.random() * list.length)];
-    setLook({ color: idea.color, font: idea.font }); setTpl(idea.template); setF((x) => ({ ...x, title: idea.title, message: idea.message }));
+    const hit = IDEA_WORDS.find(([words, id]) => words.some((k) => w.includes(k)) && list.some((i) => i.template === id));
+    setTpl(hit ? hit[1] : list[Math.floor(Math.random() * list.length)].template);
   };
-  const create = () => {
+  const pending = edit ? s.signoffs.some((x) => x.eventId === event.id && x.scope === "invitations" && x.subject === edit.name && x.approvers.some((a) => !a.at)) : false;
+  const photo = async (k: "cover" | "story", files: FileList | null) => { if (!files?.[0]) return; try { set({ [k]: await readImage(files[0]) }); setErr(""); } catch { setErr(t("menu.imgerr")); } };
+  const save = () => {
     if (!tpl) return;
-    const now = Date.now();
-    onCreated({ id: uid(), eventId: event.id, name: f.name.trim() || t("ins.newname"), html: templateHtml(tpl, ev, texts()), css: "", createdAt: now, modifiedAt: now, versions: [], source: mode, comments: [], likes: [] });
+    const now = Date.now(), nm = name.trim() || t("ins.newname");
+    if (!edit) { onCreated({ id: uid(), eventId: event.id, name: nm, html, css: "", tpl, fields: F, createdAt: now, modifiedAt: now, versions: [], source: mode, comments: [], likes: [] }); return; }
+    update((st) => {
+      const i = st.invitations.find((x) => x.id === edit.id); if (!i) return;
+      const old = i.name;
+      i.versions = [...(i.versions ?? []), { id: uid(), at: now, name: `v${(i.versions ?? []).length + 1}`, html: i.html, css: i.css }];
+      i.name = nm; i.html = html; i.tpl = tpl; i.fields = F; i.modifiedAt = now;
+      // an edit while it is in approval restarts the approval: the same people must approve the new version
+      const k = st.signoffs.findIndex((x) => x.eventId === event.id && x.scope === "invitations" && x.subject === old && x.approvers.some((a) => !a.at));
+      if (k >= 0) {
+        const so = st.signoffs[k];
+        st.signoffs[k] = { ...so, subject: nm, summary: [nm, t("ins.src." + (i.source ?? "template")), `${(i.likes ?? []).length} ♥ · ${(i.comments ?? []).length} ${t("tl.comments").toLowerCase()}`], snap: { k: "invitation", html, css: "" }, startedBy: me(st).name, startedAt: now, approvers: so.approvers.map((a) => ({ ...a, id: uid(), at: 0, by: "" })) };
+        notify(st, "approval", "inb.n.restarted", { name: me(st).name, subject: nm }, `/app/event/${event.id}`);
+      }
+    });
+    onClose();
   };
   const designing = mode === "ai" && !tpl;
+  const picking = !edit && mode === "template" && (!tpl || changing);
+  const tname = (id: string) => catalogName(id) ?? t("tpl." + id);
+  const L = (id: string, label: string, el: React.ReactNode, full = true) => <div className={full ? "full" : undefined}><label htmlFor={id}>{label}</label>{el}</div>;
+  const moments = F.itinerary ?? [];
   return (
-    <Modal title={mode === "ai" ? t("ins.ai") : t("ins.fromtpl")} onClose={onClose} wide>
+    <Modal title={edit ? t("ins.edit.title") : mode === "ai" ? t("ins.ai") : t("ins.fromtpl")} onClose={onClose} xl>
       {designing ? (
         <>
           <p className="muted small" style={{ marginTop: 0 }}>{t("ins.ai.desc")}</p>
@@ -59,36 +91,67 @@ function CreateModal({ event, mode, onClose, onCreated }: { event: EventT; mode:
           <div className="row" style={{ justifyContent: "flex-end" }}><button className="ghost" onClick={onClose}>{t("cancel")}</button><button onClick={generate}><Sparkles size={15} /> {t("ins.ai.go")}</button></div>
         </>
       ) : (
-        <div className="invmake">
-          <div>
-            {mode === "template" && (
-              <div className="invgrid mini" style={{ marginBottom: 12 }}>
-                {TEMPLATE_IDS.map((id) => (
-                  <button type="button" key={id} className={`tplcard${tpl === id ? " selected" : ""}`} aria-pressed={tpl === id} onClick={() => setTpl(id)}>
-                    <Thumb html={templateHtml(id, event, texts())} css="" title={t("tpl." + id)} /><b className="small">{t("tpl." + id)}</b>
-                  </button>
+        <>
+          {picking ? (
+            <div className="invgrid mini" style={{ marginBottom: 12 }}>
+              {ids.map((id) => (
+                <button type="button" key={id} className={`tplcard${tpl === id ? " selected" : ""}`} aria-pressed={tpl === id} onClick={() => { setTpl(id); setChanging(false); }}>
+                  <Thumb html={thumbs[id]} css="" title={tname(id)} /><b className="small">{tname(id)}</b>
+                </button>
+              ))}
+            </div>
+          ) : tpl && (
+            <div className="row between" style={{ marginBottom: 10 }}>
+              <span><span className="muted small">{t("ins.template")}: </span><b>{tname(tpl)}</b></span>
+              {mode === "ai" && !edit ? <button className="ghost sm" onClick={() => setTpl(null)}><Sparkles size={13} /> {t("ins.ai.again")}</button> : !edit && <button className="ghost sm" onClick={() => setChanging(true)}><LayoutTemplate size={13} /> {t("ins.changetpl")}</button>}
+            </div>
+          )}
+          {tpl && !picking && (
+            <div className="invmake edit">
+              <div className="form" style={{ alignContent: "start" }}>
+                {pending && <p role="status" className="small full" style={{ margin: 0, padding: "8px 10px", borderRadius: 8, background: "var(--soft)", border: "1px solid var(--gold)" }}>{t("ins.edit.restart")}</p>}
+                {L("in", t("ins.name"), <input id="in" value={name} onChange={(e) => setName(e.target.value)} />)}
+                {L("it", t("ins.f.title"), <input id="it" value={F.title} onChange={(e) => set({ title: e.target.value })} />)}
+                {L("id", t("date"), <input id="id" type="date" value={F.iso} onChange={(e) => set({ iso: e.target.value })} />, false)}
+                {L("ih", t("ins.f.time"), <input id="ih" type="time" value={F.time} onChange={(e) => set({ time: e.target.value })} />, false)}
+                {L("iv", t("location"), <input id="iv" value={F.venue} onChange={(e) => set({ venue: e.target.value })} />)}
+                {L("ia", t("ins.f.address"), <input id="ia" value={F.address ?? ""} onChange={(e) => set({ address: e.target.value })} />)}
+                {L("im", t("ins.f.map"), <input id="im" type="url" placeholder="https://…" value={F.mapUrl ?? ""} onChange={(e) => set({ mapUrl: e.target.value })} />)}
+                {L("il", t("ins.f.lodging"), <input id="il" type="url" placeholder="https://…" value={F.lodging ?? ""} onChange={(e) => set({ lodging: e.target.value })} />)}
+                {L("iw", t("ins.f.wa"), <input id="iw" inputMode="tel" placeholder="5215512345678" value={F.whatsapp ?? ""} onChange={(e) => set({ whatsapp: e.target.value.replace(/[^\d+]/g, "") })} />, false)}
+                {L("ir", t("ins.f.deadline"), <input id="ir" type="date" value={F.deadline ?? ""} onChange={(e) => set({ deadline: e.target.value })} />, false)}
+                {L("ids", t("ins.f.dress"), <input id="ids" value={F.dress ?? ""} onChange={(e) => set({ dress: e.target.value })} />)}
+                {L("ig", t("ins.f.gifts"), <textarea id="ig" rows={2} value={F.gifts ?? ""} onChange={(e) => set({ gifts: e.target.value })} />)}
+                <div className="full"><label>{t("ins.f.itin")}</label>
+                  {moments.map((m, i) => (
+                    <div className="row" key={i} style={{ flexWrap: "nowrap", marginBottom: 6 }}>
+                      <input type="time" aria-label={t("ins.f.time")} style={{ width: 120 }} value={m.time} onChange={(e) => set({ itinerary: moments.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)) })} />
+                      <input aria-label={t("ins.f.moment")} value={m.title} onChange={(e) => set({ itinerary: moments.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} />
+                      <button type="button" className="ghost sm icon" aria-label={t("delete")} onClick={() => set({ itinerary: moments.filter((_, j) => j !== i) })}><X size={14} /></button>
+                    </div>
+                  ))}
+                  {moments.length < 8 && <button type="button" className="ghost sm" onClick={() => set({ itinerary: [...moments, { time: F.time, title: "" }] })}><Plus size={13} /> {t("ins.f.addmoment")}</button>}
+                </div>
+                {(["cover", "story"] as const).map((k) => (
+                  <div key={k}><label>{t("ins.f." + k)}</label>
+                    <div className="row" style={{ gap: 8 }}>
+                      {F[k] && <img src={F[k]} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10 }} />}
+                      <label className="addimg">{F[k] ? "↻" : "+"}<input type="file" accept="image/*" hidden onChange={(e) => { void photo(k, e.target.files); e.target.value = ""; }} /></label>
+                      {F[k] && <button type="button" className="ghost sm" onClick={() => set({ [k]: "" })}>{t("delete")}</button>}
+                    </div>
+                  </div>
                 ))}
+                {err && <p role="alert" className="full" style={{ color: "var(--danger)", margin: 0 }}>{err}</p>}
               </div>
-            )}
-            {mode === "ai" && tpl && <div className="row" style={{ marginBottom: 10 }}><span className="muted small grow">{t("ins.ai.done")}</span><button className="ghost sm" onClick={() => setTpl(null)}><Sparkles size={13} /> {t("ins.ai.again")}</button></div>}
-            {tpl && (
-              <div className="form">
-                <div className="full"><label htmlFor="in">{t("ins.name")}</label><input id="in" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-                <div className="full"><label htmlFor="it">{t("ins.f.title")}</label><input id="it" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
-                <div className="full"><label htmlFor="im">{t("ins.f.message")}</label><textarea id="im" rows={2} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} /></div>
-                <div><label htmlFor="id">{t("date")}</label><input id="id" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
-                <div><label htmlFor="iv">{t("location")}</label><input id="iv" value={f.venue} onChange={(e) => setF({ ...f, venue: e.target.value })} /></div>
-                <p className="muted small full" style={{ margin: 0 }}>{t("ins.basiconly")}</p>
+              <div>
+                <div className="muted small" style={{ marginBottom: 4 }}>{t("ins.preview")}</div>
+                <iframe title="preview" sandbox={invSandbox(shown)} srcDoc={invitationDoc(shown, "")} style={{ width: "100%", height: "66vh", border: "1px solid var(--line)", borderRadius: 12, background: "#fff" }} />
               </div>
-            )}
-          </div>
-          <div>
-            <div className="muted small" style={{ marginBottom: 4 }}>{t("ins.preview")}</div>
-            {tpl ? <Thumb html={templateHtml(tpl, ev, texts())} css="" title="preview" /> : <div className="invthumb" style={{ display: "grid", placeItems: "center" }}><span className="muted small">{t("ins.pick")}</span></div>}
-          </div>
-        </div>
+            </div>
+          )}
+          <div className="row" style={{ justifyContent: "flex-end", marginTop: 16 }}><button className="ghost" onClick={onClose}>{t("cancel")}</button><button disabled={!tpl || picking} onClick={save}>{edit ? t("save") : t("ins.use")}</button></div>
+        </>
       )}
-      {!designing && <div className="row" style={{ justifyContent: "flex-end", marginTop: 16 }}><button className="ghost" onClick={onClose}>{t("cancel")}</button><button disabled={!tpl} onClick={create}>{t("ins.use")}</button></div>}
     </Modal>
   );
 }
@@ -141,7 +204,7 @@ function RequestModal({ event, onClose }: { event: EventT; onClose: () => void }
   );
 }
 
-function InvCard({ inv, event, blocked, onOpen }: { inv: Invitation; event: EventT; blocked: string; onOpen: () => void }) {
+function InvCard({ inv, event, blocked, approved, onOpen, onEdit }: { inv: Invitation; event: EventT; blocked: string; approved: boolean; onOpen: () => void; onEdit?: () => void }) {
   const s = useStore();
   const { t, locale } = useT();
   const [open, setOpen] = useState(false);
@@ -155,6 +218,7 @@ function InvCard({ inv, event, blocked, onOpen }: { inv: Invitation; event: Even
       <div className="row between" style={{ marginTop: 8, flexWrap: "nowrap" }}>
         <div style={{ minWidth: 0 }}><b style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.name}</b><span className="muted small">{t("ins.src." + (inv.source ?? "template"))}</span></div>
         <span className="row" style={{ gap: 0, flexWrap: "nowrap" }}>
+          {onEdit && (approved ? <span className="row" title={t("ins.locked")} style={{ padding: "0 8px" }}><LockI /></span> : <button className="ghost sm" aria-label={t("ins.edit")} title={t("ins.edit")} onClick={onEdit}><Pencil size={15} /></button>)}
           <button className={`ghost sm likebtn${liked ? " on" : ""}`} aria-pressed={liked} aria-label={liked ? t("task.unlike") : t("task.like")} title={liked ? t("task.unlike") : t("task.like")} onClick={() => patch((i) => { const l = i.likes ?? []; i.likes = liked ? l.filter((x) => x !== who) : [...l, who]; })}><Heart size={15} fill={liked ? "currentColor" : "none"} /> {(inv.likes ?? []).length || ""}</button>
           <button className="ghost sm" aria-expanded={open} aria-label={t("tl.comments")} title={t("tl.comments")} onClick={() => setOpen(!open)}><MessageCircle size={15} /> {(inv.comments ?? []).length || ""}</button>
         </span>
@@ -186,21 +250,24 @@ export default function DesignTab({ event }: { event: EventT }) {
   const [menu, setMenu] = useState(false);
   const [modal, setModal] = useState<"request" | "template" | "ai" | null>(null);
   const [view, setView] = useState<Invitation | null>(null);
+  const [editing, setEditing] = useState<Invitation | null>(null);
   const all = s.invitations.filter((i) => i.eventId === event.id);
   const staff = all.filter((i) => i.source === "staff").slice(0, 3), mine = all.filter((i) => i.source !== "staff");
   const reqs = s.designRequests.filter((r) => r.eventId === event.id && !r.delivered);
   // only one invitation at a time can go through approval: while one is waiting or approved, the others are blocked
   const busy = s.signoffs.find((x) => x.eventId === event.id && x.scope === "invitations");
-  const blockedFor = (i: Invitation) => (busy && busy.subject !== i.name ? t("ins.oneapproval", { name: busy.subject }) : "");
+  // once one invitation is fully approved it is the one used on RSVP: no new ones, and the others cannot be approved
+  const approvedSo = s.signoffs.find((x) => x.eventId === event.id && x.scope === "invitations" && x.approvers.every((a) => a.at));
+  const isApproved = (i: Invitation) => !!approvedSo && approvedSo.subject === i.name;
+  const blockedFor = (i: Invitation) => (approvedSo && approvedSo.subject !== i.name ? t("ins.approved.blocked", { name: approvedSo.subject }) : busy && busy.subject !== i.name ? t("ins.oneapproval", { name: busy.subject }) : "");
   const deliver = (rid: string) => { // demo: stands in for the 1Plan designer delivering the designs
     update((st) => {
       const r = st.designRequests.find((x) => x.id === rid); if (!r) return;
       r.delivered = true;
       const ev = st.events.find((e) => e.id === event.id)!, now = Date.now();
       const x: TplText = { title: ev.name, message: t("design.msg.default"), date: new Date(ev.date + "T12:00").toLocaleDateString(st.lang === "en" ? "en" : st.lang, { dateStyle: "full" }), typeName: ev.type, venue: ev.venue };
-      (["classic", "floral", "gold"] as const).forEach((tp, n) => {
-        const color = n === 0 && r.colors.match(/#[0-9a-f]{6}/i)?.[0] || ev.design.color;
-        st.invitations.push({ id: uid(), eventId: event.id, name: `${t("ins.design")} ${n + 1}`, html: templateHtml(tp, { ...ev, design: { ...ev.design, color } }, x), css: "", createdAt: now, modifiedAt: now, versions: [], source: "staff", comments: [], likes: [], requestId: rid });
+      templatesFor(ev.type).slice(0, 3).forEach((tp, n) => {
+        st.invitations.push({ id: uid(), eventId: event.id, name: `${t("ins.design")} ${n + 1}`, html: templateHtml(tp, ev, x), css: "", createdAt: now, modifiedAt: now, versions: [], source: "staff", comments: [], likes: [], requestId: rid });
       });
     });
   };
@@ -210,7 +277,7 @@ export default function DesignTab({ event }: { event: EventT }) {
       <div className="row between" style={{ marginBottom: 14 }}>
         <p className="muted" style={{ margin: 0 }}>{t("ins.desc")}</p>
         <span style={{ position: "relative" }}>
-          <button aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}><Plus size={16} /> {t("ins.newinv")} <ChevronDown size={14} /></button>
+          <button aria-haspopup="menu" aria-expanded={menu} disabled={!!approvedSo} title={approvedSo ? t("ins.approved.new") : undefined} onClick={() => setMenu(!menu)}><Plus size={16} /> {t("ins.newinv")} <ChevronDown size={14} /></button>
           {menu && (
             <>
               <div className="menu-bg" onClick={() => setMenu(false)} />
@@ -223,6 +290,8 @@ export default function DesignTab({ event }: { event: EventT }) {
         </span>
       </div>
 
+      {approvedSo && <div role="status" className="card small" style={{ marginBottom: 14, boxShadow: "none", borderColor: "var(--teal)" }}>{t("ins.approved.note", { name: approvedSo.subject })}</div>}
+
       {reqs.map((r) => (
         <div key={r.id} className="card row between" style={{ marginBottom: 14, boxShadow: "none", borderColor: "var(--gold)" }}>
           <span><b>{t("ins.req.pending")}</b><br /><span className="muted small">{t("ins.req.pending.desc")}</span></span>
@@ -233,16 +302,17 @@ export default function DesignTab({ event }: { event: EventT }) {
       {staff.length > 0 && (<>
         <h3 style={{ margin: "0 0 8px" }}>{t("ins.staff")}</h3>
         <p className="muted small" style={{ marginTop: -4 }}>{t("ins.staff.desc")}</p>
-        <div className="invgrid wide" style={{ marginBottom: 22 }}>{staff.map((i) => <InvCard key={i.id} inv={i} event={event} blocked={blockedFor(i)} onOpen={() => setView(i)} />)}</div>
+        <div className="invgrid wide" style={{ marginBottom: 22 }}>{staff.map((i) => <InvCard key={i.id} inv={i} event={event} blocked={blockedFor(i)} approved={isApproved(i)} onOpen={() => setView(i)} onEdit={i.tpl && i.source !== "staff" ? () => setEditing(i) : undefined} />)}</div>
       </>)}
       {mine.length > 0 && (<>
         <h3 style={{ margin: "0 0 8px" }}>{t("ins.mine")}</h3>
-        <div className="invgrid wide" style={{ marginBottom: 22 }}>{mine.map((i) => <InvCard key={i.id} inv={i} event={event} blocked={blockedFor(i)} onOpen={() => setView(i)} />)}</div>
+        <div className="invgrid wide" style={{ marginBottom: 22 }}>{mine.map((i) => <InvCard key={i.id} inv={i} event={event} blocked={blockedFor(i)} approved={isApproved(i)} onOpen={() => setView(i)} onEdit={i.tpl && i.source !== "staff" ? () => setEditing(i) : undefined} />)}</div>
       </>)}
       {all.length === 0 && reqs.length === 0 && <div className="card muted">{t("ins.empty")}</div>}
 
       {modal === "request" && <RequestModal event={event} onClose={() => setModal(null)} />}
       {(modal === "template" || modal === "ai") && <CreateModal event={event} mode={modal} onClose={() => setModal(null)} onCreated={created} />}
+      {editing && <CreateModal event={event} mode="template" edit={editing} onClose={() => setEditing(null)} onCreated={() => setEditing(null)} />}
       {view && <PreviewModal inv={view} onClose={() => setView(null)} />}
     </>
   );

@@ -1,3 +1,4 @@
+import { BUILTIN_TEMPLATES } from "../../src/templates";
 import { useSyncExternalStore } from "react";
 import { hashPassword, newTotpSecret } from "./crypto";
 import { KB_VERSION, seedArticles } from "./kbSeed";
@@ -55,7 +56,9 @@ export type TplStatus = "draft" | "published";
 export type TplSource = "template" | "request" | "draft";
 export const SOURCE_LABEL: Record<TplSource, string> = { template: "Template", request: "Event request", draft: "Draft" };
 export interface TplComment { id: string; by: string; at: number; text: string }
-export interface Template { id: string; name: string; category: string; status: TplStatus; html: string; css: string; version: number; updatedAt: number; publishedAt: number; by: string; source: TplSource; tags: string[]; comments: TplComment[]; taskId?: string; versions?: { id: string; at: number; name: string; html: string; css: string }[] }
+export interface Template { id: string; name: string; category: string; status: TplStatus; html: string; css: string; version: number; updatedAt: number; publishedAt: number; by: string; source: TplSource; tags: string[]; comments: TplComment[]; taskId?: string; versions?: { id: string; at: number; name: string; html: string; css: string }[];
+  /** Full-page template (a complete HTML document with its own data block). Built-in ones ship with 1Plan; staff can edit or unpublish them but not delete them. */
+  full?: boolean; builtin?: string; suits?: string[]; baseHash?: string; edited?: boolean }
 export interface ApiKey { id: string; name: string; service: string; last4: string; status: "active" | "revoked"; createdAt: number; rotatedAt: number }
 /** Customer plans of 1Plan. Ids stay basic / planner / pro (as stored by the customer app); the names customers see are Essential / Premier / Unlimited. "none" = no active plan or trial. */
 export type CustomerPlan = "none" | "basic" | "planner" | "pro";
@@ -121,6 +124,17 @@ const H = 3600_000;
 let state: State = load() ?? ({ seeded: 0 } as State);
 const subs = new Set<() => void>();
 function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? migrate(JSON.parse(r) as State) : null; } catch { return null; } }
+export const hashDoc = (str: string) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h >>> 0); };
+/** The full-page templates that ship with 1Plan show up in the library as published designs. A newer shipped design replaces a copy nobody has edited. */
+function ensureBuiltins(s: State) {
+  if (!s.templates) return;
+  const now = Date.now();
+  for (const b of BUILTIN_TEMPLATES) {
+    const base = hashDoc(b.html), t = s.templates.find((x) => x.id === b.id);
+    if (!t) s.templates.push({ id: b.id, name: b.name, category: b.category, status: "published", html: b.html, css: "", version: 1, updatedAt: now, publishedAt: now, by: "System", source: "template", tags: [b.category, "full page", "built-in"], comments: [], full: true, builtin: b.id, suits: b.suits, baseHash: base });
+    else if (t.builtin && !t.edited && t.baseHash !== base) { t.html = b.html; t.baseHash = base; t.version += 1; t.updatedAt = now; }
+  }
+}
 /** Brings data saved by an older version up to date (new plans of 1Plan) without touching anything else. */
 function migrate(s: State): State {
   if (s.config?.plans && "free" in s.config.plans) s.config.plans = structuredClone(DEFAULT_PLANS); // old Free / Planner / Pro price list
@@ -131,6 +145,7 @@ function migrate(s: State): State {
     s.kb = [...seedArticles(now, "Ana Ruiz"), ...s.kb.filter((a) => !(/^kb\d+$/.test(a.id) && a.updatedAt === s.kbSeededAt))];
     s.kbSeededAt = now; s.kbVersion = KB_VERSION;
   }
+  ensureBuiltins(s);
   return s;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* quota */ } }
@@ -263,6 +278,13 @@ export function addTemplate(by: string, name: string, category: string, html = B
   return t;
 }
 
+/** A full-page template added by staff (imported .html). Starts as a draft; publish it to make it appear in the customer app. */
+export function addFullTemplate(by: string, name: string, category: string, html: string): Template {
+  const t: Template = { id: uid(), name, category, status: "draft", html, css: "", version: 1, updatedAt: Date.now(), publishedAt: 0, by, source: "template", tags: [category, "full page"], comments: [], full: true, suits: [category] };
+  update((s) => { s.templates.unshift(t); });
+  return t;
+}
+
 // ───────── Seed (demo data) ─────────
 export const DEMO_PASSWORD = "Staff-Demo-2026!"; // demo-only accounts; real accounts are created by a super admin
 const demoStaff: [string, string, Role][] = [
@@ -336,4 +358,5 @@ export async function ensureSeed() {
     const wt = (name: string, ownerId: string, statusId: string, priority: WPriority, due: number, tags: string[]): WorkTask => ({ id: uid(), ownerId, name, statusId, description: "", start: new Date(now).toISOString().slice(0, 10), due: new Date(now + due * 24 * H).toISOString().slice(0, 10), priority, tags, assignees: [ownerId], done: statusId === "done", likes: [], notes: [], history: [{ id: uid(), at: now, by: "System", text: "Task created" }], createdAt: now });
     s.work.push(wt("Review pricing page copy", adm.id, "todo", "medium", 3, ["admin"]), wt("Rotate the email provider key", adm.id, "doing", "high", 1, ["admin", "urgent"]), wt("Update the payment-failed macro", sup.id, "todo", "medium", 2, ["support"]), wt("Call back Carlos about the locked account", sup.id, "doing", "urgent", 0, ["support", "urgent"]), wt("Create 3 summer templates", dsg.id, "doing", "high", 5, ["design"]), wt("Refresh the Garden Party thumbnail", dsg.id, "todo", "low", 7, ["design"]));
   });
+  update((st) => ensureBuiltins(st));
 }

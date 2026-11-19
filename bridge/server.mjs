@@ -24,7 +24,7 @@ const cleanCoupons = (v) => { const o = {}; if (v && typeof v === "object") for 
 const send = (res, code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
 const readBody = (req) => new Promise((ok, bad) => {
   let n = 0; const chunks = [];
-  req.on("data", (c) => { n += c.length; if (n > 2_000_000) { bad(new Error("too large")); req.destroy(); } else chunks.push(c); });
+  req.on("data", (c) => { n += c.length; if (n > 8_000_000) { bad(new Error("too large")); req.destroy(); } else chunks.push(c); });
   req.on("end", () => { try { ok(JSON.parse(Buffer.concat(chunks).toString() || "{}")); } catch (e) { bad(e); } });
 });
 

@@ -71,7 +71,7 @@ async function push() {
   const body = JSON.stringify({
     coupons: Object.fromEntries((s.config.coupons ?? []).filter((c) => c.active && (!c.expires || c.expires >= new Date().toISOString().slice(0, 10))).map((c) => [c.code, c.percent])),
     plans: s.config.plans, web: s.config.web, design: s.config.design,
-    templates: s.templates.filter((t) => t.status === "published").map((t) => ({ id: t.id, name: t.name, category: t.category, html: t.html, css: t.css, version: t.version })),
+    templates: s.templates.filter((t) => t.status === "published").map((t) => ({ id: t.id, name: t.name, category: t.category, html: t.html, css: t.css, version: t.version, full: !!t.full, suits: t.suits })),
     statuses,
   });
   if (body === lastPushed) return;

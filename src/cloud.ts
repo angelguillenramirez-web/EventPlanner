@@ -88,7 +88,7 @@ async function loadFor(user: User, fromLink: boolean) {
 export function initCloud() {
   const params = new URLSearchParams(location.search);
   const tokenHash = params.get("token_hash"), linkType = params.get("type");
-  const hashFlow = !!tokenHash && ["recovery", "signup", "email", "invite", "magiclink"].includes(linkType ?? "");
+  const hashFlow = !!tokenHash && ["recovery", "signup", "email", "invite", "magiclink", "email_change"].includes(linkType ?? "");
   const fromLink = params.has("code") || (hashFlow && linkType !== "recovery");
   const clean = () => { if (location.search) history.replaceState(null, "", location.pathname + location.hash); };
   // A link that Supabase rejected (expired, already used) comes back as ?error=… or #error=…: say so instead of showing the home page.
@@ -98,7 +98,7 @@ export function initCloud() {
   if (hashFlow) { // link built from a plain token (works in any browser, and mail scanners cannot use it up): the app verifies it itself
     if (linkType === "recovery") recovery = true;
     clean();
-    void supabase.auth.verifyOtp({ token_hash: tokenHash!, type: linkType as "recovery" | "signup" | "email" | "invite" | "magiclink" }).then(({ error }) => { if (error) { recovery = false; showLinkError("expired"); } });
+    void supabase.auth.verifyOtp({ token_hash: tokenHash!, type: linkType as "recovery" | "signup" | "email" | "invite" | "magiclink" | "email_change" }).then(({ error }) => { if (error) { recovery = false; showLinkError("expired"); } });
   } else if (linkErr) setTimeout(() => showLinkError("expired"), 0);
   else if (params.has("code")) void supabase.auth.getSession().then(({ data }) => { if (!data.session) showLinkError("nosession"); }); // the code could not be exchanged (e.g. opened in another browser)
 
@@ -108,6 +108,11 @@ export function initCloud() {
     setTimeout(async () => {
       if (event === "PASSWORD_RECOVERY") { clean(); if (session?.user) await loadFor(session.user, false); go("/set-password"); return; }
       if (event === "SIGNED_OUT") { if (ready || loadedFor) wipe(); return; }
+      if (event === "USER_UPDATED" && session?.user?.email && ready && loadedFor === session.user.id) { // the new e-mail address was confirmed from the link
+        const em = session.user.email;
+        update((st) => { st.userEmail = em; const a = st.accounts.find((x) => x.id === PREFIX + session.user.id); if (a) a.email = em; });
+        return;
+      }
       if (session?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) { await loadFor(session.user, fromLink); if (recovery && event === "SIGNED_IN") go("/set-password"); clean(); }
     }, 0);
   });
@@ -148,6 +153,10 @@ export const cloudSignUp = (v: { name: string; last: string; email: string; pass
 export const cloudSignIn = (email: string, password: string) => supabase.auth.signInWithPassword({ email, password });
 export const cloudResend = (email: string) => supabaseMailer.auth.resend({ type: "signup", email, options: { emailRedirectTo: home() } });
 export const cloudResetRequest = (email: string) => supabaseMailer.auth.resetPasswordForEmail(email, { redirectTo: home() });
+/** Re-checks the password of the signed-in user before a sensitive change. Uses a throw-away client, so the real session is untouched. */
+export const cloudVerifyPassword = (email: string, password: string) => supabaseMailer.auth.signInWithPassword({ email, password });
+/** Asks Supabase to change the login e-mail: the address only changes after the link sent to the NEW address is opened. */
+export const cloudChangeEmail = (email: string) => supabase.auth.updateUser({ email }, { emailRedirectTo: home() });
 export const cloudSetPassword = async (password: string) => { const r = await supabase.auth.updateUser({ password }); if (!r.error) recovery = false; return r; };
 
 /** Turns a Supabase error into one of our dictionary keys. */
