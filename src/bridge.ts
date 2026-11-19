@@ -17,6 +17,13 @@ export interface PublicData {
 
 /* Support goes through Supabase when the customer has a real account (works online); local test accounts keep using the bridge above. */
 const isUuid = (x: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
+/** The customer has the replies on screen: tell the database (once per new reply) so the support team can see they were read. Harmless if the database function is not installed yet. */
+const marked = new Map<string, number>();
+function markSeen(thread: string, staffReplies: number) {
+  if (!staffReplies || (marked.get(thread) ?? 0) >= staffReplies) return;
+  marked.set(thread, staffReplies);
+  void Promise.resolve(supabase.rpc("mark_messages_seen", { p_thread: thread })).then((r) => { if (r.error) { console.warn("1Plan: could not record the read time:", r.error.message); marked.delete(thread); } }, () => marked.delete(thread));
+}
 const sbUser = async () => { try { return (await supabase.auth.getSession()).data.session?.user ?? null; } catch { return null; } };
 
 export async function sendRequest(b: { kind: "support" | "design"; title: string; description: string; customerName: string; customerEmail: string }): Promise<string | null> {
@@ -44,6 +51,7 @@ export async function fetchStatuses(refs: string[]): Promise<Record<string, Remo
       const { data: th } = await supabase.from("support_threads").select("id, ref, status").in("ref", refs);
       if (th?.length) {
         const { data: ms } = await supabase.from("support_messages").select("thread_id, body, created_at").in("thread_id", th.map((x) => x.id)).eq("from_staff", true).order("created_at");
+        for (const t of th) markSeen(t.id as string, (ms ?? []).filter((m) => m.thread_id === t.id).length);
         for (const t of th) out[t.ref as string] = { taskId: t.ref as string, status: t.status as string, replies: (ms ?? []).filter((m) => m.thread_id === t.id).map((m) => ({ at: Date.parse(m.created_at as string), text: m.body as string })) };
         rest = refs.filter((r) => !out[r]);
       }
@@ -90,6 +98,7 @@ export async function fetchChat(chatId: string): Promise<{ messages: LiveMsg[]; 
       const { data: t } = await supabase.from("support_threads").select("closed").eq("id", chatId).maybeSingle();
       if (!t) return null;
       const { data: ms } = await supabase.from("support_messages").select("id, from_staff, body, created_at").eq("thread_id", chatId).order("created_at");
+      markSeen(chatId, (ms ?? []).filter((m) => m.from_staff).length);
       return { closed: !!t.closed, messages: (ms ?? []).map((m) => ({ id: m.id as string, from: m.from_staff ? "support" : "me", text: m.body as string, at: Date.parse(m.created_at as string) })) };
     } catch { return null; }
   }

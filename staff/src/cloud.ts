@@ -216,6 +216,13 @@ function threadSync(role: string) {
           sentState.set(t.id, sig);
         }
       }
+      // when the customer opened our replies ("Seen" time, shown to staff only)
+      const { data: seenRows } = await supabase.from("support_messages").select("local_id, seen_at").eq("from_staff", true).not("seen_at", "is", null).order("seen_at", { ascending: false }).limit(300);
+      if (seenRows?.length) {
+        const seen = new Map(seenRows.filter((r) => r.local_id).map((r) => [r.local_id as string, Date.parse(r.seen_at as string)]));
+        const need = getState().tasks.some((t) => t.notes.some((n) => !n.internal && !n.customer && !n.seenAt && seen.has(n.id)));
+        if (need) update((s) => { for (const t of s.tasks) for (const n of t.notes) if (!n.internal && !n.customer && !n.seenAt && seen.has(n.id)) n.seenAt = seen.get(n.id); });
+      }
       if (status.note.startsWith("support")) setStatus({ kb: status.kb, note: "" });
     } catch (e) { setStatus({ kb: status.kb, note: "support: " + (e as Error).message }); }
     finally { busy = false; }

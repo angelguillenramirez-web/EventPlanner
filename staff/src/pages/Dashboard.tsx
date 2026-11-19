@@ -46,7 +46,8 @@ export default function Dashboard({ me }: { me: Staff }) {
   );
 }
 
-export function TaskTable({ rows, me, showOwner }: { rows: Task[]; me: Staff; showOwner?: boolean }) {
+/** `statusReadOnly`: show the status as a tag only (the Team queue); otherwise the owner or a super admin can change it from the row. */
+export function TaskTable({ rows, me, showOwner, statusReadOnly }: { rows: Task[]; me: Staff; showOwner?: boolean; statusReadOnly?: boolean }) {
   const s = useStore();
   useSeen();
   if (!rows.length) return <p className="muted" style={{ margin: 8 }}>Nothing here.</p>;
@@ -64,7 +65,7 @@ export function TaskTable({ rows, me, showOwner }: { rows: Task[]; me: Staff; sh
               {showOwner && <td className="small">{s.staff.find((m) => m.id === t.assigneeId)?.name ?? <i className="muted">unassigned</i>}</td>}
               <td><PriorityBadge p={t.priority} /></td>
               <td onClick={(e) => e.stopPropagation()}>
-                {t.assigneeId === me.id || me.role === "super_admin"
+                {!statusReadOnly && (t.assigneeId === me.id || me.role === "super_admin")
                   ? <select aria-label={`Status of ${t.id}`} style={{ padding: "3px 6px", width: "auto" }} value={t.status} onChange={(e) => setStatus(t.id, me.name, e.target.value as TaskStatus)}>{STATUSES.map((x) => <option key={x} value={x}>{STATUS_LABEL[x]}</option>)}</select>
                   : <StatusBadge s={t.status} />}
               </td>

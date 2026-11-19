@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { changePassword, checkCode, checkCredentials, setSupabasePassword, signInSupabase } from "./auth";
 import { SUPABASE_AUTH, supabase } from "./supabase";
 import { otpauthUri, totpAt, totpStep } from "./crypto";
-import { DEMO_PASSWORD, getState, resetAll, ROLE_LABEL, type Staff } from "./store";
+import { DEMO_PASSWORD, getState, resetAll, ROLE_LABEL, takeOutReason, type Staff } from "./store";
 import { Copy, Logo } from "./ui";
 import { Lock } from "./icons";
 
@@ -14,6 +14,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
   const [who, setWho] = useState<Staff | null>(null);
   const [f, setF] = useState({ email: "", pw: "", code: "", np: "", np2: "" });
   const [err, setErr] = useState("");
+  const [outWhy] = useState(() => takeOutReason()); // set when the console signed the person out by itself
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
   const next = (m: Staff) => setStep(m.mustChangePassword ? "change" : m.totpEnrolled ? "code" : "enroll");
@@ -62,6 +63,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
         <div className="card">
           <div className="row" style={{ marginBottom: 6 }}><Logo height={30} /><b style={{ fontSize: "1.1rem" }}>· Staff</b></div>
           <p className="muted small" style={{ marginTop: 0 }}>Authorized employees only. Access is logged.</p>
+          {outWhy && step === "creds" && <div className="warn small" role="status">You were signed out automatically: {outWhy}.</div>}
 
           {step === "creds" && (
             <form onSubmit={creds} className="grid" style={{ gap: 12 }}>

@@ -1,11 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { bridgeLink, onBridge, startSync } from "./bridge";
-import { hasSupabaseSession, signOut } from "./auth";
+import { hasSupabaseSession, loadStaff, signOut } from "./auth";
 import { SUPABASE_AUTH, supabase } from "./supabase";
 import { cloudStatus, onCloud, startCloud } from "./cloud";
 import { BarChart3, BookOpen, Brush, ClipboardCheck, Gauge, KeyRound, LifeBuoy, ListChecks, LogOut, MessageCircle, Moon, Palette, ScrollText, Sun, UserCircle, Users, Globe, DollarSign, Inbox } from "./icons";
 import Login from "./Login";
-import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, unreadTotal, newRequests, useSeen, update, useStore, type Presence, type Role } from "./store";
+import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, setOutReason, getState, unreadTotal, newRequests, useSeen, update, useStore, type Presence, type Role } from "./store";
 import { Avatar, go, Logo, Modal, useRoute } from "./ui";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
@@ -65,7 +65,7 @@ export default function App() {
     const bump = () => touchSession();
     const evs = ["click", "keydown", "mousemove"] as const;
     evs.forEach((e) => addEventListener(e, bump, { passive: true }));
-    const i = setInterval(() => { if (!getSession()) { if (me) setPresence(me.id, "offline"); setSess(null); } }, 5000);
+    const i = setInterval(() => { if (!getSession()) { if (me) setPresence(me.id, "offline"); setOutReason("15 minutes without activity"); setSess(null); } }, 5000);
     return () => { evs.forEach((e) => removeEventListener(e, bump)); clearInterval(i); };
   }, [me]);
   // keep prices / templates / request statuses in sync with the 1Plan app, and receive its requests
@@ -76,12 +76,18 @@ export default function App() {
   // real accounts: if the Supabase session ends (expired, signed out in another tab) the console locks too
   useEffect(() => {
     if (!SUPABASE_AUTH || !me) return;
-    hasSupabaseSession().then((ok) => { if (!ok) { setSession(null); setSess(null); } });
-    const { data } = supabase.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") { setSession(null); setSess(null); } });
+    hasSupabaseSession().then((ok) => { if (!ok) { setOutReason("the sign-in with the server is no longer valid (session expired or ended elsewhere)"); setSession(null); setSess(null); } });
+    const { data } = supabase.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") { setOutReason("the server ended the session"); setSession(null); setSess(null); } });
     return () => data.subscription.unsubscribe();
   }, [me?.id]);
   // deactivated or removed while signed in → out
-  useEffect(() => { if (sess && !me) { setSession(null); setSess(null); } }, [sess, me]);
+  useEffect(() => {
+    if (!sess || me) return;
+    const out = (why: string) => { setOutReason(why); setSession(null); setSess(null); };
+    // real accounts: the saved staff list may simply be stale or empty after a reload — read it from the server before deciding
+    if (SUPABASE_AUTH) void loadStaff().then(() => { if (!getState().staff.some((m) => m.id === sess.staffId && m.active)) out("this account is not an active staff member"); });
+    else out("this account was removed or deactivated");
+  }, [sess, me]);
 
   useSeen();
   const fresh = me ? newRequests(s, me) : [];

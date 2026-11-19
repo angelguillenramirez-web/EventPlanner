@@ -33,7 +33,7 @@ export type TaskStatus = "new" | "assigned" | "in_progress" | "waiting" | "done"
 export const STATUSES: TaskStatus[] = ["new", "assigned", "in_progress", "waiting", "done"];
 export const STATUS_LABEL: Record<TaskStatus, string> = { new: "New", assigned: "Assigned", in_progress: "In progress", waiting: "Waiting on customer", done: "Done" };
 export type Priority = "low" | "normal" | "high" | "urgent";
-export interface TaskNote { id: string; by: string; at: number; text: string; internal: boolean; customer?: boolean }
+export interface TaskNote { id: string; by: string; at: number; text: string; internal: boolean; customer?: boolean; /** When the customer opened a reply (set by the 1Plan app through Supabase; shown to staff only). */ seenAt?: number }
 export interface TaskEvent { at: number; by: string; text: string }
 export interface Task {
   id: string; kind: TaskKind; title: string; description: string; requester: string; customerId: string; priority: Priority;
@@ -128,8 +128,9 @@ const H = 3600_000;
 let state: State = load() ?? ({ seeded: 0 } as State);
 const subs = new Set<() => void>();
 export const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
-function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? migrate(JSON.parse(r) as State) : null; } catch { return null; } }
-export const hashDoc = (str: string) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h >>> 0); };
+function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? migrate(JSON.parse(r) as State) : null; } catch (e) { console.error("643: saved data could not be loaded", e); return null; } }
+// a function declaration (not a const): the saved data is loaded while this module is still starting up, and loading uses it
+export function hashDoc(str: string) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h >>> 0); }
 /** The full-page templates that ship with 1Plan show up in the library as published designs. A newer shipped design replaces a copy nobody has edited. */
 function ensureBuiltins(s: State) {
   if (!s.templates) return;
@@ -170,6 +171,9 @@ export function getSession(): Session | null {
 export function setSession(staffId: string | null) {
   try { if (staffId) sessionStorage.setItem(SKEY, JSON.stringify({ staffId, expires: Date.now() + IDLE_MS })); else sessionStorage.removeItem(SKEY); } catch { /* ignore */ }
 }
+/** Why the console signed someone out by itself (shown on the sign-in page, so a surprise sign-out can be explained). */
+export const setOutReason = (r: string) => { try { sessionStorage.setItem("ep-staff.out", r); } catch { /* ignore */ } };
+export const takeOutReason = () => { try { const r = sessionStorage.getItem("ep-staff.out"); sessionStorage.removeItem("ep-staff.out"); return r ?? ""; } catch { return ""; } };
 export const touchSession = () => { const s = getSession(); if (s) setSession(s.staffId); };
 
 // ───────── Audit + tasks ─────────

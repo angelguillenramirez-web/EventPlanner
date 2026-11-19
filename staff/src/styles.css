@@ -140,3 +140,77 @@ th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align
 /* new requests / customer messages not yet opened */
 .badge.b-new { background: var(--rose); color: #fff; font-weight: 700; }
 tr.isnew td:first-child { box-shadow: inset 3px 0 0 var(--rose); } tr.isnew td b { font-weight: 800; }
+
+/* request page: internal notes sit beside the conversation; history is collapsed */
+.cv-notes .cv-internal { max-width: none; } .cv-notes h3 { display: inline-flex; align-items: center; gap: 6px; } .cv-notes textarea { min-height: 0; }
+details.hist summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; } details.hist summary::-webkit-details-marker { display: none; }
+details.hist summary::before { content: "▸"; color: var(--muted); } details.hist[open] summary::before { content: "▾"; } details.hist[open] summary { margin-bottom: 8px; }
+.cv-composer.reply .cv-hint { margin-bottom: 2px; }
+
+/* request page: compact request card and a tidier status card */
+.rq { padding: 12px 14px; display: grid; gap: 8px; }
+.rq-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rq-from { display: flex; align-items: center; gap: 10px; min-width: 0; } .rq-from b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rq-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; } .rq-desc.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.linkbtn { justify-self: start; background: none; border: 0; padding: 0; color: var(--teal); font-weight: 600; font-size: .8rem; box-shadow: none; }
+.rqside { display: grid; gap: 12px; padding: 14px; align-content: start; grid-auto-rows: min-content; }
+.rq-field label { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.rq-owner { display: flex; align-items: center; gap: 8px; } .rq-owner select { flex: 1; min-width: 0; }
+.rq-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.rq-done { width: 100%; padding: 10px; font-weight: 700; }
+.rq-resolved { text-align: center; padding: 8px; border-radius: 10px; background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); font-weight: 600; }
+.rq-foot { text-align: center; margin-top: -4px; }
+
+/* smaller request title and a more compact status card */
+h1.rq-title { margin: 0; font-size: 1.05rem; font-weight: 700; line-height: 1.3; } h1.rq-title .mono { font-weight: 600; color: var(--muted); }
+.rqside { gap: 8px; padding: 10px 12px; }
+.rqside .rq-field label { font-size: .64rem; margin-bottom: 2px; }
+.rqside select { padding: 5px 8px; font-size: .85rem; }
+.rqside .rq-owner { gap: 6px; } .rqside .rq-owner .avatar { width: 24px !important; height: 24px !important; font-size: .55rem !important; }
+.rqside .rq-actions { gap: 5px; } .rqside .rq-actions button { padding: 3px 8px; font-size: .78rem; }
+.rqside .rq-done { padding: 6px; font-size: .85rem; }
+.rqside .rq-resolved { padding: 5px; font-size: .82rem; } .rqside .rq-foot { margin-top: -2px; font-size: .72rem; }
+
+/* the request name and its controls are one header bar across the top */
+.rq-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; padding: 10px 14px; margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.rq-header-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.rq-controls { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.rq-controls .rq-field label { font-size: .64rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); display: block; margin-bottom: 2px; }
+.rq-controls select { padding: 5px 8px; font-size: .85rem; width: auto; min-width: 130px; }
+.rq-controls .rq-owner { display: flex; align-items: center; gap: 6px; }
+.rq-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .rq-btns button { padding: 5px 10px; font-size: .8rem; }
+.rq-resolved { padding: 5px 10px; border-radius: 8px; background: color-mix(in srgb, var(--green) 14%, var(--surface)); color: var(--green); font-weight: 600; font-size: .82rem; }
+.rq-sub { flex-basis: 100%; display: flex; gap: 14px; flex-wrap: wrap; }
+
+.rq-controls .rq-info { min-height: 31px; font-size: .88rem; font-weight: 500; }
+.rq-confirm { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 10px; background: color-mix(in srgb, var(--amber) 16%, var(--surface)); border: 1px dashed color-mix(in srgb, var(--amber) 75%, var(--line)); align-self: flex-end; }
+.rq-confirm button { padding: 4px 10px; font-size: .8rem; }
+
+/* owner / status / actions panel on the right, in the platform colours */
+.rqpanel { padding: 0; overflow: hidden; border-top: 3px solid var(--teal); }
+.rqpanel-head { padding: 7px 12px; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: color-mix(in srgb, var(--teal) 14%, var(--surface)); }
+.rqpanel-body { padding: 10px 12px 12px; display: grid; gap: 10px; }
+.rqpanel .rq-field label { display: block; font-size: .64rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 3px; }
+.rqpanel select { width: 100%; padding: 6px 8px; font-size: .86rem; }
+.rqpanel .rq-info { display: flex; align-items: center; gap: 8px; min-height: 30px; font-weight: 600; }
+.rqpanel select.stsel { border-left: 5px solid var(--muted); font-weight: 600; }
+.rqpanel select.stsel[data-st="new"] { border-left-color: var(--rose); } .rqpanel select.stsel[data-st="assigned"] { border-left-color: var(--amber); }
+.rqpanel select.stsel[data-st="in_progress"] { border-left-color: var(--teal); } .rqpanel select.stsel[data-st="waiting"] { border-left-color: #4EB1E8; } .rqpanel select.stsel[data-st="done"] { border-left-color: var(--green); }
+.rqpanel select.actsel { border-color: var(--teal); background: color-mix(in srgb, var(--teal) 9%, var(--surface)); font-weight: 600; }
+.rqpanel .rq-confirm { margin-top: 6px; flex-wrap: wrap; align-self: auto; } .rqpanel .rq-resolved { display: inline-block; margin-top: 6px; }
+.rqpanel .rq-sub { display: grid; gap: 2px; padding-top: 2px; border-top: 1px solid var(--line); }
+
+/* other staff viewing the same request: small round profile pictures; the name shows on hover */
+.rq-viewers { display: flex; align-items: center; gap: 6px; margin-left: auto; padding: 3px 10px 3px 8px; border-radius: 99px; background: color-mix(in srgb, var(--teal) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--teal) 55%, var(--line)); color: var(--ink); }
+.rq-viewer { display: inline-flex; cursor: default; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); } .rq-viewer + .rq-viewer { margin-left: -6px; }
+
+.rq-created { white-space: nowrap; font-size: .72rem; }
+
+/* request page: use the top of the screen better */
+.rq-header { margin-top: -12px; padding: 6px 12px; gap: 4px 14px; }
+
+/* the request header stays visible while the page scrolls */
+.rq-header { position: sticky; top: 0; z-index: 20; box-shadow: 0 6px 12px -8px rgba(0, 0, 0, .25); }
+@media (max-width: 860px) { .rq-header { top: 56px; margin-top: 0; } } /* below the phone top bar */
+
+.cv-seen { font-size: .62rem; color: var(--muted); margin-top: 2px; text-align: right; }

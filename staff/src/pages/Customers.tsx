@@ -8,8 +8,10 @@ import { refreshCustomers } from "../cloud";
 
 /** Support tools: account lookup, reset, unblock, payment history and payment issues, usage guides. */
 export default function Customers({ me, route }: { me: Staff; route: string }) {
-  const id = route.split("/")[2];
-  return id ? <Account me={me} id={id} /> : <List />;
+  const parts = route.split("/");
+  const id = parts[2];
+  const from = parts[3] === "from" ? parts[4] : ""; // "#/customers/<id>/from/<request>": opened from a request, so we can go back to it
+  return id ? <Account me={me} id={id} from={from} /> : <List />;
 }
 
 const stBadge = (st: Customer["status"]) => <span className="badge" style={st === "active" ? { background: "#dcf3e8", color: "#1f7a52" } : { background: "#fde3e8", color: "#a3304a" }}>{st}</span>;
@@ -47,7 +49,7 @@ const GUIDES: [string, string][] = [
   ["Reset my password", "On the sign-in page choose 'Forgot password'. If you no longer have access to your email, contact support so we can verify you and issue a temporary password."],
 ];
 
-function Account({ me, id }: { me: Staff; id: string }) {
+function Account({ me, id, from }: { me: Staff; id: string; from: string }) {
   const s = useStore();
   const c = s.customers.find((x) => x.id === id);
   const [msg, setMsg] = useState("");
@@ -79,7 +81,7 @@ function Account({ me, id }: { me: Staff; id: string }) {
   const tasks = s.tasks.filter((t) => t.customerId === c.id);
   return (
     <>
-      <p><a href="#/customers">← Customers</a></p>
+      <p className="row" style={{ gap: 14 }}>{from && <a className="btn sm" href={"#/tasks/" + from}>← Back to request <span className="mono">{from}</span></a>}<a href="#/customers">{from ? "All customers" : "← Customers"}</a></p>
       <div className="row between"><h1 style={{ margin: 0 }}>{c.name}</h1><div className="row">{stBadge(c.status)}<span className="badge">{PLAN_LABEL[c.plan]}</span></div></div>
       <p className="muted">{c.email} · member since {fmtDate(c.createdAt)} · last login {fmtDate(c.lastLogin)}</p>
       {msg && <div className="okbox" role="status" style={{ marginBottom: 14 }}>{msg}</div>}

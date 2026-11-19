@@ -82,6 +82,7 @@ function finishSignIn(m: Staff) {
 export async function loadStaff(): Promise<string | null> {
   const { data, error } = await supabase.from("staff_members").select("*").order("created_at");
   if (error || !data) return "Could not load the staff list.";
+  if (!data.length) return "The staff list came back empty."; // never replace the list with nothing (e.g. a request sent before the session was ready)
   update((s) => { const old = new Map(s.staff.map((x) => [x.id, x])); s.staff = (data as Row[]).map((r) => toStaff(r, { presence: old.get(r.user_id)?.presence ?? "offline", lastLogin: old.get(r.user_id)?.lastLogin ?? 0 })); });
   return null;
 }
