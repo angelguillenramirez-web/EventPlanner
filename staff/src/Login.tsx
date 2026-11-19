@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { changePassword, checkCode, checkCredentials } from "./auth";
+import { changePassword, checkCode, checkCredentials, setSupabasePassword, signInSupabase } from "./auth";
+import { SUPABASE_AUTH, supabase } from "./supabase";
 import { otpauthUri, totpAt, totpStep } from "./crypto";
 import { DEMO_PASSWORD, getState, resetAll, ROLE_LABEL, type Staff } from "./store";
 import { Copy, Logo } from "./ui";
@@ -19,6 +20,13 @@ export default function Login({ onDone }: { onDone: () => void }) {
 
   const creds = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setBusy(true);
+    if (SUPABASE_AUTH) {
+      const r = await signInSupabase(f.email, f.pw);
+      setBusy(false);
+      if (typeof r === "object") { set("pw", ""); return setErr(r.error); }
+      if (r === "change") return setStep("change");
+      return onDone();
+    }
     const r = await checkCredentials(f.email, f.pw);
     setBusy(false);
     if (!r.ok) return setErr(r.error);
@@ -28,6 +36,12 @@ export default function Login({ onDone }: { onDone: () => void }) {
     e.preventDefault(); setErr("");
     if (f.np !== f.np2) return setErr("The two passwords do not match.");
     setBusy(true);
+    if (SUPABASE_AUTH) {
+      const bad = await setSupabasePassword(f.np);
+      setBusy(false);
+      if (bad) return setErr(bad);
+      return onDone();
+    }
     const r = await changePassword(who!.id, f.pw, f.np);
     setBusy(false);
     if (r) return setErr(r);
@@ -79,9 +93,9 @@ export default function Login({ onDone }: { onDone: () => void }) {
               <button disabled={busy}>{step === "enroll" ? "Verify and sign in" : "Verify"}</button>
             </form>
           )}
-          {step !== "creds" && <p style={{ marginBottom: 0 }}><a href="#/" onClick={(e) => { e.preventDefault(); setStep("creds"); setWho(null); setErr(""); setF({ email: "", pw: "", code: "", np: "", np2: "" }); }}>← Use a different account</a></p>}
+          {step !== "creds" && <p style={{ marginBottom: 0 }}><a href="#/" onClick={(e) => { e.preventDefault(); if (SUPABASE_AUTH) void supabase.auth.signOut(); setStep("creds"); setWho(null); setErr(""); setF({ email: "", pw: "", code: "", np: "", np2: "" }); }}>← Use a different account</a></p>}
         </div>
-        {import.meta.env.DEV && <DevBox onPick={(email) => { set("email", email); set("pw", DEMO_PASSWORD); }} />}
+        {import.meta.env.DEV && !SUPABASE_AUTH && <DevBox onPick={(email) => { set("email", email); set("pw", DEMO_PASSWORD); }} />}
       </div>
     </div>
   );

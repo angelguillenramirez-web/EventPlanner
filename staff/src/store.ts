@@ -2,6 +2,8 @@ import { BUILTIN_TEMPLATES } from "../../src/templates";
 import { useSyncExternalStore } from "react";
 import { hashPassword, newTotpSecret } from "./crypto";
 import { KB_VERSION, seedArticles } from "./kbSeed";
+import { SUPABASE_AUTH } from "./supabase";
+const randomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => "ABCDEFGHJKMNPQRSTUVWXYZ23456789"[b % 31]).join("");
 
 // ───────── Types ─────────
 export type Role = "super_admin" | "support" | "designer";
@@ -51,6 +53,8 @@ export interface Payment { id: string; at: number; amount: number; plan: string;
 export interface Customer {
   id: string; name: string; email: string; plan: CustomerPlan; status: "active" | "blocked" | "locked";
   createdAt: number; lastLogin: number; payments: Payment[]; tempPassword: string; tempPasswordAt: number;
+  /** Real accounts only (read from Supabase): subscription state. */
+  sub?: { status: string; cycle: string; trialEnd: number; periodEnd: number; type: string };
 }
 export type TplStatus = "draft" | "published";
 export type TplSource = "template" | "request" | "draft";
@@ -123,6 +127,7 @@ const H = 3600_000;
 
 let state: State = load() ?? ({ seeded: 0 } as State);
 const subs = new Set<() => void>();
+export const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 function load(): State | null { try { const r = localStorage.getItem(KEY); return r ? migrate(JSON.parse(r) as State) : null; } catch { return null; } }
 export const hashDoc = (str: string) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h >>> 0); };
 /** The full-page templates that ship with 1Plan show up in the library as published designs. A newer shipped design replaces a copy nobody has edited. */
@@ -187,7 +192,8 @@ export function createTask(n: NewTask): Task {
   let task!: Task;
   update((s) => {
     s.counters[n.kind] += 1;
-    const id = `${KIND_PREFIX[n.kind]}-${String(s.counters[n.kind]).padStart(6, "0")}`;
+    // real accounts: several people create tasks at once, so a counter would collide: use a random code (customer requests keep the number the database gave them)
+    const id = n.ref && /^(SUP|DSN|ADM)-/.test(n.ref) && SUPABASE_AUTH ? n.ref : SUPABASE_AUTH ? `${KIND_PREFIX[n.kind]}-${randomCode()}` : `${KIND_PREFIX[n.kind]}-${String(s.counters[n.kind]).padStart(6, "0")}`;
     const assigneeId = pickAssignee(s, n.kind);
     const now = Date.now();
     const who = assigneeId ? s.staff.find((m) => m.id === assigneeId)?.name : "";

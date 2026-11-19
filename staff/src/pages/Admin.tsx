@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { loadStaff, staffAdmin } from "../auth";
+import { SUPABASE_AUTH, supabase } from "../supabase";
 import { hashPassword, newTotpSecret, passwordIssues, randomPassword } from "../crypto";
 import { createTask, log, PLAN_RULES, ROLE_LABEL, TRIAL_DAYS, ROLES, uid, update, useStore, type ApiKey, type Config, type Coupon, type Role, type Staff } from "../store";
 import { Copy, fmtDate, Tabs } from "../ui";
@@ -35,7 +37,13 @@ function Users({ me }: { me: Staff }) {
   const [shown, setShown] = useState<{ email: string; pw: string; what: string } | null>(null);
   const activeAdmins = s.staff.filter((m) => m.active && m.role === "super_admin").length;
 
+  useEffect(() => { if (SUPABASE_AUTH) void loadStaff(); }, []);
   const withTemp = async (id: string, what: string, extra?: (m: Staff) => void) => {
+    if (SUPABASE_AUTH) {
+      const r = await staffAdmin({ action: "reset_password", userId: id });
+      if (!r.ok) return alert("Could not reset the password (" + r.error + ").");
+      setShown({ email: s.staff.find((x) => x.id === id)!.email, pw: r.tempPassword!, what }); return;
+    }
     const pw = randomPassword();
     const { salt, hash } = await hashPassword(pw);
     update((st) => { const m = st.staff.find((x) => x.id === id)!; m.salt = salt; m.hash = hash; m.mustChangePassword = true; m.failed = 0; m.lockedUntil = 0; extra?.(m); });
@@ -47,6 +55,12 @@ function Users({ me }: { me: Staff }) {
     e.preventDefault(); setErr("");
     const email = f.email.trim().toLowerCase();
     if (s.staff.some((m) => m.email === email)) return setErr("That email already has an account.");
+    if (SUPABASE_AUTH) {
+      const r = await staffAdmin({ action: "create", email, name: f.name.trim(), role: f.role });
+      if (!r.ok) return setErr(r.error === "exists" ? "That email already has an account." : "Could not create the account (" + r.error + ").");
+      setShown({ email, pw: r.tempPassword!, what: "Account created" }); setF({ name: "", email: "", role: "support" }); void loadStaff();
+      return;
+    }
     const pw = randomPassword();
     const { salt, hash } = await hashPassword(pw);
     update((st) => { st.staff.push({ id: uid(), name: f.name.trim(), email, role: f.role, active: true, salt, hash, avatar: "", title: "", presence: "offline", presenceNote: "", presenceAt: Date.now(), mustChangePassword: true, totpSecret: newTotpSecret(), totpEnrolled: false, lastTotpStep: 0, failed: 0, lockedUntil: 0, lastLogin: 0, createdAt: Date.now() }); });
@@ -56,11 +70,13 @@ function Users({ me }: { me: Staff }) {
   };
   const setRole = (m: Staff, role: Role) => {
     if (m.role === "super_admin" && role !== "super_admin" && activeAdmins <= 1) return alert("There must be at least one active super admin.");
+    if (SUPABASE_AUTH) { void supabase.from("staff_members").update({ role }).eq("user_id", m.id).then(({ error }) => { if (error) alert("Could not change the role."); else { void supabase.from("audit_log").insert({ actor: me.id, action: `Changed role to ${ROLE_LABEL[role]}`, target: m.email }); void loadStaff(); } }); return; }
     update((st) => { st.staff.find((x) => x.id === m.id)!.role = role; }); log(me.name, `Changed role to ${ROLE_LABEL[role]}`, m.email);
   };
   const toggle = (m: Staff) => {
     if (m.id === me.id) return alert("You cannot deactivate your own account.");
     if (m.active && m.role === "super_admin" && activeAdmins <= 1) return alert("There must be at least one active super admin.");
+    if (SUPABASE_AUTH) { void staffAdmin({ action: "set_active", userId: m.id, active: !m.active }).then((r) => { if (!r.ok) alert(r.error === "last_admin" ? "There must be at least one active super admin." : "Could not change the account (" + r.error + ")."); else void loadStaff(); }); return; }
     update((st) => { const x = st.staff.find((y) => y.id === m.id)!; x.active = !x.active; }); log(me.name, m.active ? "Deactivated account" : "Reactivated account", m.email);
   };
   const reset2fa = (m: Staff) => { if (!confirm(`Reset the authenticator for ${m.email}? They will have to enroll a new one at next sign-in.`)) return; update((st) => { const x = st.staff.find((y) => y.id === m.id)!; x.totpSecret = newTotpSecret(); x.totpEnrolled = false; x.lastTotpStep = 0; }); log(me.name, "Reset authenticator (2FA)", m.email); };
@@ -68,7 +84,7 @@ function Users({ me }: { me: Staff }) {
 
   return (
     <div className="grid">
-      {shown && <div className="warn" role="status"><b>{shown.what}:</b> {shown.email}<br />Temporary password <b className="mono">{shown.pw}</b> <Copy text={shown.pw} /> — shown only once. They must change it at first sign-in{shown.what === "Account created" ? " and set up their authenticator app" : ""}. Send it over a secure channel. <button className="ghost sm" onClick={() => setShown(null)}>Done</button></div>}
+      {shown && <div className="warn" role="status"><b>{shown.what}:</b> {shown.email}<br />Temporary password <b className="mono">{shown.pw}</b> <Copy text={shown.pw} /> — shown only once. They must change it at first sign-in{shown.what === "Account created" && !SUPABASE_AUTH ? " and set up their authenticator app" : ""}. Send it over a secure channel. <button className="ghost sm" onClick={() => setShown(null)}>Done</button></div>}
       <form className="card form" onSubmit={create}>
         <div><label htmlFor="un">Full name</label><input id="un" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
         <div><label htmlFor="ue">Work email</label><input id="ue" type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
@@ -78,18 +94,18 @@ function Users({ me }: { me: Staff }) {
       </form>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Employee</th><th>Profile</th><th>2FA</th><th>Last sign-in</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th>Employee</th><th>Profile</th>{!SUPABASE_AUTH && <th>2FA</th>}<th>Last sign-in</th><th>Status</th><th /></tr></thead>
           <tbody>
             {s.staff.map((m) => (
               <tr key={m.id}>
                 <td><b>{m.name}</b><div className="muted small">{m.email}</div></td>
                 <td><select aria-label={`Profile of ${m.name}`} style={{ width: "auto" }} value={m.role} disabled={m.id === me.id} onChange={(e) => setRole(m, e.target.value as Role)}>{ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></td>
-                <td>{m.totpEnrolled ? "enrolled" : <span className="badge b-in_progress">pending</span>}</td>
+                {!SUPABASE_AUTH && <td>{m.totpEnrolled ? "enrolled" : <span className="badge b-in_progress">pending</span>}</td>}
                 <td className="small">{fmtDate(m.lastLogin)}</td>
-                <td>{!m.active ? <span className="badge b-waiting">inactive</span> : m.lockedUntil > Date.now() ? <span className="badge b-late">locked</span> : <span className="badge b-done">active</span>}{m.mustChangePassword && <span className="badge" style={{ marginLeft: 4 }}>temp password</span>}</td>
+                <td>{!m.active ? <span className="badge b-waiting">inactive</span> : m.lockedUntil > Date.now() ? <span className="badge b-late">locked</span> : <span className="badge b-done">active</span>}{!SUPABASE_AUTH && m.mustChangePassword && <span className="badge" style={{ marginLeft: 4 }}>temp password</span>}</td>
                 <td><div className="row" style={{ flexWrap: "nowrap" }}>
                   <button className="ghost sm" onClick={() => withTemp(m.id, "Password reset")}>Reset password</button>
-                  <button className="ghost sm" onClick={() => reset2fa(m)}>Reset 2FA</button>
+                  {!SUPABASE_AUTH && <button className="ghost sm" onClick={() => reset2fa(m)}>Reset 2FA</button>}
                   {m.lockedUntil > Date.now() && <button className="ghost sm" onClick={() => unlock(m)}>Unlock</button>}
                   <button className={`sm ${m.active ? "danger" : "ghost"}`} onClick={() => toggle(m)}>{m.active ? "Deactivate" : "Reactivate"}</button>
                 </div></td>

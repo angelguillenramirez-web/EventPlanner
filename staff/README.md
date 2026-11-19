@@ -57,3 +57,19 @@ npm --prefix staff run dev     # Staff console → :5174
 - Staff-only endpoints need the `x-staff-key` header (default dev key; override with `STAFF_BRIDGE_KEY` on the bridge and `VITE_BRIDGE_KEY` in the console). API keys are never sent to the bridge.
 - Not wired into the app yet: maintenance mode, web-design colours/hero text, and published templates in the Invitation Studio (they are available from `GET /api/public`).
 - Still a prototype: bridge data is a JSON file and the browser holds the staff data. Production needs a real backend with sessions, server-side role checks and a database.
+
+## Real staff accounts (Supabase)
+
+Off by default (the console uses local demo accounts). To try real sign-in:
+
+1. Supabase > SQL Editor: run `supabase/staff-schema.sql` (after the customer `supabase/schema.sql`).
+2. Supabase > Authentication > Users > **Add user** (email + password, tick "Auto confirm"). Copy the user's UUID.
+3. SQL Editor, create the first super admin (replace the values):
+   `insert into public.staff_members (user_id, email, name, role) values ('<UUID>', 'you@example.com', 'Your name', 'super_admin');`
+4. Copy `.env.example` to `.env.local` and restart `npm run dev`. Sign in with that email and password.
+
+Second factor is off at first. To require it later (after staff enrol an authenticator): `update public.staff_security set require_2fa = true;`
+
+### Deploy the staff-admin function (create accounts, reset passwords, deactivate)
+Supabase > Edge Functions > **Deploy a new function** > name `staff-admin` > paste `supabase/functions/staff-admin/index.ts` > Deploy.
+(With the Supabase CLI instead: `supabase functions deploy staff-admin --project-ref gzhssfgpvljinnvaofjz`.) No secrets to add: the service key is provided by Supabase to the function itself.

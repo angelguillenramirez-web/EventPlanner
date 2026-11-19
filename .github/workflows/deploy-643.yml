@@ -1,0 +1,48 @@
+name: Build and publish 643 console
+
+# Builds the staff console (staff/) and publishes it to the `deploy-643` branch, which Hostinger deploys to 643.1plan.com.mx.
+# Separate from the customer site workflow (deploy.yml, branch `deploy`).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "staff/**"
+      - "src/templates/**"
+      - ".github/workflows/deploy-643.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-643
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            staff/package-lock.json
+      - run: npm ci                 # the console imports the invitation templates from ../src
+      - run: npm ci
+        working-directory: staff
+      - run: npm run build
+        working-directory: staff
+        env:
+          VITE_STAFF_AUTH: supabase   # real staff accounts (public setting, not a secret)
+      - name: Publish staff/dist to the deploy-643 branch
+        run: |
+          cd staff/dist
+          git init -q -b deploy-643
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy 643 ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" deploy-643

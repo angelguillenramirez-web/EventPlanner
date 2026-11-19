@@ -1,5 +1,6 @@
 import { checkPassword, hashPassword, passwordIssues, verifyTotp } from "./crypto";
 import { getState, log, setPresence, setSession, update, type Staff } from "./store";
+import { SUPABASE_AUTH, supabase } from "./supabase";
 
 export const MAX_FAILS = 5;
 export const LOCK_MS = 15 * 60_000;
@@ -51,4 +52,83 @@ export async function checkCode(staffId: string, code: string, enrolling = false
   return null;
 }
 
-export function signOut(m?: { id: string; name: string }) { if (m) { log(m.name, "Signed out"); setPresence(m.id, "offline"); } setSession(null); }
+export function signOut(m?: { id: string; name: string }) {
+  if (m) { log(m.name, "Signed out"); setPresence(m.id, "offline"); }
+  setSession(null);
+  if (SUPABASE_AUTH) void supabase.auth.signOut();
+}
+
+/**
+ * Real sign-in (email + password through Supabase Auth). Whoever is not an ACTIVE row in staff_members is signed straight
+ * back out, and every failure shows the same message (no account enumeration). The local Staff record uses the Supabase
+ * user id so the rest of the console works unchanged. Second factor: turned on later in the database (staff_security).
+ */
+type Row = { user_id: string; email: string; name: string; role: Staff["role"]; active: boolean; avatar: string | null; title: string | null; presence_note: string | null; created_at: string };
+const toStaff = (row: Row, extra: Partial<Staff> = {}): Staff => ({
+  id: row.user_id, name: row.name || row.email, email: row.email, role: row.role, active: row.active,
+  avatar: row.avatar ?? "", title: row.title ?? "", presence: "offline", presenceNote: row.presence_note ?? "", presenceAt: Date.now(),
+  salt: "", hash: "", mustChangePassword: false, totpSecret: "", totpEnrolled: true, lastTotpStep: 0, failed: 0, lockedUntil: 0,
+  lastLogin: 0, createdAt: Date.parse(row.created_at) || Date.now(), ...extra,
+});
+let pending: Staff | null = null;
+
+function finishSignIn(m: Staff) {
+  update((s) => { const i = s.staff.findIndex((x) => x.id === m.id); if (i >= 0) s.staff[i] = { ...s.staff[i], ...m }; else s.staff.push(m); });
+  setSession(m.id);
+  log(m.name, "Signed in", m.email);
+}
+
+/** Reads the real staff list (RLS lets only staff do this) and makes it the console's staff list. */
+export async function loadStaff(): Promise<string | null> {
+  const { data, error } = await supabase.from("staff_members").select("*").order("created_at");
+  if (error || !data) return "Could not load the staff list.";
+  update((s) => { const old = new Map(s.staff.map((x) => [x.id, x])); s.staff = (data as Row[]).map((r) => toStaff(r, { presence: old.get(r.user_id)?.presence ?? "offline", lastLogin: old.get(r.user_id)?.lastLogin ?? 0 })); });
+  return null;
+}
+
+/** Super-admin actions that need the server (create account, reset password, deactivate). */
+export async function staffAdmin(body: Record<string, unknown>): Promise<{ ok: true; tempPassword?: string } | { ok: false; error: string }> {
+  const { data, error } = await supabase.functions.invoke("Staff-admin", { body });
+  if (error) {
+    let code = "server";
+    const res = (error as { context?: Response }).context;
+    try { const b = await res?.json(); code = b?.error ?? b?.message ?? b?.msg ?? code; } catch { code = "http " + (res?.status ?? "?") + " " + (error as Error).message.slice(0, 80); }
+    return { ok: false, error: code };
+  }
+  return data?.ok ? { ok: true, tempPassword: data.tempPassword } : { ok: false, error: data?.error ?? "server" };
+}
+
+/**
+ * Real sign-in (email + password through Supabase Auth). Whoever is not an ACTIVE row in staff_members is signed straight
+ * back out, and every failure shows the same message (no account enumeration). The local Staff record uses the Supabase
+ * user id so the rest of the console works unchanged. Returns "change" when the account still has a temporary password
+ * (the person must choose their own before entering). Second factor: turned on later in the database (staff_security).
+ */
+export async function signInSupabase(email: string, password: string): Promise<{ error: string } | "change" | "ok"> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+  const why = (x: string) => ({ error: GENERIC + (import.meta.env.DEV ? ` [dev: ${x}]` : "") });
+  if (error || !data.user) return why("auth: " + (error?.message ?? "no user"));
+  const { data: row, error: e2 } = await supabase.from("staff_members").select("*").eq("user_id", data.user.id).maybeSingle();
+  if (e2 || !row || !row.active) { await supabase.auth.signOut(); return why("staff row: " + (e2?.message ?? (!row ? "not found or blocked by security rules" : "inactive"))); }
+  const m = toStaff(row as Row, { presence: "online", lastLogin: Date.now() });
+  if (data.user.user_metadata?.must_change_password) { pending = m; return "change"; }
+  finishSignIn(m);
+  return "ok";
+}
+
+/** Replaces the temporary password with the person's own, then finishes signing in. */
+export async function setSupabasePassword(next: string): Promise<string | null> {
+  if (!pending) return "Sign in again.";
+  const issues = passwordIssues(next);
+  if (issues.length) return "Password needs " + issues.join(", ") + ".";
+  const { error } = await supabase.auth.updateUser({ password: next, data: { must_change_password: false } });
+  if (error) return /same|different/i.test(error.message) ? "Choose a different password." : "Could not save the password. Try again.";
+  finishSignIn(pending); pending = null;
+  return null;
+}
+
+/** True while a Supabase session exists (used to drop the local session if it was ended elsewhere). */
+export async function hasSupabaseSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
+}

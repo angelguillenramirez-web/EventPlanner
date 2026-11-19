@@ -1,6 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { bridgeLink, onBridge, startSync } from "./bridge";
-import { signOut } from "./auth";
+import { hasSupabaseSession, signOut } from "./auth";
+import { SUPABASE_AUTH, supabase } from "./supabase";
+import { cloudStatus, onCloud, startCloud } from "./cloud";
 import { BarChart3, BookOpen, Brush, ClipboardCheck, Gauge, KeyRound, LifeBuoy, ListChecks, LogOut, MessageCircle, Moon, Palette, ScrollText, Sun, UserCircle, Users, Globe, DollarSign, Inbox } from "./icons";
 import Login from "./Login";
 import { getSession, IDLE_MS, PRESENCE, PRESENCE_LIST, ROLE_LABEL, setPresence, setSession, touchSession, unreadTotal, update, useStore, type Presence, type Role } from "./store";
@@ -47,6 +49,9 @@ export default function App() {
   const s = useStore();
   const route = useRoute();
   const link = useSyncExternalStore(onBridge, bridgeLink);
+  const cloud = useSyncExternalStore(onCloud, cloudStatus);
+  const okLink = SUPABASE_AUTH ? !cloud.note : link === "online"; // real accounts: the link that matters is the database, not the local bridge
+  const linkText = SUPABASE_AUTH ? (cloud.note ? "Sync problem: " + cloud.note : "Connected to 643") : link === "online" ? "Connected to 643" : link === "offline" ? "643 link offline" : "Connecting…";
   const [menu, setMenu] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false); // phone/tablet: collapsible menu
   useEffect(() => setMenu(false), [route]);
@@ -64,7 +69,17 @@ export default function App() {
     return () => { evs.forEach((e) => removeEventListener(e, bump)); clearInterval(i); };
   }, [me]);
   // keep prices / templates / request statuses in sync with the 1Plan app, and receive its requests
-  useEffect(() => (me ? startSync() : undefined), [me?.id]);
+  // the local bridge only exists on a developer's computer: the online build talks to Supabase only
+  useEffect(() => (me && !(import.meta.env.PROD && SUPABASE_AUTH) ? startSync() : undefined), [me?.id]);
+  // real accounts: mirror shared data (knowledge base…) to Supabase while signed in
+  useEffect(() => (SUPABASE_AUTH && me ? startCloud({ id: me.id, role: me.role }) : undefined), [me?.id]);
+  // real accounts: if the Supabase session ends (expired, signed out in another tab) the console locks too
+  useEffect(() => {
+    if (!SUPABASE_AUTH || !me) return;
+    hasSupabaseSession().then((ok) => { if (!ok) { setSession(null); setSess(null); } });
+    const { data } = supabase.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") { setSession(null); setSess(null); } });
+    return () => data.subscription.unsubscribe();
+  }, [me?.id]);
   // deactivated or removed while signed in → out
   useEffect(() => { if (sess && !me) { setSession(null); setSess(null); } }, [sess, me]);
 
@@ -104,7 +119,7 @@ export default function App() {
         <span className="grow" />
         <div style={{ padding: "8px 10px", fontSize: ".78rem" }}>
           <div className="row" style={{ flexWrap: "nowrap", gap: 8, marginBottom: 6 }}><Avatar m={me} size={34} dot /><div><b style={{ color: "#fff" }}>{me.name}</b><br />{ROLE_LABEL[me.role]}</div></div>
-          <select aria-label="My status" value={me.presence} onChange={(e) => setPresence(me.id, e.target.value as Presence)} style={{ marginBottom: 6, padding: "4px 6px" }}>{PRESENCE_LIST.map((p) => <option key={p} value={p}>{PRESENCE[p].label}</option>)}</select><span style={{ color: link === "online" ? "var(--teal)" : "#e6a6b2" }}>● {link === "online" ? "Connected to 643" : link === "offline" ? "643 link offline" : "Connecting…"}</span><br /><span style={{ opacity: .6 }}>Auto sign-out after {IDLE_MS / 60000} min idle</span></div>
+          <select aria-label="My status" value={me.presence} onChange={(e) => setPresence(me.id, e.target.value as Presence)} style={{ marginBottom: 6, padding: "4px 6px" }}>{PRESENCE_LIST.map((p) => <option key={p} value={p}>{PRESENCE[p].label}</option>)}</select><span style={{ color: okLink ? "var(--teal)" : "#e6a6b2" }} role={okLink ? undefined : "alert"}>● {linkText}</span><br /><span style={{ opacity: .6 }}>Auto sign-out after {IDLE_MS / 60000} min idle</span></div>
         <a href="#/" onClick={(e) => { e.preventDefault(); update((st) => { st.theme = st.theme === "dark" ? "light" : "dark"; }); }}>{s.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}{s.theme === "dark" ? "Light mode" : "Dark mode"}</a>
         <a href="#/" onClick={(e) => { e.preventDefault(); setConfirmOut(true); }}><LogOut size={16} />Sign out</a>
         </div>
