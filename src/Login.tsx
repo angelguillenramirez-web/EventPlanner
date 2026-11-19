@@ -3,6 +3,7 @@ import { useT } from "./i18n";
 import { go, isLocalHost, TEST_USERS, update, useStore } from "./store";
 import { authErrorKey, cloudResend, cloudSignIn } from "./cloud";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
+import { sendRequest } from "./bridge";
 
 /** Log in with e-mail (planners, suppliers) or the user ID created by the planner . No social sign-in. */
 export default function Login() {
@@ -12,6 +13,16 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [resend, setResend] = useState<"" | "ok" | "err">("");
+  const [help, setHelp] = useState<{ open: boolean; name: string; msg: string; state: "" | "busy" | "need" | "fail"; ref: string }>({ open: false, name: "", msg: "", state: "", ref: "" });
+  const sendHelp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = f.id.trim().toLowerCase();
+    if (!help.name.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !help.msg.trim()) return setHelp({ ...help, state: "need" });
+    setHelp({ ...help, state: "busy" });
+    const ref = await sendRequest({ kind: "support", title: "Cannot sign in", description: help.msg.trim().slice(0, 2000) + "\n\n(Sent from the sign-in screen; the person is not signed in. Sign-in message: " + err + ")", customerName: help.name.trim().slice(0, 120), customerEmail: email });
+    setHelp(ref ? { ...help, state: "", ref } : { ...help, state: "fail" });
+  };
+  const blocked = err === t("login.err.blocked"); // the contact form is only for blocked accounts
   const unconfirmed = err === t("login.err.unconfirmed") && !!f.id.trim();
   const sendAgain = async () => { const { error } = await cloudResend(f.id.trim().toLowerCase()); setResend(error ? "err" : "ok"); };
   const submit = async (e: React.FormEvent) => {
@@ -56,6 +67,18 @@ export default function Login() {
           {resend === "err" && <p role="alert" className="small" style={{ color: "var(--danger)", margin: 0 }}>{t("auth.err.rate")}</p>}
           <button type="submit" disabled={busy}>{busy ? "…" : t("login")}</button>
         </form>
+        {blocked && !help.open && <p style={{ textAlign: "center", margin: "0 0 8px" }}><a href="#/login" onClick={(e) => { e.preventDefault(); setHelp({ ...help, open: true }); }}>{t("login.help.link")}</a></p>}
+        {blocked && help.open && (help.ref
+          ? <p role="status" className="small" style={{ color: "var(--teal)" }}>{t("login.help.sent").replace("{ref}", help.ref)}</p>
+          : <form onSubmit={sendHelp} className="grid" style={{ gap: 10, margin: "4px 0 12px" }}>
+              <h3 style={{ margin: 0 }}>{t("login.help.title")}</h3>
+              <div><label htmlFor="hn">{t("login.help.name")}</label><input id="hn" value={help.name} onChange={(e) => setHelp({ ...help, name: e.target.value })} autoComplete="name" /></div>
+              <div><label htmlFor="he">{t("login.help.email")}</label><input id="he" type="email" value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} autoComplete="email" /></div>
+              <div><label htmlFor="hm">{t("login.help.msg")}</label><textarea id="hm" rows={3} maxLength={2000} value={help.msg} onChange={(e) => setHelp({ ...help, msg: e.target.value })} /></div>
+              {help.state === "need" && <p role="alert" className="small" style={{ color: "var(--danger)", margin: 0 }}>{t("login.help.need")}</p>}
+              {help.state === "fail" && <p role="alert" className="small" style={{ color: "var(--danger)", margin: 0 }}>{t("login.help.fail")}</p>}
+              <button type="submit" disabled={help.state === "busy"}>{help.state === "busy" ? "…" : t("login.help.send")}</button>
+            </form>)}
         <p style={{ textAlign: "center", margin: "0 0 8px" }}><a href="#/forgot">{t("forgot.link")}</a></p>
         <p style={{ textAlign: "center", marginBottom: 0 }}><span className="muted">{t("auth.new")}</span> <a href="#/join">{t("signup")}</a></p>
         {isLocalHost && <><hr style={{ border: 0, borderTop: "1px solid var(--line)", margin: "16px 0" }} />

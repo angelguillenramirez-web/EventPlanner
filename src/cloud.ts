@@ -162,6 +162,7 @@ export const cloudSetPassword = async (password: string) => { const r = await su
 /** Turns a Supabase error into one of our dictionary keys. */
 export const authErrorKey = (e: { message?: string; code?: string } | null): string => {
   const m = `${e?.code ?? ""} ${e?.message ?? ""}`.toLowerCase();
+  if (m.includes("banned") || m.includes("user_banned")) return "login.err.blocked"; // blocked by staff
   if (m.includes("invalid login") || m.includes("invalid_credentials")) return "login.err.bad";
   if (m.includes("not confirmed") || m.includes("email_not_confirmed")) return "login.err.unconfirmed";
   if (m.includes("rate") || m.includes("too many") || m.includes("over_email")) return "auth.err.rate";
