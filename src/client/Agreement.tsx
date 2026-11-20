@@ -224,7 +224,19 @@ export default function AgreementTab({ event }: { event: EventT }) {
   const restore = () => { if (!old) return; patch((a) => { a.sections = structuredClone(old.sections); }); setViewVer(""); setNonce((n) => n + 1); };
   const amend = () => ask(t("ag.amend.q"), () => { patch((a) => { a.versions.push({ id: uid(), at: Date.now(), by: who, name: `v${a.version} (${t("ag.status.signed").toLowerCase()})`, sections: structuredClone(a.sections) }); a.version += 1; a.status = "draft"; }); setNonce((n) => n + 1); });
   const printDoc = () => { const f = document.createElement("iframe"); f.style.cssText = "position:fixed;width:0;height:0;border:0"; document.body.appendChild(f); f.srcdoc = fullDoc(title, body(), paper); f.onload = () => { f.contentWindow?.focus(); f.contentWindow?.print(); setTimeout(() => f.remove(), 2000); }; };
-  const download = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([fullDoc(title, body(), paper)], { type: "text/html" })); a.download = `${event.name.replace(/[^\w-]+/g, "_")}-agreement-v${ag.version}.html`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
+  /** Downloads the agreement as a PDF file (built in the browser from the same page that is printed). */
+  const download = async () => {
+    setFlash(t("ag.pdf.making"));
+    const f = document.createElement("iframe");
+    f.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0"; document.body.appendChild(f);
+    try {
+      await new Promise<void>((res) => { f.onload = () => res(); f.srcdoc = fullDoc(title, body(), paper); });
+      await f.contentDocument?.fonts?.ready;
+      const { default: html2pdf } = await import("html2pdf.js");
+      await html2pdf().set({ margin: [12, 10, 12, 10], filename: `${event.name.replace(/[^\w-]+/g, "_")}-agreement-v${ag.version}.pdf`, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "legacy"], avoid: ["h2", "h3", "tr", "figure"] } } as never).from(f.contentDocument!.body).save();
+      setFlash("");
+    } catch { setFlash(t("ag.pdf.error")); setTimeout(() => setFlash(""), 4000); } finally { f.remove(); }
+  };
   const cmd = (c: string, v?: string) => { document.execCommand(c, false, v); setFmt((n) => n + 1); };
   const keep = (e: React.MouseEvent) => e.preventDefault();
   const addComment = (sid: string) => { const v = text.trim(); if (!v) return; setSec(sid, (x) => { x.comments.push({ id: uid(), by: who, at: Date.now(), text: v }); }); setText(""); setComposer(null); };

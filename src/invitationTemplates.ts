@@ -14,14 +14,14 @@ export function templateHtml(id: string, ev: EventT, x: TplText): string {
 /** Full-page templates (own fonts, scripts, music) are stored as a complete HTML document and shown as they are. */
 export const isFullDoc = (html: string) => /^\s*<!doctype html/i.test(html);
 /** iframe sandbox for an invitation: only full-page templates run scripts (no same-origin, no top navigation). */
-export const invSandbox = (html: string) => (isFullDoc(html) ? "allow-scripts allow-popups allow-downloads" : "");
+export const invSandbox = (html: string) => (isFullDoc(html) ? "allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads" : "");
 
 const DATA_RE = /(<script type="application\/json" id="invitation-data">)([\s\S]*?)(<\/script>)/;
 function editData(doc: string, fn: (d: any) => void): string { // eslint-disable-line @typescript-eslint/no-explicit-any
   return doc.replace(DATA_RE, (_m, a: string, json: string, b: string) => { const d = JSON.parse(json); fn(d); return a + "\n" + JSON.stringify(d, null, 2).replace(/</g, "\\u003c") + "\n" + b; });
 }
 /** Shows a full-page invitation for one guest (name and number of seats). */
-export const personalizeDoc = (doc: string, name: string, people: number) => !isFullDoc(doc) ? doc : editData(doc, (d) => { d.guest = { ...d.guest, name, people, maxPeople: people, description: {}, status: {}, message: {} }; });
+export const personalizeDoc = (doc: string, name: string, people: number, response?: { answer: "yes" | "no"; people: number }) => !isFullDoc(doc) ? doc : editData(doc, (d) => { d.guest = { ...d.guest, name, people, maxPeople: people, description: {}, status: {}, message: {}, response: response ?? null }; });
 
 /** A full-page template as the app lists it. */
 export interface CatalogEntry { id: string; name: string; category: string; suits: string[]; html: string; builtin: boolean }
@@ -48,6 +48,15 @@ export function buildInvitation(tpl: string, ev: EventT, f: TplFields, locale: s
   return templateHtml(tpl, ev, { title: f.title, message: f.message, date: new Date(f.iso + "T12:00").toLocaleDateString(locale, { dateStyle: "full" }), typeName, venue: f.venue, iso: f.iso, time: f.time, extra: f });
 }
 
+/** A pasted map address: a link (with or without https://), the code Google Maps gives for embedding, or plain text (searched on Google Maps). */
+export function mapHref(v: string): string {
+  const raw = v.trim(); if (!raw) return "";
+  const emb = raw.match(/src=["']([^"']+)["']/); const x = (emb ? emb[1] : raw).trim();
+  if (/^https?:\/\//i.test(x)) return x;
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(x)) return "https://" + x; // www.google.com/maps/…, maps.app.goo.gl/…
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(x);
+}
+
 function fullPageDoc(id: string, ev: EventT, x: TplText): string {
   const X = x.extra, iso = x.iso || ev.date, time = x.time || ev.time || "17:00";
   const start = new Date(`${iso}T${time}`); if (isNaN(+start)) start.setTime(Date.now() + 30 * 864e5);
@@ -60,16 +69,18 @@ function fullPageDoc(id: string, ev: EventT, x: TplText): string {
   return editData((catalog().find((t) => t.id === id) ?? catalog()[0]).html, (d) => {
     // dates and times are shown in the zone the planner entered them in
     d.event = { ...d.event, names: names.length ? names : [x.title], milestone: "", start: start.toISOString(), end: new Date(+start + 7 * 36e5).toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
-    d.venue = { name: x.venue, address: X?.address ?? "", mapUrl: X?.mapUrl ?? "" };
+    d.venue = { name: x.venue, address: X?.address ?? "", mapUrl: mapHref(X?.mapUrl ?? "") };
     d.lodging = { url: X?.lodging ?? "" }; d.contact = { whatsapp: X?.whatsapp ?? "" };
     const dl = X?.deadline ? new Date(`${X.deadline}T12:00`) : deadline;
     d.rsvp = { deadline: dl > new Date() ? dl.toISOString() : "" };
     d.photos = { cover: X?.cover ?? "", story: X?.story ?? "" };
     const cp: Record<string, string> = {}; if (X?.dress) cp.dc = X.dress; if (X?.gifts) cp.gifts1 = X.gifts;
+    for (const [k, v] of Object.entries(X?.copy ?? {})) if (v.trim()) cp[k] = v;
     if (Object.keys(cp).length) d.copy = { es: cp, en: cp };
     d.music = { ...d.music, src: music };
     d.guest = { ...d.guest, name: "Invitado / Guest", people: 1, maxPeople: 1, ...(classicLook ? {} : { description: {}, status: {}, message: {} }) };
-    if (!classicLook) d.sections = { ...d.sections, lodging: !!X?.lodging, contact: !!X?.whatsapp }; // no hotel link or WhatsApp number yet
+    // hotels and contact only show when asked for (or when their link / number is filled in); every other section can be switched off
+    d.sections = { ...d.sections, lodging: !!X?.lodging, contact: !!X?.whatsapp, ...(X?.sections ?? {}) };
     // keep the template's own rhythm: same gaps between moments, starting at the event time
     const t0 = d.itinerary[0] ? mins(d.itinerary[0].time) : 0;
     d.itinerary = d.itinerary.map((it: { time: string }) => ({ ...it, time: hhmm(new Date(+start + (((mins(it.time) - t0) % 1440 + 1440) % 1440) * 6e4)) }));

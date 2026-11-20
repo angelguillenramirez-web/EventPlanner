@@ -20,6 +20,7 @@ const IDEA_WORDS: [string[], string][] = [
   [["sea", "mar", "beach", "playa", "costa"], "costa"], [["minimal", "simple", "sencill"], "lino"], [["glitter", "brillo", "sparkle"], "eras"],
 ];
 
+const SECTION_KEYS = ["quote", "countdown", "itinerary", "lodging", "dresscode", "gifts", "adultsOnly", "contact"] as const;
 const PALETTE = ["#FF7A59", "#F0B429", "#46C8B2", "#6FA8FF", "#1F2937", "#F5EFE4", "#7C5CFF", "#FF9C7F"];
 
 /** Read-only view of an invitation. Nobody except 1Plan staff can edit the HTML. */
@@ -80,6 +81,9 @@ function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT;
   const tname = (id: string) => catalogName(id) ?? t("tpl." + id);
   const L = (id: string, label: string, el: React.ReactNode, full = true) => <div className={full ? "full" : undefined}><label htmlFor={id}>{label}</label>{el}</div>;
   const moments = F.itinerary ?? [];
+  const on = (k: string) => (F.sections ?? {})[k] ?? (k === "lodging" ? !!F.lodging : k === "contact" ? !!F.whatsapp : true);
+  /** a piece of text the user can reword (empty = the template's own wording) */
+  const TX = (k: string) => <div className="full" key={k}><label htmlFor={"tx-" + k}>{t("ins.t." + k)}</label><textarea id={"tx-" + k} rows={2} placeholder={t("ins.t.default")} value={F.copy?.[k] ?? ""} onChange={(e) => set({ copy: { ...(F.copy ?? {}), [k]: e.target.value } })} /></div>;
   return (
     <Modal title={edit ? t("ins.edit.title") : mode === "ai" ? t("ins.ai") : t("ins.fromtpl")} onClose={onClose} xl>
       {designing ? (
@@ -116,13 +120,23 @@ function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT;
                 {L("ih", t("ins.f.time"), <input id="ih" type="time" value={F.time} onChange={(e) => set({ time: e.target.value })} />, false)}
                 {L("iv", t("location"), <input id="iv" value={F.venue} onChange={(e) => set({ venue: e.target.value })} />)}
                 {L("ia", t("ins.f.address"), <input id="ia" value={F.address ?? ""} onChange={(e) => set({ address: e.target.value })} />)}
-                {L("im", t("ins.f.map"), <input id="im" type="url" placeholder="https://…" value={F.mapUrl ?? ""} onChange={(e) => set({ mapUrl: e.target.value })} />)}
-                {L("il", t("ins.f.lodging"), <input id="il" type="url" placeholder="https://…" value={F.lodging ?? ""} onChange={(e) => set({ lodging: e.target.value })} />)}
-                {L("iw", t("ins.f.wa"), <input id="iw" inputMode="tel" placeholder="5215512345678" value={F.whatsapp ?? ""} onChange={(e) => set({ whatsapp: e.target.value.replace(/[^\d+]/g, "") })} />, false)}
+                {L("im", t("ins.f.map"), <input id="im" placeholder={t("ins.f.map.ph")} value={F.mapUrl ?? ""} onChange={(e) => set({ mapUrl: e.target.value })} />)}
+                {TX("gate")}{TX("tagline")}
+                <div className="full"><label>{t("ins.sections")}</label>
+                  <div className="secgrid">
+                    {SECTION_KEYS.map((k) => <label key={k} className="row" style={{ gap: 6, flexWrap: "nowrap", margin: 0, fontWeight: 400 }}><input type="checkbox" style={{ width: "auto" }} checked={on(k)} onChange={(e) => set({ sections: { ...(F.sections ?? {}), [k]: e.target.checked } })} /> {t("ins.sec." + k)}</label>)}
+                  </div>
+                </div>
+                {on("quote") && <>{TX("q1")}{TX("q2")}</>}
+                {on("itinerary") && TX("details_t")}
+                {on("lodging") && <>{L("il", t("ins.f.lodging"), <input id="il" placeholder="https://…" value={F.lodging ?? ""} onChange={(e) => set({ lodging: e.target.value })} />)}{TX("lodging_t")}</>}
+                {on("dresscode") && <>{L("ids", t("ins.f.dress"), <input id="ids" value={F.dress ?? ""} onChange={(e) => set({ dress: e.target.value })} />)}{TX("dc_w_t")}{TX("dc_note")}</>}
+                {on("gifts") && <>{L("ig", t("ins.f.gifts"), <textarea id="ig" rows={2} value={F.gifts ?? ""} onChange={(e) => set({ gifts: e.target.value })} />)}{TX("gifts2")}{TX("gifts3")}</>}
+                {on("adultsOnly") && TX("adults_t")}
+                {TX("count_t")}
                 {L("ir", t("ins.f.deadline"), <input id="ir" type="date" value={F.deadline ?? ""} onChange={(e) => set({ deadline: e.target.value })} />, false)}
-                {L("ids", t("ins.f.dress"), <input id="ids" value={F.dress ?? ""} onChange={(e) => set({ dress: e.target.value })} />)}
-                {L("ig", t("ins.f.gifts"), <textarea id="ig" rows={2} value={F.gifts ?? ""} onChange={(e) => set({ gifts: e.target.value })} />)}
-                <div className="full"><label>{t("ins.f.itin")}</label>
+                {on("contact") && <>{L("iw", t("ins.f.wa"), <input id="iw" inputMode="tel" placeholder="5215512345678" value={F.whatsapp ?? ""} onChange={(e) => set({ whatsapp: e.target.value.replace(/[^\d+]/g, "") })} />, false)}{TX("contact_t")}</>}
+                {on("itinerary") && <div className="full"><label>{t("ins.f.itin")}</label>
                   {moments.map((m, i) => (
                     <div className="row" key={i} style={{ flexWrap: "nowrap", marginBottom: 6 }}>
                       <input type="time" aria-label={t("ins.f.time")} style={{ width: 120 }} value={m.time} onChange={(e) => set({ itinerary: moments.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)) })} />
@@ -131,7 +145,7 @@ function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT;
                     </div>
                   ))}
                   {moments.length < 8 && <button type="button" className="ghost sm" onClick={() => set({ itinerary: [...moments, { time: F.time, title: "" }] })}><Plus size={13} /> {t("ins.f.addmoment")}</button>}
-                </div>
+                </div>}
                 {(["cover", "story"] as const).map((k) => (
                   <div key={k}><label>{t("ins.f." + k)}</label>
                     <div className="row" style={{ gap: 8 }}>

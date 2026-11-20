@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { update, useStore } from "../store";
+import { invSandbox, isFullDoc, personalizeDoc } from "../invitationTemplates";
 import { LangSwitch, Logo, ThemeToggle } from "../shared";
 import { Check, X } from "../icons";
 
@@ -23,6 +24,25 @@ export default function Rsvp({ parts }: { parts: string[] }) {
     update((st) => { const x = st.guests.find((y) => y.token === code); if (x) { x.views = (x.views ?? 0) + 1; x.lastViewedAt = Date.now(); } });
   }, [code, g?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const answer = (v: "confirmed" | "declined") => { update((st) => { const x = st.guests.find((y) => y.token === code); if (x) { x.status = v; x.confirmedN = v === "confirmed" ? Math.min(x.invitees, n || x.invitees) : 0; } }); setDone(v); };
+  // the link opens the designed invitation (the approved one) for this guest; the reply given inside it is saved here
+  const approvedHtml = (() => { const so = g ? s.signoffs.find((x) => x.eventId === g.eventId && x.scope === "invitations" && x.approvers.every((a) => a.at) && x.snap?.k === "invitation") : undefined; return so?.snap?.k === "invitation" ? so.snap.html : ""; })();
+  const frame = useRef<HTMLIFrameElement>(null);
+  const doc = useMemo(() => { // built once per opening (the page inside keeps its own state while the guest answers)
+    if (!g || !isFullDoc(approvedHtml)) return "";
+    const resp = g.status === "confirmed" ? { answer: "yes" as const, people: g.confirmedN ?? g.invitees } : g.status === "declined" ? { answer: "no" as const, people: 0 } : undefined;
+    const bridge = `<script>document.addEventListener("invitation:rsvp",function(e){parent.postMessage({inv:"rsvp",d:e.detail},"*")})</script>`;
+    return personalizeDoc(approvedHtml, g.name, g.invitees, resp).replace("</body>", bridge + "</body>");
+  }, [code, approvedHtml, g?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!doc) return;
+    const on = (e: MessageEvent) => {
+      if (e.source !== frame.current?.contentWindow || e.data?.inv !== "rsvp") return;
+      const d = e.data.d as { answer: "yes" | "no"; people: number; message?: string };
+      update((st) => { const x = st.guests.find((y) => y.token === code); if (x) { x.status = d.answer === "yes" ? "confirmed" : "declined"; x.confirmedN = d.answer === "yes" ? Math.min(x.invitees, Math.max(1, d.people || x.invitees)) : 0; } });
+    };
+    window.addEventListener("message", on); return () => window.removeEventListener("message", on);
+  }, [doc, code]);
+  if (doc) return <iframe ref={frame} title={ev?.name ?? "invitation"} sandbox={invSandbox(doc)} srcDoc={doc} style={{ position: "fixed", inset: 0, width: "100%", height: "100%", border: 0 }} />;
   return (
     <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 520, maxWidth: "100%", textAlign: "center" }}>

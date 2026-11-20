@@ -897,3 +897,5 @@ select:not([multiple]) { -webkit-appearance: none; appearance: none; padding-rig
 
 .invact { padding: 6px 9px !important; min-height: 36px; font-size: .9rem !important; gap: 5px !important; } .invact svg { width: 20px !important; height: 20px !important; flex: none; }
 @media print { .agbar { position: static; } }
+.secgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; }
+.invact { border: 0 !important; background: transparent !important; box-shadow: none !important; } .invact:hover { background: var(--soft) !important; }
