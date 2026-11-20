@@ -4,6 +4,8 @@ import { usePublic } from "./bridge";
 import { COLORS, TRIAL_DAYS, yearlySaving, go, useStore, type Plan } from "./store";
 import { money, planBullets, usePrices } from "./client/Billing";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
+import { SupplierCard } from "./client/Suppliers";
+import { SUPPLIERS } from "./suppliers";
 import { CalendarRange, Check, FileText, FolderOpen, Handshake, Headset, Heart, LayoutGrid, Mail, Sparkles, Table2, TypeIcon } from "./icons";
 
 const FEATURES: [React.ReactNode, string][] = [[<LayoutGrid />, "tracker"], [<CalendarRange />, "scheduler"], [<Mail />, "invites"], [<FileText />, "forms"], [<FolderOpen />, "docs"], [<Table2 />, "tables"], [<Handshake />, "vendors"], [<Headset />, "support"]];
@@ -41,6 +43,7 @@ export default function Landing() {
         <Logo href="#/" />
         <a className="l" href="#features" onClick={(e) => { e.preventDefault(); document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.features")}</a>
         <a className="l" href="#events" onClick={(e) => { e.preventDefault(); document.getElementById("events")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.events")}</a>
+        <a className="l" href="#suppliers" onClick={(e) => { e.preventDefault(); document.getElementById("suppliers")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.suppliers")}</a>
         <a className="l" href="#pricing" onClick={(e) => { e.preventDefault(); document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.pricing")}</a>
         <LangSwitch /><ThemeToggle />
         <button className="ghost" onClick={() => go("/login")}>{t("login")}</button><button onClick={() => go("/join")}>{t("signup")}</button>
@@ -93,6 +96,18 @@ export default function Landing() {
           {TYPES.map((id) => <div className={`etype t-${id}`} key={id}><TypeIcon type={id} size={28} /><h3>{t("type." + id)}</h3><p>{t("type." + id + ".d")}</p></div>)}
         </div>
         <div className="card" style={{ marginTop: 24 }}><h3>{t("planners.title")}</h3><p className="muted" style={{ margin: 0 }}>{t("planners.sub")}</p></div>
+      </section>
+
+      <section className="sec" id="suppliers">
+        <span className="kicker">{t("nav.suppliers")}</span><h2>{t("land.sup.title")}</h2>
+        <p className="lead" style={{ maxWidth: 720 }}>{t("land.sup.sub")}</p>
+        <div className="grid g3" style={{ marginTop: 16 }}>
+          {["s1", "s3", "s5"].map((id) => SUPPLIERS.find((x) => x.id === id)!).map((x) => <SupplierCard key={x.id} x={x} />)}
+        </div>
+        <div className="grid g2" style={{ marginTop: 18 }}>
+          <div className="card"><h3>{t("land.sup.planners")}</h3><p className="muted">{t("land.sup.planners.d")}</p><button onClick={() => go("/join")}>{t("land.sup.cta.planner")} →</button></div>
+          <div className="card"><h3>{t("land.sup.suppliers")}</h3><p className="muted">{t("land.sup.suppliers.d")}</p><button className="ghost" onClick={() => go("/join")}>{t("land.sup.cta.supplier")} →</button></div>
+        </div>
       </section>
 
       <section className="sec" id="pricing" style={{ paddingTop: 24 }}>

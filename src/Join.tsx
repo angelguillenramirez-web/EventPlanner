@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "./i18n";
-import { TRIAL_DAYS, go, newTrial, uid, update, useStore } from "./store";
+import { TRIAL_DAYS, enterWorkspace, go, newTrial, uid, update, useStore } from "./store";
 import { Check } from "./icons";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
 import { authErrorKey, cloudResend, cloudSignUp } from "./cloud";
@@ -102,6 +102,7 @@ export function Confirm({ token }: { token: string }) {
   if (acct && !done) {
     setDone(true);
     setTimeout(() => {
+      enterWorkspace(acct.id);
       update((st) => { const a = st.accounts.find((x) => x.id === acct.id)!; if (!a.confirmed) { a.confirmed = true; a.confirmedAt = Date.now(); st.sub = { ...newTrial("planner"), status: "none" }; st.card = null; } st.loggedIn = true; st.sessionId = a.id; st.viewAs = ""; st.userName = a.name; st.userEmail = a.email; st.accountType = a.accountType; });
       go(acct.profile ? (acct.accountType ? "/app" : "/choose-type") : "/welcome");
     }, 0);

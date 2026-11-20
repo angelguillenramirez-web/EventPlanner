@@ -72,7 +72,7 @@ export default function Invitations({ event }: { event: EventT }) {
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   // the invitation shown here is read-only: the approved design, or the default design while none exists yet
   const baseDoc = approvedSnap ? invitationDoc(approvedSnap.html, approvedSnap.css) : chosen ? invitationDoc(chosen.html, chosen.css) : invitationDoc(templateHtml(templatesFor(event.type)[0], event, { title: event.name, message: t("design.msg.default"), date: new Date(event.date + "T12:00").toLocaleDateString(locale, { dateStyle: "full" }), typeName: tn(event.type), venue: event.venue }), "");
-  const previewDoc = preview && isFullDoc(baseDoc) ? personalizeDoc(baseDoc, preview.name, preview.invitees) : preview ? baseDoc.replace("<body>", `<body><p style="font:600 15px system-ui,sans-serif;text-align:center;color:#14203A;margin:18px 12px 0">${esc(t("rsvp.pg.hello", { name: preview.name }))}<br><span style="font-weight:400;color:#6b7280">${esc(t("rsvp.pg.party", { n: preview.invitees }))}</span></p>`) : baseDoc;
+  const previewDoc = preview && isFullDoc(baseDoc) ? personalizeDoc(baseDoc, preview.name, preview.invitees) : preview ? baseDoc.replace("<body>", `<body><p style="font:600 15px system-ui,sans-serif;text-align:center;color:#14203A;margin:18px 12px 0">${esc(t("rsvp.pg.hello", { name: preview.name }))}<br><span style="font-weight:400;color:#6B6458">${esc(t("rsvp.pg.party", { n: preview.invitees }))}</span></p>`) : baseDoc;
   const drafts = guests.filter((g) => g.status === "draft");
   const sentList = guests.filter((g) => g.status !== "draft");
   const chan = (c: Channel) => (c === "whatsapp" ? <WhatsApp size={14} /> : <Mail size={14} />);

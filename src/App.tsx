@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRoute, useStore, go } from "./store";
+import { useRoute, useStore, go, accountTypes, update } from "./store";
 import Landing from "./Landing";
 import Login from "./Login";
 import ChooseType from "./ChooseType";
@@ -7,7 +7,6 @@ import Welcome from "./Welcome";
 import { Join, Sent, Confirm, CloudSent } from "./Join";
 import { Invite, Access } from "./Invite";
 import { Forgot, LinkError, ResetPage, SetPassword } from "./Reset";
-import SupplierHome from "./SupplierHome";
 import ClientApp from "./client/ClientApp";
 import { TrialPage } from "./client/Billing";
 import Upsell from "./client/Upsell";
@@ -35,6 +34,7 @@ export default function App() {
     else if (priv && s.loggedIn && acct) {
       if (!acct.profile && route !== "/welcome") go("/welcome");
       else if (acct.profile && !s.accountType && route !== "/choose-type") go("/choose-type");
+      else if (acct.profile && !s.viewAs && accountTypes(acct).includes("planner") && s.accountType === "supplier") update((st) => { st.accountType = "planner"; const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.accountType = "planner"; }); // a person with a planner profile always gets the full app (the supplier profile is inside it)
       else if (acct.profile && s.accountType === "planner" && s.sub.status === "none" && route !== "/trial") go("/trial"); // a card is required to start the free trial
       else if (acct.profile && s.accountType && (route === "/choose-type" || route === "/welcome" || (route === "/trial" && (s.accountType !== "planner" || s.sub.status !== "none")))) go("/app");
     }
@@ -59,6 +59,6 @@ export default function App() {
   else if (route === "/welcome") page = s.loggedIn && acct ? <Welcome /> : null;
   else if (route === "/choose-type") page = s.loggedIn && !s.accountType && acct?.profile ? <ChooseType /> : null;
   else if (route === "/trial") page = s.loggedIn && s.accountType === "planner" ? <TrialPage /> : null;
-  else if (route.startsWith("/app")) page = !s.loggedIn || !s.accountType ? null : s.accountType === "supplier" ? <SupplierHome /> : <ClientApp route={route} />;
+  else if (route.startsWith("/app")) page = !s.loggedIn || !s.accountType ? null : <ClientApp route={route} />;
   return <>{page}<Upsell />{s.loggedIn && <SignOutDialog />}<CloudBadge /><AskHost /></>;
 }

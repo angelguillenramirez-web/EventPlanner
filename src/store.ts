@@ -27,9 +27,9 @@ export type AccountType = "planner" | "supplier";
 /** Answers to the five profile questions asked after the e-mail is confirmed. */
 export interface Profile { role: string; volume: string; team: string; goals: string[]; source: string }
 /** A registered user (the owner of a planner or supplier account). */
-export interface Account { id: string; name: string; email: string; company: string; password: string; promo: string; token: string; confirmed: boolean; confirmedAt: number; createdAt: number; profile: Profile | null; accountType: AccountType | null; test?: boolean }
+export interface Account { id: string; /** the profiles this account has: a person can be a planner, a supplier or both (then they choose when they sign in) */ types?: ("planner" | "supplier")[]; /** a supplier account that started the Planner plan (lets it go back to the supplier area until the trial starts) */ wasSupplier?: boolean; name: string; email: string; company: string; password: string; promo: string; token: string; confirmed: boolean; confirmedAt: number; createdAt: number; profile: Profile | null; accountType: AccountType | null; test?: boolean }
 /** Public profile of the business in the suppliers market, and the open link to the service catalog (platform link / business name). */
-export interface SupplierProfile { published: boolean; name: string; slug: string; category: string; tagline: string; about: string; city: string; country: string; phone: string; email: string; web: string; instagram: string; supports: string[]; tier: 1 | 2 | 3; from: number; cover: string; catalogOpen: boolean }
+export interface SupplierProfile { published: boolean; name: string; slug: string; category: string; tagline: string; about: string; city: string; country: string; phone: string; email: string; web: string; instagram: string; supports: string[]; tier: 1 | 2 | 3; from: number; cover: string; catalogOpen: boolean; /** all the kinds of service offered ("category" is the first one) */ categories?: string[] }
 export const emptyProfile = (): SupplierProfile => ({ published: false, name: "", slug: "", category: "catering", tagline: "", about: "", city: "", country: "", phone: "", email: "", web: "", instagram: "", supports: [], tier: 2, from: 0, cover: "", catalogOpen: false });
 /** Account details edited but not saved yet (listed when the user signs out). */
 /** Budget of a client for one event. It belongs to the client (ownerId = member id): the planner sees it only while `shared` is on. */
@@ -156,7 +156,7 @@ export interface EventType { id: string; color: string; name?: string; custom?: 
 export interface State {
   lang: Lang; theme: Theme; plan: Plan; sidebarCollapsed: boolean; businessLogo: string; userLastName: string; budgets: Budget[]; defaultFields: TaskField[]; defaultFieldsCustom: boolean; loggedIn: boolean; sub: Subscription; eventLog: number[]; invoices: Invoice[]; card: Card | null; sessionId: string; accounts: Account[]; outbox: Mail[]; accountType: "planner" | "supplier" | null; userName: string; avatar: string;
   tags: string[]; team: Member[]; events: EventT[]; tasks: Task[]; todos: Todo[]; guests: Guest[]; invitations: Invitation[]; seatings: Seating[]; menu: MenuItem[]; menuLibrary: MenuItem[]; services: Service[]; documents: Doc[]; meetings: Meeting[]; dots: Dot[]; itineraries: Itinerary[]; talents: Talent[]; signoffs: Signoff[]; agreements: Agreement[]; designRequests: DesignRequest[]; folders: Folder[]; defaultSurvey: DefaultSurvey | null; userEmail: string; userPhone: string; billing: Billing;
-  supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; /** how many staff replies the customer has already seen, per request id and "chat" */ supportSeen: Record<string, number>; /** staff messages in the live chat as last checked */ chatTotal: number; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
+  /** local accounts: whose workspace (events, guests...) is loaded right now; empty = the demo planner's */ wsOwner: string; supplierProfile: SupplierProfile; accDraft: AccDraft | null; confirmOut: boolean; tourSeen: string[]; threads: Thread[]; notifs: Notif[]; inboxPrefs: InboxPrefs; support: Support[]; chat: ChatMsg[]; /** how many staff replies the customer has already seen, per request id and "chat" */ supportSeen: Record<string, number>; /** staff messages in the live chat as last checked */ chatTotal: number; supplierChats: Record<string, ChatMsg[]>; surveys: Survey[]; feedback: { rating: number; text: string; at: number }[]; cancelSurveys: CancelSurvey[];
   eventTypes: EventType[]; upsell: string | null; supportOpen: boolean; viewAs: string; seatEditor: boolean; seatDirty: boolean;
 }
 
@@ -188,8 +188,8 @@ export const TEST_CLIENT = { kind: "client" as CollabKind, ...KIND_PRESET.client
 export const TEST_COLLAB = { kind: "team" as CollabKind, ...KIND_PRESET.team, email: TEST_USERS.collaborator.login, username: TEST_USERS.collaborator.login, password: TEST_USERS.collaborator.password, relation: "", role: "coordinator" };
 const mkAccount = (p: Partial<Account> & { name: string; email: string; password: string }): Account => ({ id: Math.random().toString(36).slice(2, 10), company: "", promo: "", token: "", confirmed: true, confirmedAt: Date.now(), createdAt: Date.now(), profile: null, accountType: null, ...p });
 const testAccounts = (): Account[] => [
-  mkAccount({ name: "Laura", email: TEST_USERS.planner.login, password: TEST_USERS.planner.password, company: "Laura Events", accountType: "planner", test: true, profile: { role: "planner", volume: "6-20", team: "2-5", goals: ["tasks", "invitations"], source: "other" } }),
-  mkAccount({ name: "Marco (supplier)", email: TEST_USERS.supplier.login, password: TEST_USERS.supplier.password, company: "Marco Catering", accountType: "supplier", test: true, profile: { role: "vendor", volume: "21-50", team: "2-5", goals: ["clients"], source: "other" } }),
+  mkAccount({ name: "Laura", email: TEST_USERS.planner.login, password: TEST_USERS.planner.password, company: "Laura Events", accountType: "planner", types: ["planner"], test: true, profile: { role: "planner", volume: "6-20", team: "2-5", goals: ["tasks", "invitations"], source: "other" } }),
+  mkAccount({ name: "Marco (supplier)", email: TEST_USERS.supplier.login, password: TEST_USERS.supplier.password, company: "Marco Catering", accountType: "supplier", types: ["supplier"], test: true, profile: { role: "vendor", volume: "21-50", team: "2-5", goals: ["clients"], source: "other" } }),
 ];
 /** Address of the "how to" video shown on first access. Empty until the video is produced: a placeholder is shown instead. */
 export const HOWTO_VIDEO_URL = "";
@@ -349,7 +349,7 @@ function seed(): State {
     ].map(([name, time, duration, location]) => ({ id: uid(), eventId: w.id, activities: [{ id: uid(), name: name as string, date: w.date, time: time as string, duration: duration as number, location: location as string, comments: [], history: [] }] })),
     meetings: [{ id: uid(), eventId: w.id, title: "Reunión con el proveedor de catering", date: iso(6), time: "10:00", duration: 45, provider: "meet", link: "https://meet.google.com/abc-defg-hij", agenda: "Revisar menú y cantidades.", attendees: ["Sofía", "Daniel"], createdAt: Date.now() }],
     itineraries: [], talents: [], signoffs: [], agreements: [], designRequests: [], viewAs: "",
-    upsell: null, supportOpen: false, seatEditor: false, seatDirty: false,
+    wsOwner: "", upsell: null, supportOpen: false, seatEditor: false, seatDirty: false,
   };
 }
 
@@ -448,10 +448,18 @@ export function update(fn: (draft: State) => void) {
   subs.forEach((s) => s());
 }
 /** Ends the session (owner or collaborator). */
+/** The profiles an account has (older accounts only have the one they chose). */
+export const accountTypes = (a?: Account): ("planner" | "supplier")[] => (a?.types?.length ? a.types : a?.accountType ? [a.accountType] : []);
+/** A supplier account chooses the Planner plan: it skips the sign-up questions and goes to the trial page (card, 7 days, then the payment starts) and then into the planner profile. The supplier profile is kept: from then on the person chooses which one to enter. */
+export const upgradeToPlanner = () => { update((st) => { st.accountType = "planner"; st.sub = { ...newTrial("basic"), status: "none" }; st.card = null; /* a supplier account has no planner subscription yet */ const a = st.accounts.find((x) => x.id === st.sessionId); if (a) { a.types = [...new Set([...accountTypes(a), "planner" as const])]; a.accountType = "planner"; a.wasSupplier = true; } }); go("/trial"); };
+/** Leaves the trial page without starting it: back to the supplier area. */
+export const backToSupplier = () => { update((st) => { st.accountType = "supplier"; const a = st.accounts.find((x) => x.id === st.sessionId); if (a) { a.types = ["supplier"]; a.accountType = "supplier"; a.wasSupplier = false; } }); go("/app"); };
+/** A planner adds the free supplier profile to the same account and opens it inside the planner app (same sidebar and header). */
+export const addSupplierProfile = () => { update((st) => { const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.types = [...new Set([...accountTypes(a), "supplier" as const])]; }); go("/app/supplier-profile"); };
 export const logout = () => update((st) => { st.loggedIn = false; st.sessionId = ""; st.viewAs = ""; st.accountType = null; st.accDraft = null; st.confirmOut = false; });
 /** Asks to sign out: a window confirms it (and lists unsaved changes). */
 export const askLogout = () => update((st) => { st.confirmOut = true; });
-export const resetDemo = () => { try { localStorage.removeItem(KEY); } catch {} state = seed(); subs.forEach((s) => s()); };
+export const resetDemo = () => { try { localStorage.removeItem(KEY); Object.keys(localStorage).filter((k) => k.startsWith(WS)).forEach((k) => localStorage.removeItem(k)); } catch {} state = seed(); subs.forEach((s) => s()); };
 export const getState = () => state;
 export const useStore = () => useSyncExternalStore((cb) => { subs.add(cb); return () => subs.delete(cb); }, () => state);
 export const openUpsell = (reason: string) => update((s) => { s.upsell = reason; });
@@ -502,7 +510,7 @@ export function downloadCsv(filename: string, rows: (string | number)[][]) {
 export const isLocalHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) || location.hostname.endsWith(".localhost");
 export const subscribe = (cb: () => void) => { subs.add(cb); return () => { subs.delete(cb); }; };
 /** Fields NOT saved to the cloud workspace: sign-in state, per-device settings and transient UI flags. */
-export const CLOUD_SKIP = new Set(["accounts", "outbox", "loggedIn", "sessionId", "viewAs", "upsell", "supportOpen", "seatEditor", "seatDirty", "accDraft", "confirmOut", "lang", "theme", "sidebarCollapsed", "userEmail", "sub", "plan", "card", "invoices"]);
+export const CLOUD_SKIP = new Set(["accounts", "outbox", "loggedIn", "sessionId", "viewAs", "upsell", "supportOpen", "seatEditor", "seatDirty", "accDraft", "confirmOut", "lang", "theme", "sidebarCollapsed", "userEmail", "sub", "plan", "card", "invoices", "wsOwner"]);
 /** A brand-new real account starts with an empty workspace (no demo events, guests or tasks). */
 export const blankWorkspace = (): Partial<State> => {
   const w: Partial<State> = {
@@ -514,3 +522,24 @@ export const blankWorkspace = (): Partial<State> => {
   for (const k of CLOUD_SKIP) delete (w as Record<string, unknown>)[k];
   return w;
 };
+/* ───── Separate data per local account (test users and local sign-ups): each person gets their own workspace in this browser ───── */
+const WS = "fiesta-ws:";
+const WS_SKIP = new Set([...CLOUD_SKIP].filter((k) => !["sub", "plan", "card", "invoices"].includes(k))); // subscription and card belong to the person too
+const workspaceOf = (st: State) => Object.fromEntries(Object.entries(st).filter(([k]) => !WS_SKIP.has(k)));
+/** The built-in planner test account: the demo data (and the team members' data) belong to it. */
+export const testPlannerId = () => state.accounts.find((a) => a.test && a.email === TEST_USERS.planner.login)?.id ?? "";
+/** Signing in to a local account: the data of the person who was in is put away and this person's own data is loaded (empty the first time, so a supplier never sees planner events). */
+export function enterWorkspace(id: string) {
+  if (!id) return;
+  try {
+    const owner = state.wsOwner || testPlannerId();
+    if (owner === id) return;
+    localStorage.setItem(WS + owner, JSON.stringify(workspaceOf(state)));
+    const raw = localStorage.getItem(WS + id);
+    const acct = state.accounts.find((x) => x.id === id);
+    const supplierOnly = !!acct && !accountTypes(acct).includes("planner"); // a supplier starts with an empty catalog, not the planner's sample services
+    const next = raw ? JSON.parse(raw) : { ...blankWorkspace(), ...(supplierOnly ? { services: [] } : {}), sub: { ...newTrial("basic"), status: "none" }, plan: "basic", card: null, invoices: [] };
+    update((st) => { Object.assign(st, next); st.wsOwner = id; });
+  } catch { /* storage may be blocked: keep what is loaded */ }
+}
+

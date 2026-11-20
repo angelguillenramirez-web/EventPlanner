@@ -3,10 +3,10 @@ export const SUPPLIER_CATEGORIES = ["venue", "catering", "photo", "music", "deco
 export type SupplierCategory = (typeof SUPPLIER_CATEGORIES)[number];
 export interface Supplier {
   id: string; name: string; category: SupplierCategory; supports: string[]; tier: 1 | 2 | 3; from: number; city: string; country: string; rating: number; about: string;
-  phone: string; email: string; web: string; instagram: string; cover?: string; mine?: boolean;
+  phone: string; email: string; web: string; instagram: string; cover?: string; mine?: boolean; categories?: SupplierCategory[]; tagline?: string; logo?: string;
 }
 /** Your own profile as it appears in the market. */
-export const profileToSupplier = (p: import("./store").SupplierProfile): Supplier => ({ id: "mine", name: p.name, category: p.category as SupplierCategory, supports: p.supports, tier: p.tier, from: p.from, city: p.city, country: p.country, rating: 0, about: p.about || p.tagline, phone: p.phone, email: p.email, web: p.web, instagram: p.instagram, cover: p.cover, mine: true });
+export const profileToSupplier = (p: import("./store").SupplierProfile, logo = ""): Supplier => ({ id: "mine", name: p.name, category: (p.categories?.[0] ?? p.category) as SupplierCategory, categories: (p.categories?.length ? p.categories : [p.category]) as SupplierCategory[], tagline: p.tagline, logo, supports: p.supports, tier: p.tier, from: p.from, city: p.city, country: p.country, rating: 0, about: p.about || p.tagline, phone: p.phone, email: p.email, web: p.web, instagram: p.instagram, cover: p.cover, mine: true });
 const ALL = ["wedding", "birthday", "babyshower", "graduation", "anniversary", "corporate"];
 const s = (id: string, name: string, category: SupplierCategory, supports: string[], tier: 1 | 2 | 3, from: number, city: string, country: string, rating: number, about: string, phone: string, slug: string): Supplier =>
   ({ id, name, category, supports, tier, from, city, country, rating, about, phone, email: `hola@${slug}.example.com`, web: `www.${slug}.example.com`, instagram: `@${slug}` });

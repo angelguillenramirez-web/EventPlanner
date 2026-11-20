@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "../i18n";
 import { isCloudId, goCheckout } from "../cloud";
-import { PLANS, PRICES, yearlySaving, TRIAL_DAYS, go, uid, update, useStore, type Card, type Invoice, type Plan } from "../store";
+import { PLANS, PRICES, backToSupplier, yearlySaving, TRIAL_DAYS, go, uid, update, useStore, type Card, type Invoice, type Plan } from "../store";
 import { Check, CreditCard, Download, Printer } from "../icons";
 import { Modal } from "./ui";
 import { usePublic } from "../bridge";
@@ -185,6 +185,7 @@ export function TrialPage() {
   const [card, setCard] = useState({ number: "", exp: "", cvc: "", holder: s.userName });
   const [err, setErr] = useState("");
   const ends = new Date(Date.now() + TRIAL_DAYS * 86400000).toLocaleDateString(locale, { dateStyle: "long" });
+  const acct = s.accounts.find((a) => a.id === s.sessionId);
   const cloud = isCloudId(s.sessionId); // real accounts pay on Stripe's secure page; the demo accounts keep the simulated card
   const [busy, setBusy] = useState(false);
   const start = async () => {
@@ -217,6 +218,7 @@ export function TrialPage() {
           <p className="muted small" style={{ margin: 0 }}>{t("trial.then", { amount: money(PRICES[plan][cycle], locale), when: ends, plan: t("plan." + plan) })}</p>
           {err && <p role="alert" style={{ color: "var(--danger)" }}>{err}</p>}
           <button style={{ width: "100%", justifyContent: "center", marginTop: 12 }} disabled={busy} onClick={start}>{t("trial.start", { n: TRIAL_DAYS })}</button>
+          {acct?.wasSupplier && <button className="ghost" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} onClick={backToSupplier}>{t("trial.back")}</button>}
         </div>
       </div>
     </div>

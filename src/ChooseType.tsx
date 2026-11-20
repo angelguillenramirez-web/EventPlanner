@@ -8,7 +8,7 @@ export default function ChooseType() {
   const s = useStore();
   const acct = s.accounts.find((a) => a.id === s.sessionId);
   const suggested = acct?.profile && ["vendor", "venue"].includes(acct.profile.role) ? "supplier" : "planner";
-  const pick = (type: "planner" | "supplier") => { update((st) => { st.accountType = type; const a = st.accounts.find((x) => x.id === st.sessionId); if (a) a.accountType = type; }); go(type === "planner" ? "/trial" : "/app"); };
+  const pick = (type: "planner" | "supplier") => { update((st) => { st.accountType = type; if (type === "supplier") st.services = []; const a = st.accounts.find((x) => x.id === st.sessionId); if (a) { a.accountType = type; a.types = [type]; } }); go(type === "planner" ? "/trial" : "/app"); };
   const opts: ["planner" | "supplier", string][] = [["planner", "🗓"], ["supplier", "🤝"]];
   return (
     <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", placeItems: "center", padding: 20 }}>

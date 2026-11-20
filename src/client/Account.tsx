@@ -5,12 +5,11 @@ import { yearlySaving, RESET_MINUTES, TRIAL_DAYS, askLogout, go, logout, eventLi
 import CancelSurvey from "./CancelSurvey";
 import { authErrorKey, cloudChangeEmail, cloudResetRequest, cloudVerifyPassword, goCheckout, goPortal, isCloudId } from "../cloud";
 import { Modal } from "./ui";
-import SupplierProfileTab from "./SupplierProfile";
 import { ResetMail } from "../Reset";
-import { Check, CreditCard, Pencil } from "../icons";
+import { Check, CreditCard, Pencil, ImageIcon } from "../icons";
 import { ask } from "./Ask";
 
-const TABS = ["basic", "supplier", "identity", "billing", "subscription"] as const;
+const TABS = ["basic", "identity", "billing", "subscription"] as const;
 
 /** Notice the platform "sends" when the email or phone of the account changes (shown in the demo). */
 function Notices({ list }: { list: import("../store").Mail[] }) {
@@ -88,7 +87,7 @@ export const unsavedList = (s: ReturnType<typeof useStore>, t: (k: string) => st
   return [d.name !== undefined && d.name !== s.userName ? t("name") : "", d.last !== undefined && d.last !== s.userLastName ? t("team.lastname") : "", d.avatar !== undefined && d.avatar !== s.avatar ? t("account.photo") : "", d.logo !== undefined && d.logo !== s.businessLogo ? t("account.logo") : ""].filter(Boolean);
 };
 
-function BasicInfo() {
+export function BasicInfo() {
   const s = useStore();
   const { t } = useT();
   const [msg, setMsg] = useState("");
@@ -125,7 +124,7 @@ function BasicInfo() {
       {row(t("account.phone"), s.userPhone, () => setContact("phone"), t("acct.change.phone"))}
       <div><label>{t("account.logo")}</label>
         <label className="avatar-edit logo" title={t("account.logo")} aria-label={t("account.logo")}>
-          {logo ? <img src={logo} alt="" /> : <span className="big" style={{ fontSize: "1.1rem" }}>{t("account.logo")}</span>}
+          {logo ? <img src={logo} alt="" /> : <span className="big logo-ph"><ImageIcon size={28} /><small>{t("account.logo.add")}</small></span>}
           <span className="ov"><Pencil size={26} /></span>
           <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => { read(e.target.files?.[0], (v) => setDraft({ logo: v })); e.target.value = ""; }} />
         </label>
@@ -327,7 +326,6 @@ export default function Account({ tab }: { tab: string }) {
         {TABS.map((k) => <a key={k} href={`#/app/account/${k}`} aria-current={cur === k ? "page" : undefined}>{t("account.tab." + k)}</a>)}
       </nav>
       {cur === "basic" && <BasicInfo />}
-      {cur === "supplier" && <SupplierProfileTab />}
       {cur === "identity" && <Identity />}
       {cur === "billing" && <BillingInfo />}
       {cur === "subscription" && <Subscription />}

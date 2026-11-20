@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "./i18n";
-import { go, isLocalHost, TEST_USERS, update, useStore } from "./store";
+import { enterWorkspace, getState, go, isLocalHost, TEST_USERS, testPlannerId, update, useStore } from "./store";
 import { authErrorKey, cloudResend, cloudSignIn } from "./cloud";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
 import { sendRequest } from "./bridge";
@@ -41,12 +41,15 @@ export default function Login() {
     if (acct) {
       if (acct.password !== f.pw) return setErr(t("login.err.bad"));
       if (!acct.confirmed) return setErr(t("login.err.unconfirmed"));
+      enterWorkspace(acct.id);
       update((st) => { st.loggedIn = true; st.sessionId = acct.id; st.viewAs = ""; st.userName = acct.name; st.userEmail = acct.email; st.accountType = acct.accountType; });
       return go(!acct.profile ? "/welcome" : !acct.accountType ? "/choose-type" : "/app");
     }
-    const pending = s.team.find((x) => x.email.toLowerCase() === id && !x.password);
+    enterWorkspace(testPlannerId()); // team members and clients live inside their planner's data
+    const team = getState().team;
+    const pending = team.find((x) => x.email.toLowerCase() === id && !x.password);
     if (pending) return setErr(t("login.err.pending"));
-    const m = s.team.find((x) => x.password && x.email.toLowerCase() === id && x.password === f.pw);
+    const m = team.find((x) => x.password && x.email.toLowerCase() === id && x.password === f.pw);
     if (!m) return setErr(t("login.err.bad"));
     if (m.mustChange) { try { sessionStorage.setItem("aplan-tp", f.pw); } catch { /* ignore */ } return go("/access/" + m.token); } // temporary password: choose a new one first
     update((st) => { st.loggedIn = true; st.sessionId = "member:" + m.id; st.viewAs = m.id; st.accountType = "planner"; m.lastLogin = Date.now(); });

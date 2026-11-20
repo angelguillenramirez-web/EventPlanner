@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useT } from "../i18n";
-import { SERVICE_CATEGORIES, uid, update, useStore, type PriceModel, type Service } from "../store";
-import { BriefcaseBusiness, Share2, Copy, ImageIcon, Pencil, Plus, Star, Trash2 } from "../icons";
+import { SERVICE_CATEGORIES, accountTypes, addSupplierProfile, go, uid, update, useStore, type PriceModel, type Service } from "../store";
+import { Briefcase, Check, CircleCheck, ExternalLink, Eye, EyeOff, MapPin, Share2, Copy, ImageIcon, Pencil, Plus, Star, Trash2 } from "../icons";
 import { Modal } from "./ui";
-import { CatalogShare } from "./SupplierProfile";
+import { CatalogShare, ProfilePreviewModal, catalogUrl } from "./SupplierProfile";
 import { readImage } from "./MenuTab";
 import { ask } from "./Ask";
 
@@ -55,6 +55,51 @@ function ServiceModal({ svc, onClose }: { svc?: Service; onClose: () => void }) 
   );
 }
 
+/** The supplier side of this catalog: the business profile it goes with (name, logo, contact, public page), or the offer to create it. */
+function ProfileBanner() {
+  const { t } = useT();
+  const s = useStore();
+  const p = s.supplierProfile;
+  const acct = s.accounts.find((a) => a.id === s.sessionId);
+  const isSupplier = accountTypes(acct).includes("supplier");
+  const has = isSupplier && !!p.name.trim();
+  const cats = p.categories?.length ? p.categories : [p.category];
+  const place = [p.city, p.country].filter(Boolean).join(", ");
+  const edit = () => go("/app/supplier-profile");
+  const [preview, setPreview] = useState(false);
+  if (!has) return (
+    <div className="card pbanner offer">
+      <div><b>{isSupplier ? t("svc.pb.none") : t("svc.pb.offer")}</b><p className="muted small" style={{ margin: "4px 0 0" }}>{isSupplier ? t("svc.pb.none.sub") : t("svc.pb.offer.sub")}</p></div>
+      <div className="pbactions">
+        <button className="ghost" onClick={() => setPreview(true)}><Eye size={14} /> {t("svc.pb.preview")}</button>
+        <button onClick={isSupplier ? edit : addSupplierProfile}>{isSupplier ? t("svc.pb.create") : t("svc.pb.add")}</button>
+      </div>
+      {preview && <ProfilePreviewModal onClose={() => setPreview(false)} onEdit={isSupplier ? edit : addSupplierProfile} />}
+    </div>
+  );
+  return (
+    <div className="card pbanner">
+      <div className="pblogo">{s.businessLogo ? <img src={s.businessLogo} alt="" /> : <span>{p.name[0]}</span>}</div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div className="muted small">{t("svc.pb.title")}</div>
+        <b style={{ fontSize: "1.1rem" }}>{p.name}</b>
+        {p.tagline && <div className="small">{p.tagline}</div>}
+        <div className="row small muted" style={{ gap: 6, marginTop: 4 }}>
+          {cats.map((c) => <span key={c} className="badge">{t("supc." + c)}</span>)}
+          {place && <span className="row" style={{ gap: 3 }}><MapPin size={13} />{place}</span>}
+          {p.catalogOpen ? <span className="small" style={{ color: "var(--teal)" }}><Check size={13} style={{ verticalAlign: -2 }} /> {t("svc.pb.public")}</span> : <span className="small">{t("svc.pb.nopublic")}</span>}
+        </div>
+      </div>
+      <div className="pbactions">
+        <button className="ghost" onClick={() => setPreview(true)}><Eye size={14} /> {t("svc.pb.preview")}</button>
+        <button className="ghost" onClick={edit}><Pencil size={14} /> {t("svc.pb.edit")}</button>
+        {p.catalogOpen && p.slug && <a className="ghost btnlike" href={catalogUrl(p.slug)} target="_blank" rel="noreferrer"><ExternalLink size={14} /> {t("sprof.viewpublic")}</a>}
+      </div>
+      {preview && <ProfilePreviewModal onClose={() => setPreview(false)} onEdit={edit} />}
+    </div>
+  );
+}
+
 /** Service Catalog: the planner personalises the services offered to clients. */
 export default function Services() {
   const s = useStore();
@@ -70,16 +115,16 @@ export default function Services() {
   return (
     <>
       <div className="row between" style={{ marginBottom: 6 }}>
-        <h1 style={{ margin: 0 }}><BriefcaseBusiness size={22} style={{ verticalAlign: -3 }} /> {t("nav.services")}</h1>
+        <h1 style={{ margin: 0 }}>{t("nav.services")}</h1>
         <span className="row" style={{ gap: 6 }}><button className="ghost" onClick={() => setShare(true)}><Share2 size={15} /> {t("cat.share")}</button><button onClick={() => setModal({})}><Plus size={16} /> {t("svc.new")}</button></span>
       </div>
       <p className="muted" style={{ marginTop: 0 }}>{t("svc.desc")}</p>
       {share && <CatalogShare onClose={() => setShare(false)} />}
-      <div className="grid g4" style={{ marginBottom: 14 }}>
-        <div className="card"><div className="muted small">{t("svc.total")}</div><h2 style={{ margin: 0 }}>{s.services.length}</h2></div>
-        <div className="card"><div className="muted small">{t("svc.active")}</div><h2 style={{ margin: 0, color: "var(--teal)" }}>{s.services.filter((x) => x.active).length}</h2></div>
-        <div className="card"><div className="muted small">{t("svc.hidden")}</div><h2 style={{ margin: 0 }}>{s.services.filter((x) => !x.active).length}</h2></div>
-        <div className="card"><div className="muted small">{t("svc.featured")}</div><h2 style={{ margin: 0, color: "var(--gold)" }}>{s.services.filter((x) => x.featured).length}</h2></div>
+      {!s.viewAs && <ProfileBanner />}
+      <div className="stats">
+        {([[<Briefcase size={20} />, "svc.total", s.services.length, "teal"], [<CircleCheck size={20} />, "svc.active", s.services.filter((x) => x.active).length, "coral"], [<EyeOff size={20} />, "svc.hidden", s.services.filter((x) => !x.active).length, "lilac"], [<Star size={20} />, "svc.featured", s.services.filter((x) => x.featured).length, "butter"]] as const).map(([ic, k, n, tone]) => (
+          <div className="card stat" key={k}><div className={`sq ${tone}`}>{ic}</div><div><b data-count={n}>{n}</b><span className="l">{t(k)}</span></div></div>
+        ))}
       </div>
       <div className="row" style={{ marginBottom: 14 }}>
         <input style={{ maxWidth: 260 }} value={q} placeholder={t("search")} aria-label={t("search")} onChange={(e) => setQ(e.target.value)} />

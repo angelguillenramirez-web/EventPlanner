@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { go, uid, update, useStore } from "../store";
 import { SUPPLIERS, SUPPLIER_CATEGORIES, profileToSupplier, type Supplier } from "../suppliers";
-import { Globe, Mail, MapPin, MessageCircle, Phone, Search, Star, Store, AtSign, IdCard, LockI } from "../icons";
+import { Globe, Mail, MapPin, MessageCircle, Phone, Search, Star, AtSign, IdCard, LockI } from "../icons";
 import { Modal } from "./ui";
 
 const tier = (n: number) => "$".repeat(n);
@@ -14,7 +14,7 @@ function ContactCard({ sup, onClose }: { sup: Supplier; onClose: () => void }) {
   return (
     <Modal title={t("sup.card")} onClose={onClose}>
       <h3 style={{ margin: "0 0 2px" }}>{sup.name}</h3>
-      <div className="muted small" style={{ marginBottom: 10 }}>{t("supc." + sup.category)} · {sup.city}, {sup.country}</div>
+      <div className="muted small" style={{ marginBottom: 10 }}>{(sup.categories?.length ? sup.categories : [sup.category]).map((c) => t("supc." + c)).join(", ")} · {sup.city}, {sup.country}</div>
       <p style={{ marginTop: 0 }}>{sup.about}</p>
       {row(<Phone size={16} />, sup.phone, `tel:${sup.phone.replace(/\s/g, "")}`)}
       {row(<Mail size={16} />, sup.email, `mailto:${sup.email}`)}
@@ -24,23 +24,35 @@ function ContactCard({ sup, onClose }: { sup: Supplier; onClose: () => void }) {
   );
 }
 
+const MAX_CHIPS = 3;
 /** One supplier in the market. Also used to preview your own profile (no actions then). */
 export function SupplierCard({ x, onChat, onCard, mine }: { x: Supplier; onChat?: () => void; onCard?: () => void; mine?: boolean }) {
   const { t, tn } = useT();
+  const cats = x.categories?.length ? x.categories : [x.category];
+  const tones = ["var(--teal)", "var(--coral)", "var(--gold)", "var(--blue)", "#9B87F5"];
+  const tone = tones[Math.max(0, SUPPLIER_CATEGORIES.indexOf(cats[0])) % tones.length];
+  const place = [x.city, x.country].filter(Boolean).join(", ");
   return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 6, ...(mine ? { borderColor: "var(--teal)" } : {}) }}>
-      {x.cover && <img src={x.cover} alt="" style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 12 }} />}
-      <div className="row between" style={{ flexWrap: "nowrap" }}><b>{x.name || "—"}</b><span className="row small" style={{ gap: 3, flexWrap: "nowrap" }}>{x.rating > 0 ? <><Star size={13} fill="currentColor" style={{ color: "var(--gold)" }} />{x.rating}</> : <span className="badge ok">{t("sup.new")}</span>}</span></div>
-      <div><span className="badge">{t("supc." + x.category)}</span></div>
-      <div className="muted small row" style={{ gap: 4 }}><MapPin size={13} />{[x.city, x.country].filter(Boolean).join(", ") || "—"}</div>
-      <div className="small"><b>{tier(x.tier)}</b> <span className="muted">· {t("sup.from")} ${x.from}</span></div>
-      <div className="row" style={{ gap: 4 }}>{x.supports.map((e) => <span key={e} className="badge">{tn(e)}</span>)}</div>
-      <p className="muted small" style={{ margin: "4px 0", flex: 1 }}>{x.about}</p>
-      {(onChat || onCard) && <div className="row">
+    <article className={`mk-card${mine ? " mine" : ""}`}>
+      <div className="mk-cover" style={x.cover ? { backgroundImage: `url(${x.cover})` } : { background: `color-mix(in srgb, ${tone} 26%, var(--surface))`, ["--tc" as string]: tone }}>
+        {x.rating > 0 ? <span className="mk-rate"><Star size={12} fill="currentColor" /> {x.rating.toFixed(1)}</span> : <span className="mk-rate mk-new">{t("sup.new")}</span>}
+      </div>
+      <div className="mk-logo" aria-hidden>{x.logo ? <img src={x.logo} alt="" /> : <span>{(x.name || "?")[0]}</span>}</div>
+      <div className="mk-body">
+        <h3 className="mk-name">{x.name || "—"}</h3>
+        <div className="mk-cats">{cats.map((c) => <span key={c} className="badge">{t("supc." + c)}</span>)}</div>
+        <p className="mk-about">{x.tagline || x.about || "\u00A0"}</p>
+        <div className="mk-meta">
+          <span className="row" style={{ gap: 4, flexWrap: "nowrap" }}><MapPin size={14} />{place || "—"}</span>
+          <span><b>{tier(x.tier)}</b> <span className="muted">· {t("sup.from")} ${x.from}</span></span>
+        </div>
+        {x.supports.length > 0 && <div className="row" style={{ gap: 4 }}>{x.supports.slice(0, MAX_CHIPS).map((e) => <span key={e} className="mk-chip">{tn(e)}</span>)}{x.supports.length > MAX_CHIPS && <span className="mk-chip">+{x.supports.length - MAX_CHIPS}</span>}</div>}
+      </div>
+      {(onChat || onCard) && <div className="mk-actions">
         {onChat && <button className="sm" onClick={onChat}><MessageCircle size={14} /> {t("sup.chat")}</button>}
         {onCard && <button className="ghost sm" onClick={onCard}><IdCard size={14} /> {t("sup.card")}</button>}
       </div>}
-    </div>
+    </article>
   );
 }
 
@@ -63,12 +75,12 @@ export default function Suppliers() {
   const all = useMemo(() => [...(s.supplierProfile.published && s.supplierProfile.name ? [profileToSupplier(s.supplierProfile)] : []), ...SUPPLIERS], [s.supplierProfile]);
   const places = useMemo(() => [...new Set(all.map((x) => `${x.city}, ${x.country}`))].sort(), []);
   const list = all.filter((x) =>
-    (!cat || x.category === cat) && (!type || x.supports.includes(type)) && (!price || x.tier === Number(price)) && (!place || `${x.city}, ${x.country}` === place) &&
+    (!cat || x.category === cat || !!x.categories?.includes(cat as never)) && (!type || x.supports.includes(type)) && (!price || x.tier === Number(price)) && (!place || `${x.city}, ${x.country}` === place) &&
     (!q.trim() || (x.name + " " + x.about).toLowerCase().includes(q.trim().toLowerCase())));
 
   return (
     <>
-      <h1 style={{ margin: "0 0 4px" }}><Store size={22} style={{ verticalAlign: -3 }} /> {t("nav.suppliers")}</h1>
+      <h1 style={{ margin: "0 0 4px" }}>{t("nav.suppliers")}</h1>
       <p className="muted" style={{ marginTop: 0 }}>{t("sup.desc")}</p>
       <div className="card form" style={{ marginBottom: 14, gridTemplateColumns: "2fr repeat(4, 1fr)" }}>
         <div><label htmlFor="sq">{t("search")}</label><div className="row" style={{ flexWrap: "nowrap", gap: 6 }}><Search size={16} className="muted" /><input id="sq" value={q} onChange={(e) => setQ(e.target.value)} /></div></div>
