@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 const PORT = 5175;
 const STAFF_KEY = process.env.STAFF_BRIDGE_KEY || "dev-only-staff-key";
 // Each app has its own address (…​.localhost resolves to this machine, no hosts-file edit needed).
-const ORIGINS = new Set(["http://eventplanner.localhost:5173", "http://643.localhost:5174", "http://localhost:5173", "http://localhost:5174"]);
+const ORIGINS = new Set(["http://eventplanner.localhost:5173", "http://643.localhost:5174", "http://localhost:5173", "http://localhost:5174", "https://1plan.com.mx", "https://www.1plan.com.mx"]);
+// any local dev server (localhost, 127.0.0.1, *.localhost, any port) may talk to the bridge: it only runs on this machine, and staff actions still need the staff key
+const localOrigin = (o) => /^http:\/\/(localhost|127\.0\.0\.1|\[::1\]|[a-z0-9-]+\.localhost)(:\d+)?$/i.test(o);
 const FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "data.json");
 const empty = () => ({ inbox: [], chats: {}, published: { coupons: {}, plans: null, web: null, design: null, templates: [], statuses: {} } });
 let db = (() => { try { return { ...empty(), ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch { return empty(); } })();
@@ -30,7 +32,7 @@ const readBody = (req) => new Promise((ok, bad) => {
 
 http.createServer(async (req, res) => {
   const origin = req.headers.origin;
-  if (origin && ORIGINS.has(origin)) { res.setHeader("access-control-allow-origin", origin); res.setHeader("vary", "origin"); res.setHeader("access-control-allow-headers", "content-type, x-staff-key"); res.setHeader("access-control-allow-methods", "GET, POST, PUT, OPTIONS"); }
+  if (origin && (ORIGINS.has(origin) || localOrigin(origin))) { res.setHeader("access-control-allow-origin", origin); res.setHeader("vary", "origin"); res.setHeader("access-control-allow-headers", "content-type, x-staff-key"); res.setHeader("access-control-allow-methods", "GET, POST, PUT, OPTIONS"); }
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
   const url = new URL(req.url, "http://x");
   const staff = same(req.headers["x-staff-key"] || "", STAFF_KEY);

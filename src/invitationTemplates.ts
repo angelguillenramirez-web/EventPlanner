@@ -6,9 +6,10 @@ import { usePublic } from "./bridge";
 export interface TplText { title: string; message: string; date: string; typeName: string; venue: string; /** event date as YYYY-MM-DD (full-page templates need the real date) */ iso?: string; time?: string; /** every customized value (full-page templates use them) */ extra?: TplFields }
 
 /** Invitation document for a ready-made template (every template is a full page; unknown ids fall back to the first). */
+/** The template with this id; if it is not in the list any more (unpublished) the first one, and the built-in set if staff left nothing published. */
+const entryFor = (id: string): CatalogEntry => catalog().find((t) => t.id === id) ?? catalog()[0] ?? bundled[0];
 export function templateHtml(id: string, ev: EventT, x: TplText): string {
-  const list = catalog();
-  return fullPageDoc((list.find((t) => t.id === id) ?? list[0]).id, ev, x);
+  return fullPageDoc(entryFor(id).id, ev, x);
 }
 
 /** Full-page templates (own fonts, scripts, music) are stored as a complete HTML document and shown as they are. */
@@ -30,9 +31,11 @@ let live: CatalogEntry[] | null = null;
 /** Full-page templates published from the 643 staff console. Nothing published (or bridge offline) = the built-in set. */
 export function setLiveTemplates(list: { id: string; name: string; category: string; html: string; full?: boolean; suits?: string[] }[] | null) {
   const f = (list ?? []).filter((t) => t.full && isFullDoc(t.html));
-  live = f.length ? f.map((t) => ({ id: t.id, name: t.name, category: t.category, suits: t.suits?.length ? t.suits : [t.category], html: t.html, builtin: bundled.some((b) => b.id === t.id) })) : null;
+  live = list === null ? null : f.map((t) => ({ id: t.id, name: t.name, category: t.category, suits: t.suits?.length ? t.suits : [t.category], html: t.html, builtin: bundled.some((b) => b.id === t.id) }));
 }
 const catalog = (): CatalogEntry[] => live ?? bundled;
+/** Changes whenever a template is added, removed or edited: lists that build thumbnails use it to refresh. */
+export const catalogKey = (): string => catalog().map((t) => `${t.id}:${t.html.length}:${t.html.charCodeAt(Math.floor(t.html.length / 2))}`).join("|");
 /** Keeps the template list in step with 643. Call it in any component that lists templates. */
 export function useCatalog() { const pub = usePublic(); setLiveTemplates(pub?.templates ?? null); return pub; }
 /** Name for templates that are not built in (staff-added ones); built-in ones use the translated labels. */
@@ -66,7 +69,7 @@ function fullPageDoc(id: string, ev: EventT, x: TplText): string {
   const deadline = new Date(+start - 30 * 864e5);
   const music = new URL(`${import.meta.env.BASE_URL}invitations/demo-music.wav`, location.href).href;
   const classicLook = id === "botanica"; // the first full-page template keeps its own sample guest text and sections
-  return editData((catalog().find((t) => t.id === id) ?? catalog()[0]).html, (d) => {
+  return editData(entryFor(id).html, (d) => {
     // dates and times are shown in the zone the planner entered them in
     d.event = { ...d.event, names: names.length ? names : [x.title], milestone: "", start: start.toISOString(), end: new Date(+start + 7 * 36e5).toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
     d.venue = { name: x.venue, address: X?.address ?? "", mapUrl: mapHref(X?.mapUrl ?? "") };

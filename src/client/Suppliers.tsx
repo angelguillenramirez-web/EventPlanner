@@ -4,6 +4,7 @@ import { go, uid, update, useStore } from "../store";
 import { SUPPLIERS, SUPPLIER_CATEGORIES, profileToSupplier, type Supplier } from "../suppliers";
 import { Globe, Mail, MapPin, MessageCircle, Phone, Search, Star, AtSign, IdCard, LockI } from "../icons";
 import { Modal } from "./ui";
+import { SupplierArt } from "../illustrations";
 
 const tier = (n: number) => "$".repeat(n);
 
@@ -35,6 +36,7 @@ export function SupplierCard({ x, onChat, onCard, mine }: { x: Supplier; onChat?
   return (
     <article className={`mk-card${mine ? " mine" : ""}`}>
       <div className="mk-cover" style={x.cover ? { backgroundImage: `url(${x.cover})` } : { background: `color-mix(in srgb, ${tone} 26%, var(--surface))`, ["--tc" as string]: tone }}>
+        {!x.cover && <span className="mk-art"><SupplierArt cat={cats[0]} /></span>}
         {x.rating > 0 ? <span className="mk-rate"><Star size={12} fill="currentColor" /> {x.rating.toFixed(1)}</span> : <span className="mk-rate mk-new">{t("sup.new")}</span>}
       </div>
       <div className="mk-logo" aria-hidden>{x.logo ? <img src={x.logo} alt="" /> : <span>{(x.name || "?")[0]}</span>}</div>

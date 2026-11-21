@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { askLogout, go, me, supportUnread, unreadCounts, update, upgradeToPlanner, useStore } from "../store";
 import Locked from "./Locked";
+import { useCatalog } from "../invitationTemplates";
 import { Modal } from "./ui";
 import { AppMark, LangSwitch, Logo, ThemeToggle, useMedia } from "../shared";
 import { Play, Inbox as InboxIcon, Menu, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Headset, LifeBuoy, ListChecks, BriefcaseBusiness, Bell, MessageSquare, Search, Store, User, Users, LogOut, Languages, LockI } from "../icons";
@@ -54,6 +55,7 @@ export default function ClientApp({ route }: { route: string }) {
   const helpOpen = (help || sec === "feedback") && !collapsed;
   const memberNow = s.viewAs ? s.team.find((m) => m.id === s.viewAs) : undefined;
   const showBudget = !!memberNow && memberNow.kind === "client" && s.sessionId.startsWith("member:"); // only clients have a Budget menu; the planner sees shared budgets inside each event
+  useCatalog(); // the templates the design team publishes from 643 stay up to date everywhere in the app
   const lite = s.accountType === "supplier" && !s.viewAs; // free supplier account: only the service catalog and the suppliers module (plus account and help); the rest needs the Planner plan
   const OPEN_FOR_LITE = ["services", "suppliers", "supplier-profile", "account", "feedback"];
   useEffect(() => { if (lite && sec === "") go("/app/services"); }, [lite, sec]);

@@ -3,11 +3,14 @@ import { useT } from "./i18n";
 import { usePublic } from "./bridge";
 import { COLORS, TRIAL_DAYS, yearlySaving, go, useStore, type Plan } from "./store";
 import { money, planBullets, usePrices } from "./client/Billing";
+import { EventArt } from "./illustrations";
 import { LangSwitch, Logo, ThemeToggle } from "./shared";
 import { SupplierCard } from "./client/Suppliers";
 import { SUPPLIERS } from "./suppliers";
 import { CalendarRange, Check, FileText, FolderOpen, Handshake, Headset, Heart, LayoutGrid, Mail, Sparkles, Table2, TypeIcon } from "./icons";
 
+/** Opens the sign-up page; "supplier" remembers where the person came from so the page can speak to suppliers (no trial talk, they pay nothing). */
+const toJoin = (as?: "supplier") => { try { if (as) sessionStorage.setItem("aplan-intent", as); else sessionStorage.removeItem("aplan-intent"); } catch { /* ignore */ } go("/join"); };
 const FEATURES: [React.ReactNode, string][] = [[<LayoutGrid />, "tracker"], [<CalendarRange />, "scheduler"], [<Mail />, "invites"], [<FileText />, "forms"], [<FolderOpen />, "docs"], [<Table2 />, "tables"], [<Handshake />, "vendors"], [<Headset />, "support"]];
 const TYPES = ["wedding", "birthday", "babyshower", "graduation", "anniversary", "corporate"]; // each has a soft pastel tile (see .etype.t-* in styles.css)
 type Cycle = "monthly" | "yearly";
@@ -24,7 +27,7 @@ function PlanCard({ id, pop, cycle }: { id: Plan; pop?: boolean; cycle: Cycle })
       <div className="price">{money(Math.round(shown * 100) / 100, locale)}<span className="muted"> {t("plan.permonth")}</span></div>
       <p className="muted small plannote">{cycle === "yearly" ? t("land.billedyear", { amount: money(price(id, "yearly"), locale), save: money(yearlySaving(id), locale) }) : t("plan.yearly", { amount: money(price(id, "yearly"), locale), save: money(yearlySaving(id), locale) })}</p>
       <ul className="ticks">{planBullets(id, t).map((i) => <li key={i}>{i}</li>)}</ul>
-      <button className={pop ? "" : "ghost"} style={{ width: "100%", justifyContent: "center" }} onClick={() => go("/join")}>{t("cta.start")}</button>
+      <button className={pop ? "" : "ghost"} style={{ width: "100%", justifyContent: "center" }} onClick={() => toJoin()}>{t("cta.start")}</button>
     </div>
   );
 }
@@ -46,7 +49,7 @@ export default function Landing() {
         <a className="l" href="#suppliers" onClick={(e) => { e.preventDefault(); document.getElementById("suppliers")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.suppliers")}</a>
         <a className="l" href="#pricing" onClick={(e) => { e.preventDefault(); document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" }); }}>{t("nav.pricing")}</a>
         <LangSwitch /><ThemeToggle />
-        <button className="ghost" onClick={() => go("/login")}>{t("login")}</button><button onClick={() => go("/join")}>{t("signup")}</button>
+        <button className="ghost" onClick={() => go("/login")}>{t("login")}</button><button onClick={() => toJoin()}>{t("signup")}</button>
       </div></nav>
 
       <header className="hero"><div className="sec">
@@ -54,7 +57,7 @@ export default function Landing() {
           <span className="kicker"><i className="kdot" />{t("hero.kicker")}</span>
           <h1>{t("hero.t1")}<span className="hl">{t("hero.t2")}</span></h1>
           <p className="lead">{t("hero.sub")}</p>
-          <div className="row"><button className="lg" onClick={() => go("/join")}>{t("cta.start")} →</button><button className="ghost lg" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>{t("nav.pricing")}</button></div>
+          <div className="row"><button className="lg" onClick={() => toJoin()}>{t("cta.start")} →</button><button className="ghost lg" onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}>{t("nav.pricing")}</button></div>
           <div className="proof"><span className="av" aria-hidden><i style={{ background: "#46C8B2" }} /><i style={{ background: "#FF7A59" }} /><i style={{ background: "#B9A6FF" }} /><i style={{ background: "#FFD96B" }} /></span><span>{t("land.proof", { n: TRIAL_DAYS })}</span></div>
         </div>
         <div className="mock" aria-hidden="true">
@@ -93,7 +96,7 @@ export default function Landing() {
       <section className="sec" id="events">
         <span className="kicker">{t("nav.events")}</span><h2>{t("types.title")}</h2>
         <div className="grid g3" style={{ marginTop: 20 }}>
-          {TYPES.map((id) => <div className={`etype t-${id}`} key={id}><TypeIcon type={id} size={28} /><h3>{t("type." + id)}</h3><p>{t("type." + id + ".d")}</p></div>)}
+          {TYPES.map((id) => <div className={`etype t-${id}`} key={id}><div className="etart"><EventArt type={id} /></div><h3>{t("type." + id)}</h3><p>{t("type." + id + ".d")}</p></div>)}
         </div>
         <div className="card" style={{ marginTop: 24 }}><h3>{t("planners.title")}</h3><p className="muted" style={{ margin: 0 }}>{t("planners.sub")}</p></div>
       </section>
@@ -105,8 +108,8 @@ export default function Landing() {
           {["s1", "s3", "s5"].map((id) => SUPPLIERS.find((x) => x.id === id)!).map((x) => <SupplierCard key={x.id} x={x} />)}
         </div>
         <div className="grid g2" style={{ marginTop: 18 }}>
-          <div className="card"><h3>{t("land.sup.planners")}</h3><p className="muted">{t("land.sup.planners.d")}</p><button onClick={() => go("/join")}>{t("land.sup.cta.planner")} →</button></div>
-          <div className="card"><h3>{t("land.sup.suppliers")}</h3><p className="muted">{t("land.sup.suppliers.d")}</p><button className="ghost" onClick={() => go("/join")}>{t("land.sup.cta.supplier")} →</button></div>
+          <div className="card audcard"><span className="audico" style={{ background: "var(--teal-soft)", color: "var(--teal-ink)" }}><CalendarRange size={22} /></span><h3>{t("land.sup.planners")}</h3><p className="muted">{t("land.sup.planners.d")}</p><button onClick={() => toJoin()}>{t("land.sup.cta.planner")} →</button></div>
+          <div className="card audcard"><span className="audico" style={{ background: "var(--coral-soft)", color: "var(--coral-ink)" }}><Handshake size={22} /></span><h3>{t("land.sup.suppliers")}</h3><p className="muted">{t("land.sup.suppliers.d")}</p><button onClick={() => toJoin("supplier")}>{t("land.sup.cta.supplier")} →</button></div>
         </div>
       </section>
 
@@ -121,7 +124,7 @@ export default function Landing() {
       </section>
 
       <section className="sec" style={{ paddingTop: 0, paddingBottom: 0 }}><div className="ctabox">
-        <h2>{t("cta.title")}</h2><button className="lg" onClick={() => go("/join")}>{t("cta.start")} →</button>
+        <h2>{t("cta.title")}</h2><button className="lg" onClick={() => toJoin()}>{t("cta.start")} →</button>
       </div></section>
       <footer className="lf">© 2026 1Plan · {t("footer")}</footer>
     </>

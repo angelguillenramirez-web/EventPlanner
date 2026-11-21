@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "../i18n";
 import { PLANS, notify, openUpsell, uid, update, useStore, me, type Comment, type EventT, type Invitation, type TplFields } from "../store";
 import { ChevronDown, Heart, Pencil, LayoutTemplate, LockI, MessageCircle, Plus, Send, Sparkles, X } from "../icons";
-import { buildInvitation, catalogName, invSandbox, invitationDoc, templateHtml, templatesFor, useCatalog, type TplText } from "../invitationTemplates";
+import { buildInvitation, catalogKey, catalogName, invSandbox, invitationDoc, templateHtml, templatesFor, useCatalog, type TplText } from "../invitationTemplates";
 import { sendRequest } from "../bridge";
 import { Modal } from "./ui";
 import ApprovalButton from "./Approval";
@@ -49,7 +49,7 @@ function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT;
   const [shown, setShown] = useState(html); // the preview follows the form a moment after typing stops
   useEffect(() => { const id = setTimeout(() => setShown(html), 500); return () => clearTimeout(id); }, [html]);
   const ids = templatesFor(event.type);
-  const thumbs = useMemo(() => Object.fromEntries(ids.map((id) => [id, buildInvitation(id, event, F, locale, tn(event.type))])), [ids.join(), F.title, F.iso, F.time, F.venue, locale]); // eslint-disable-line
+  const thumbs = useMemo(() => Object.fromEntries(ids.map((id) => [id, buildInvitation(id, event, F, locale, tn(event.type))])), [ids.join(), catalogKey(), F.title, F.iso, F.time, F.venue, locale]); // eslint-disable-line
   const generate = () => {
     const list = IDEAS[event.type] ?? IDEAS.default, w = prompt.toLowerCase();
     const hit = IDEA_WORDS.find(([words, id]) => words.some((k) => w.includes(k)) && list.some((i) => i.template === id));
@@ -98,6 +98,7 @@ function CreateModal({ event, mode, edit, onClose, onCreated }: { event: EventT;
         <>
           {picking ? (
             <div className="invgrid mini" style={{ marginBottom: 12 }}>
+              {ids.length === 0 && <p className="muted">{t("ins.notpl")}</p>}
               {ids.map((id) => (
                 <button type="button" key={id} className={`tplcard${tpl === id ? " selected" : ""}`} aria-pressed={tpl === id} onClick={() => { setTpl(id); setChanging(false); }}>
                   <Thumb html={thumbs[id]} css="" title={tname(id)} /><b className="small">{tname(id)}</b>

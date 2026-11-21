@@ -21,6 +21,7 @@ export function Join() {
   const [f, setF] = useState(() => { let p = { name: "", email: "" }; try { p = JSON.parse(sessionStorage.getItem("aplan-join") ?? "") ?? p; sessionStorage.removeItem("aplan-join"); } catch { /* ignore */ } return { name: p.name ?? "", last: "", email: p.email ?? "", company: "", pw: "", promo: "" }; });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const supplier = (() => { try { return sessionStorage.getItem("aplan-intent") === "supplier"; } catch { return false; } })(); // came from "Join free as a supplier"
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = f.email.trim().toLowerCase(), name = f.name.trim(), last = f.last.trim();
@@ -40,10 +41,10 @@ export function Join() {
     <Shell wide>
       <div className="joingrid">
         <div>
-          <span className="kicker">{t("plan.trialnote", { n: TRIAL_DAYS })}</span>
-          <h1 style={{ marginTop: 6 }}>{t("join.title")}</h1>
-          <p className="muted">{t("join.sub")}</p>
-          <ul className="joinlist">{[1, 2, 3, 4].map((n) => <li key={n}><Check size={16} /> {t("join.b" + n)}</li>)}</ul>
+          {!supplier && <span className="kicker">{t("plan.trialnote", { n: TRIAL_DAYS })}</span>}
+          <h1 style={{ marginTop: 6 }}>{supplier ? t("join.sup.title") : t("join.title")}</h1>
+          <p className="muted">{supplier ? t("join.sup.sub") : t("join.sub")}</p>
+          <ul className="joinlist">{[1, 2, 3, 4].map((n) => <li key={n}><Check size={16} /> {supplier ? t("join.sup.b" + n) : t("join.b" + n)}</li>)}</ul>
         </div>
         <form className="card grid" style={{ gap: 12 }} onSubmit={submit} noValidate>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -55,7 +56,7 @@ export function Join() {
           <div><label htmlFor="jp">{t("password")} *</label><input id="jp" type="password" value={f.pw} autoComplete="new-password" onChange={(e) => setF({ ...f, pw: e.target.value })} /></div>
           <div><label htmlFor="jr">{t("join.promo")}</label><input id="jr" value={f.promo} onChange={(e) => setF({ ...f, promo: e.target.value.toUpperCase() })} />{f.promo.trim() && <span className="small" style={{ color: "var(--teal)" }}>{t("join.promo.ok", { code: f.promo.trim() })}</span>}</div>
           {err && <p role="alert" style={{ color: "var(--danger)", margin: 0 }}>{err} {err === t("join.err.exists") && <a href="#/login">{t("login")}</a>}</p>}
-          <button type="submit" disabled={busy}>{busy ? "…" : t("join.submit")}</button>
+          <button type="submit" disabled={busy}>{busy ? "…" : supplier ? t("join.sup.submit") : t("join.submit")}</button>
           <p className="muted small" style={{ margin: 0 }}>{t("join.terms")}</p>
           <p style={{ margin: 0, textAlign: "center" }}><span className="muted">{t("join.have")}</span> <a href="#/login">{t("login")}</a></p>
         </form>

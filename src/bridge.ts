@@ -68,7 +68,7 @@ export function usePublic(): PublicData | null {
     let alive = true;
     const load = () => fetch(BASE + "/api/public").then((r) => (r.ok ? r.json() : null)).then((x) => { if (alive) setD(x); }).catch(() => { if (alive) setD(null); });
     load();
-    const i = setInterval(load, 15000);
+    const i = setInterval(load, 5000);
     return () => { alive = false; clearInterval(i); };
   }, []);
   return d;
